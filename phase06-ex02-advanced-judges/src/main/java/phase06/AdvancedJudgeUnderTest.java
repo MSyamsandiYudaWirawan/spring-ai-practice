@@ -67,7 +67,9 @@ public class AdvancedJudgeUnderTest {
      *   "Response: " + response + "\n" +
      *   "Output: PASS or FAIL on line 1, Score: <0.0-1.0> on line 2."
      * - Model outputs responses formatted like: "PASS\nScore: 0.90" or "FAIL\nScore: 0.40".
-     * - Parse each run for PASS vs FAIL (e.g. contains "PASS") and float score from "Score: <val>".
+     * - Parse each run:
+     *   - pass: {@code out.toUpperCase().contains("PASS")}
+     *   - score: extract float using regex {@link #CONSENSUS_SCORE_PATTERN} ({@code "(?i)score:\s*([0-9]+(?:\.[0-9]+)?)"}), fallback to 0.5f if not found.
      * - Compute:
      *   - passVotes, failVotes = runs - passVotes
      *   - majorityPass = passVotes > runs / 2
@@ -76,6 +78,9 @@ public class AdvancedJudgeUnderTest {
      *   - averageScore = sum(scores) / (float) runs
      * - Return ConsensusResult.
      */
+    public static final Pattern CONSENSUS_SCORE_PATTERN =
+            Pattern.compile("(?i)score:\\s*([0-9]+(?:\\.[0-9]+)?)");
+
     public static ConsensusResult evaluateConsensus(
             ChatClient chatClient,
             String query,
@@ -119,12 +124,15 @@ public class AdvancedJudgeUnderTest {
      *   "Query: " + query + "\nResponse: " + response + "\n" +
      *   "Format output:\nDIRECT_ANSWER: YES/NO\nRELEVANCE_SCORE: <0.0 to 1.0>\nDRIFT_DETECTED: YES/NO\nFEEDBACK: <text>"
      * - Parse fields:
-     *   directAnswer = contains "DIRECT_ANSWER: YES"
-     *   relevanceScore = parsed float (clamp 0.0 to 1.0)
-     *   queryDriftDetected = contains "DRIFT_DETECTED: YES"
-     *   passed = directAnswer && (relevanceScore >= minRelevanceThreshold) && !queryDriftDetected
+     *   - directAnswer = contains "DIRECT_ANSWER: YES"
+     *   - relevanceScore = extract float using regex {@link #RELEVANCE_SCORE_PATTERN} ({@code "(?i)relevance_score:\s*([0-9]+(?:\.[0-9]+)?)"}), clamp 0.0 to 1.0
+     *   - queryDriftDetected = contains "DRIFT_DETECTED: YES"
+     *   - passed = directAnswer && (relevanceScore >= minRelevanceThreshold) && !queryDriftDetected
      * - Return RelevanceResult.
      */
+    public static final Pattern RELEVANCE_SCORE_PATTERN =
+            Pattern.compile("(?i)relevance_score:\\s*([0-9]+(?:\\.[0-9]+)?)");
+
     public static RelevanceResult evaluateRelevance(
             ChatClient chatClient,
             String query,
@@ -143,7 +151,8 @@ public class AdvancedJudgeUnderTest {
      *   "Evaluate the response for the query using calibrated anchors:\n" +
      *   "Query: " + query + "\nResponse: " + response + "\n" +
      *   "Rate each dimension 1.0 to 5.0:\nCorrectness: <score>\nCompleteness: <score>\nConciseness: <score>\nFeedback: <text>"
-     * - Parse scores for the 3 dimensions (clamp each between 1.0 and 5.0).
+     * - Parse scores for the 3 dimensions using regex: {@code Pattern.compile("(?i)" + dimension + ":\\s*([0-9]+(?:\\.[0-9]+)?)")}
+     *   for "Correctness", "Completeness", and "Conciseness" (clamp each between 1.0 and 5.0, default 3.0f if unparsed).
      * - Classify anchor match for each:
      *   < 2.5 -> "Level 1 (Poor)", 2.5 to 3.9 -> "Level 3 (Adequate)", >= 4.0 -> "Level 5 (Exemplary)".
      * - normalizedScore = (s1 + s2 + s3) / 15.0f.

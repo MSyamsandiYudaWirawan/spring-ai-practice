@@ -6,6 +6,8 @@ import phase02.DecisionModelContracts.DecisionEnvelope;
 import phase02.DecisionModelContracts.OptimizationDecision;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service under test — THE ONLY FILE YOU MODIFY.
@@ -90,13 +92,13 @@ public class DecisionEngineUnderTest {
     /**
      * Scenario 6: Fallback semi-structured diagnostic prose extraction (FallbackDecisionExtractor pattern).
      * When model articulates reasoning in prose without JSON brackets:
-     * - Uses regex to extract:
-     *     - hypothesis category (H1-H7)
-     *     - confidence (default 0.8)
-     *     - template (jar-unpack, hikari-pool, virtual-threads)
-     *     - signal to eliminate (default JavaMonitorEnter)
-     *     - target metric (default p95)
-     *     - ledger direction (strengthen/weaken, default strengthen)
+     * - Uses regex to extract (pre-compiled patterns provided below):
+     *     - hypothesis category (H1-H7): {@code PROSE_HYPOTHESIS_PATTERN} ("(?i)\\b(H[1-7])\\b")
+     *     - confidence (default 0.8): {@code PROSE_CONFIDENCE_PATTERN} ("(?i)confidence\\s+([0-9]*\\.?[0-9]+)")
+     *     - template (jar-unpack, hikari-pool, virtual-threads): {@code PROSE_TEMPLATE_PATTERN} ("(?i)template\\s+([a-z0-9-]+)")
+     *     - signal to eliminate (default JavaMonitorEnter): {@code PROSE_SIGNAL_PATTERN} ("(?i)(JavaMonitorEnter|SocketRead|ObjectAllocationSample)")
+     *     - target metric (default p95): {@code PROSE_METRIC_PATTERN} ("(?i)\\b(p95|median|rps|error_rate)\\b")
+     *     - ledger direction (strengthen/weaken, default strengthen): {@code PROSE_DIRECTION_PATTERN} ("(?i)\\b(strengthen|weaken)\\b")
      * - Reconstructs and returns an OptimizationDecision with:
      *     - hypothesis: category, confidence, and rationale
      *     - prediction: metric, direction fixed to "improve", and signalToEliminate
@@ -104,6 +106,13 @@ public class DecisionEngineUnderTest {
      *     - change: kind = "template", template name, null edits, empty/null parameters
      * - Returns null if text is null, blank, or missing required diagnostic indicators (e.g. hypothesis or template).
      */
+    public static final Pattern PROSE_HYPOTHESIS_PATTERN = Pattern.compile("(?i)\\b(H[1-7])\\b");
+    public static final Pattern PROSE_CONFIDENCE_PATTERN = Pattern.compile("(?i)confidence\\s+([0-9]*\\.?[0-9]+)");
+    public static final Pattern PROSE_TEMPLATE_PATTERN = Pattern.compile("(?i)template\\s+([a-z0-9-]+)");
+    public static final Pattern PROSE_SIGNAL_PATTERN = Pattern.compile("(?i)(JavaMonitorEnter|SocketRead|ObjectAllocationSample)");
+    public static final Pattern PROSE_METRIC_PATTERN = Pattern.compile("(?i)\\b(p95|median|rps|error_rate)\\b");
+    public static final Pattern PROSE_DIRECTION_PATTERN = Pattern.compile("(?i)\\b(strengthen|weaken)\\b");
+
     public OptimizationDecision fallbackExtractFromProse(String proseText) {
         // DEFECT (Scenario 6): Returns null; does not attempt regex extraction from prose.
         return null;

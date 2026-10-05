@@ -175,6 +175,13 @@ When an LLM provides a clear diagnostic rationale in natural language prose but 
 
 ### TigerStyle Fix
 ```java
+public static final Pattern PROSE_HYPOTHESIS_PATTERN = Pattern.compile("(?i)\\b(H[1-7])\\b");
+public static final Pattern PROSE_CONFIDENCE_PATTERN = Pattern.compile("(?i)confidence\\s+([0-9]*\\.?[0-9]+)");
+public static final Pattern PROSE_TEMPLATE_PATTERN = Pattern.compile("(?i)template\\s+([a-z0-9-]+)");
+public static final Pattern PROSE_SIGNAL_PATTERN = Pattern.compile("(?i)(JavaMonitorEnter|SocketRead|ObjectAllocationSample)");
+public static final Pattern PROSE_METRIC_PATTERN = Pattern.compile("(?i)\\b(p95|median|rps|error_rate)\\b");
+public static final Pattern PROSE_DIRECTION_PATTERN = Pattern.compile("(?i)\\b(strengthen|weaken)\\b");
+
 public OptimizationDecision fallbackExtractFromProse(String proseText) {
     if (proseText == null || proseText.isBlank()) {
         return null;
