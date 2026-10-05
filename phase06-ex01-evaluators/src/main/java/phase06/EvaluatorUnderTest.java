@@ -175,29 +175,13 @@ public class EvaluatorUnderTest {
      * - If llmOutput is null or blank, or if "SCORE:" is missing or unparseable:
      *   throw IllegalArgumentException.
      * <p>
-     * Implementation Guidance:
-     * - Option A (Pre-compiled Regex): Use the provided {@link #SCORE_PATTERN} and {@link #REASON_PATTERN} constants.
-     *   SCORE_PATTERN breakdown:
-     *   - Matches case-insensitive prefix "score:" with optional spaces.
-     *   - Group 1: numerator or decimal number (e.g. "4" or "0.95").
-     *   - Group 2: optional denominator following slash (e.g. "5" in "4/5").
-     *   Parsing logic:
-     *   - Matcher sm = SCORE_PATTERN.matcher(llmOutput);
-     *   - if (!sm.find()) throw new IllegalArgumentException("Unable to parse score");
-     *   - float num = Float.parseFloat(sm.group(1));
-     *   - float score = (sm.group(2) != null) ? (num / Float.parseFloat(sm.group(2))) : (num > 1.0f ? num / 5.0f : num);
-     * - Option B (Plain String Parsing): Alternatively, avoid regex altogether!
-     *   Iterate lines via {@code llmOutput.lines()}, find line starting with "score:" (ignore case),
-     *   split on ':', trim, and if contains '/', split on '/' to divide numerator by denominator.
+     * Note: Pre-compiled {@link #SCORE_PATTERN} and {@link #REASON_PATTERN} constants are provided below.
      */
     public static class RubricScoreParser {
 
         /**
          * Pre-compiled Regex Pattern for parsing score lines:
-         * <ul>
-         *   <li>Group 1: Numerator or decimal value (e.g., "4" or "0.95")</li>
-         *   <li>Group 2: Optional denominator following slash (e.g., "5" in "4/5")</li>
-         * </ul>
+         * Group 1: Numerator or decimal value. Group 2: Optional denominator after slash.
          */
         public static final Pattern SCORE_PATTERN =
                 Pattern.compile("(?i)score:\\s*([0-9]+(?:\\.[0-9]+)?)(?:\\s*/\\s*([0-9]+(?:\\.[0-9]+)?))?");

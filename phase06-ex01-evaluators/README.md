@@ -30,48 +30,11 @@ This drill provides 10 high-repetition scenarios building instinctive muscle mem
 | **03** | `NoiseFloorThresholdEvaluator` | Deterministic telemetry keep gate (from Diagnostician `KeepRule` v2): verifies telemetry deltas clear noise floors (`rpsFloor`, `p95FloorMs`) and guards against `failRate` regressions. |
 | **04** | `GroundTruthAccuracyEvaluator` | Deterministic root-cause convergence evaluator (from Diagnostician `EvalScorerImpl`): checks if diagnosed category matches ground truth (case-insensitive after trim). |
 | **05** | `SingleMetricThresholdEvaluator` | Configurable numeric threshold gate: validates `0.0 <= threshold <= 1.0` and asserts whether incoming score meets or exceeds threshold. |
-| **06** | `RubricScoreParser` | Structured LLM judge parser: extracts normalized score (e.g. `4/5` -> `0.80`, `0.95` -> `0.95`) and reasoning text from formatted LLM judge output. |
+| **06** | `RubricScoreParser` | Structured LLM judge parser: extracts normalized score (e.g. `4/5` -> `0.80`, `0.95` -> `0.95`) and reasoning text from formatted LLM judge output. Pre-compiled patterns provided in class. |
 | **07** | `BinaryJudgeEvaluator` | Prompt-driven LLM-as-a-judge: prompts `ChatClient` with explicit evaluation instructions and parses `PASS`/`FAIL` verdict. |
 | **08** | `WeightedMultiCriteriaEvaluator` | Multi-dimension score aggregator: validates criterion weights sum to 1.0, computes weighted composite score, and evaluates against passing threshold. |
 | **09** | `ShortCircuitCompositeEvaluator` | Chained evaluator composite with fast-fail: evaluates chain sequentially; immediately returns on first failure without executing remaining evaluators. |
 | **10** | `BatchEvaluationRunner` | Benchmark suite runner: executes batch of evaluation requests, computes `BenchmarkSummary` (`passRate`, `averageScore`), and enforces minimum pass-rate threshold. |
-
----
-
-## 🔍 Scenario 6 Implementation Guide: `RubricScoreParser`
-
-LLM judges commonly return evaluation verdicts as semi-structured text:
-```
-SCORE: 4/5
-REASON: The diagnosis pinpointed JDBC connection leak accurately.
-```
-Or decimal scores:
-```
-Score: 0.95
-Reason: High clarity and actionable instructions.
-```
-
-To avoid guessing regexes, `RubricScoreParser` provides pre-compiled constants:
-- **`SCORE_PATTERN`:** `(?i)score:\s*([0-9]+(?:\.[0-9]+)?)(?:\s*/\s*([0-9]+(?:\.[0-9]+)?))?`
-  - `(?i)score:\s*` matches the case-insensitive `SCORE:` header.
-  - Group 1: `([0-9]+(?:\.[0-9]+)?)` captures the numerator or standalone decimal/integer score.
-  - Group 2: Optional denominator following `/` (e.g., `5` in `4/5`).
-- **`REASON_PATTERN`:** `(?i)reason:\s*(.*)`
-  - Group 1 captures all explanation text after `REASON:`.
-
-**Two valid ways to implement `parse(String llmOutput)`:**
-1. **Using pre-compiled patterns:**
-   ```java
-   Matcher sm = SCORE_PATTERN.matcher(llmOutput);
-   if (!sm.find()) throw new IllegalArgumentException("Unable to parse score");
-   float num = Float.parseFloat(sm.group(1));
-   float score = (sm.group(2) != null) ? (num / Float.parseFloat(sm.group(2))) : (num > 1.0f ? num / 5.0f : num);
-   ```
-2. **Using plain string manipulation (No regex needed):**
-   ```java
-   // Scan lines: find line starting with "score:" (ignore case)
-   // Split on ':', trim, and if contains '/', parse numerator and denominator.
-   ```
 
 ---
 
