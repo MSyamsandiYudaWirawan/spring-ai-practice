@@ -38,6 +38,43 @@ This drill provides 10 high-repetition scenarios building instinctive muscle mem
 
 ---
 
+## 🔍 Scenario 6 Implementation Guide: `RubricScoreParser`
+
+LLM judges commonly return evaluation verdicts as semi-structured text:
+```
+SCORE: 4/5
+REASON: The diagnosis pinpointed JDBC connection leak accurately.
+```
+Or decimal scores:
+```
+Score: 0.95
+Reason: High clarity and actionable instructions.
+```
+
+To avoid guessing regexes, `RubricScoreParser` provides pre-compiled constants:
+- **`SCORE_PATTERN`:** `(?i)score:\s*([0-9]+(?:\.[0-9]+)?)(?:\s*/\s*([0-9]+(?:\.[0-9]+)?))?`
+  - `(?i)score:\s*` matches the case-insensitive `SCORE:` header.
+  - Group 1: `([0-9]+(?:\.[0-9]+)?)` captures the numerator or standalone decimal/integer score.
+  - Group 2: Optional denominator following `/` (e.g., `5` in `4/5`).
+- **`REASON_PATTERN`:** `(?i)reason:\s*(.*)`
+  - Group 1 captures all explanation text after `REASON:`.
+
+**Two valid ways to implement `parse(String llmOutput)`:**
+1. **Using pre-compiled patterns:**
+   ```java
+   Matcher sm = SCORE_PATTERN.matcher(llmOutput);
+   if (!sm.find()) throw new IllegalArgumentException("Unable to parse score");
+   float num = Float.parseFloat(sm.group(1));
+   float score = (sm.group(2) != null) ? (num / Float.parseFloat(sm.group(2))) : (num > 1.0f ? num / 5.0f : num);
+   ```
+2. **Using plain string manipulation (No regex needed):**
+   ```java
+   // Scan lines: find line starting with "score:" (ignore case)
+   // Split on ':', trim, and if contains '/', parse numerator and denominator.
+   ```
+
+---
+
 ## Verification Commands
 
 ```powershell

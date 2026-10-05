@@ -160,11 +160,20 @@ public class EvaluatorUnderTest {
 
     /**
      * Scenario 6: Structured LLM Judge Rubric Score Parser.
+     * <p>
+     * Pattern Breakdown:
+     * - (?i)score:\s*                  -> Case-insensitive prefix "score:" with optional trailing spaces
+     * - ([0-9]+(?:\.[0-9]+)?)          -> Group 1: Captures integer or decimal numerator/score (e.g. "4", "0.95")
+     * - (?:\s*/\s*([0-9]+(?:\.[0-9]+)?))? -> Optional non-capturing group for "/ denom", Group 2 = denominator ("5")
+     * <p>
+     * Alternative Non-Regex Approach:
+     * You can also implement this without regex by iterating {@code llmOutput.lines()}, checking
+     * {@code line.toLowerCase().startsWith("score:")}, splitting by ':', and checking for '/' in the value.
      */
     public static class RubricScoreParser {
-        private static final Pattern SCORE_PATTERN =
+        public static final Pattern SCORE_PATTERN =
                 Pattern.compile("(?i)score:\\s*([0-9]+(?:\\.[0-9]+)?)(?:\\s*/\\s*([0-9]+(?:\\.[0-9]+)?))?");
-        private static final Pattern REASON_PATTERN =
+        public static final Pattern REASON_PATTERN =
                 Pattern.compile("(?i)reason:\\s*(.*)", Pattern.DOTALL);
 
         public static RubricScore parse(String llmOutput) {

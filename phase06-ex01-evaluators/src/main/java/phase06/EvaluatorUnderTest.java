@@ -12,6 +12,8 @@ import phase06.EvaluatorContracts.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service under test — THE ONLY FILE YOU MODIFY for Phase 06 Exercise 01.
@@ -163,16 +165,50 @@ public class EvaluatorUnderTest {
      * <p>
      * Instructions:
      * - Parse text formatted as "SCORE: <value>" and "REASON: <text>" (case-insensitive).
-     * - Values can be:
-     * - fraction: "4/5" -> 4.0 / 5.0 = 0.8f
-     * - fraction: "8/10" -> 8.0 / 10.0 = 0.8f
-     * - decimal: "0.85" -> 0.85f
-     * - integer: "4" (assumed out of 5) -> 4.0 / 5.0 = 0.8f
-     * - Extract reason text following "REASON:" (trimmed).
+     * - Supported value formats:
+     *   - Fraction: "4/5" -> 4.0 / 5.0 = 0.80f
+     *   - Fraction: "8/10" -> 8.0 / 10.0 = 0.80f
+     *   - Decimal: "0.85" -> 0.85f
+     *   - Integer: "4" (assumed out of 5 if > 1.0) -> 4.0 / 5.0 = 0.80f
+     * - Extract reason text following "REASON:" (trimmed, default to "Unspecified" if missing).
      * - Return new RubricScore(normalizedScore, reason).
-     * - If "SCORE:" is missing or invalid, throw IllegalArgumentException("Unable to parse rubric score from: " + llmOutput).
+     * - If llmOutput is null or blank, or if "SCORE:" is missing or unparseable:
+     *   throw IllegalArgumentException.
+     * <p>
+     * Implementation Guidance:
+     * - Option A (Pre-compiled Regex): Use the provided {@link #SCORE_PATTERN} and {@link #REASON_PATTERN} constants.
+     *   SCORE_PATTERN breakdown:
+     *   - Matches case-insensitive prefix "score:" with optional spaces.
+     *   - Group 1: numerator or decimal number (e.g. "4" or "0.95").
+     *   - Group 2: optional denominator following slash (e.g. "5" in "4/5").
+     *   Parsing logic:
+     *   - Matcher sm = SCORE_PATTERN.matcher(llmOutput);
+     *   - if (!sm.find()) throw new IllegalArgumentException("Unable to parse score");
+     *   - float num = Float.parseFloat(sm.group(1));
+     *   - float score = (sm.group(2) != null) ? (num / Float.parseFloat(sm.group(2))) : (num > 1.0f ? num / 5.0f : num);
+     * - Option B (Plain String Parsing): Alternatively, avoid regex altogether!
+     *   Iterate lines via {@code llmOutput.lines()}, find line starting with "score:" (ignore case),
+     *   split on ':', trim, and if contains '/', split on '/' to divide numerator by denominator.
      */
     public static class RubricScoreParser {
+
+        /**
+         * Pre-compiled Regex Pattern for parsing score lines:
+         * <ul>
+         *   <li>Group 1: Numerator or decimal value (e.g., "4" or "0.95")</li>
+         *   <li>Group 2: Optional denominator following slash (e.g., "5" in "4/5")</li>
+         * </ul>
+         */
+        public static final Pattern SCORE_PATTERN =
+                Pattern.compile("(?i)score:\\s*([0-9]+(?:\\.[0-9]+)?)(?:\\s*/\\s*([0-9]+(?:\\.[0-9]+)?))?");
+
+        /**
+         * Pre-compiled Regex Pattern for parsing reason lines:
+         * Group 1: Everything following "REASON:".
+         */
+        public static final Pattern REASON_PATTERN =
+                Pattern.compile("(?i)reason:\\s*(.*)", Pattern.DOTALL);
+
         public static RubricScore parse(String llmOutput) {
             // DEFECT (Scenario 6): Always returns 0.0 without parsing
             if (llmOutput == null || llmOutput.isBlank()) {
