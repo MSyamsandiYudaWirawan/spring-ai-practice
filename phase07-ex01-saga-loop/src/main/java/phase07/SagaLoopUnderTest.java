@@ -283,14 +283,35 @@ public class SagaLoopUnderTest {
      * Scenario 10: Autonomous Saga Agent Loop Runner.
      * <p>
      * Instructions:
-     * - Run loop for up to config.maxIterations turns:
-     *   - Check turn limits.
-     *   - DECIDE: Extract proposal via DecideProposalExtractor. If empty -> wastedCount++, turn to next.
-     *   - APPLY: ApplyChange via ApplyAndCompensateStep. If REVERTED -> revertedCount++, turn to next.
-     *   - MEASURE & JUDGE: Measure telemetry via NoiseFloorKeepGate.
-     *     - If KEPT: keptCount++, advance baseline telemetry and lastKeptSha.
-     *     - If REVERTED: revertedCount++.
-     * - On finish or breach: return LoopSummary.
+     * - Initialize loop state:
+     *   - {@code int turns = Math.min(config.maxIterations(), simulatedTurnTelemetry.size());}
+     *   - {@code String lastKeptSha = workspace.getHeadSha();}
+     *   - {@code TelemetryMeasurement currentBaseline = initialBaseline;}
+     *   - {@code StateTransitionEngine state = new StateTransitionEngine();}
+     *   - Initialize counters: {@code keptCount = 0, revertedCount = 0, wastedCount = 0, totalTokens = 0}.
+     * - Iterate turns {@code for (int t = 0; t < turns; t++)} where {@code turnNum = t + 1}:
+     *   1. <b>DECIDE:</b>
+     *      - {@code state.transitionTo(SagaState.DECIDE);}
+     *      - Extract proposal via {@link DecideProposalExtractor#extractProposal(ChatClient, String)} passing any prompt (e.g. {@code "propose turn " + turnNum}).
+     *      - Add token accounting: {@code totalTokens += 200;} (simulated turn tokens).
+     *      - If proposal is empty: increment {@code wastedCount++} and {@code continue} to next turn.
+     *   2. <b>APPLY:</b>
+     *      - {@code state.transitionTo(SagaState.APPLY);}
+     *      - Call {@link ApplyAndCompensateStep#applyChange(VirtualWorkspace, DecisionProposal, String, Predicate)}
+     *        passing {@code (workspace, proposalOpt.get(), lastKeptSha, buildCheck)}.
+     *      - If outcome == {@link IterationOutcome#REVERTED}: increment {@code revertedCount++} and {@code continue} to next turn.
+     *   3. <b>MEASURE & JUDGE:</b>
+     *      - {@code state.transitionTo(SagaState.MEASURE);}
+     *      - {@code state.transitionTo(SagaState.JUDGE);}
+     *      - Retrieve candidate telemetry: {@code TelemetryMeasurement turnCandidate = simulatedTurnTelemetry.get(t);}
+     *      - Define candidate commit SHA: {@code String candidateSha = "sha-" + turnNum;}
+     *      - Call {@link NoiseFloorKeepGate#judgeTelemetry(VirtualWorkspace, TelemetryMeasurement, TelemetryMeasurement, NoiseFloors, String, String)}
+     *        passing {@code (workspace, turnCandidate, currentBaseline, config.noiseFloors(), lastKeptSha, candidateSha)}.
+     *      - If outcome == {@link IterationOutcome#KEPT}: increment {@code keptCount++}, update {@code lastKeptSha = candidateSha}, and update {@code currentBaseline = turnCandidate}.
+     *      - Else: increment {@code revertedCount++}.
+     * - Termination:
+     *   - {@code state.transitionTo(SagaState.FINISH);}
+     *   - Return {@code new LoopSummary(turns, keptCount, revertedCount, wastedCount, totalTokens, lastKeptSha, state.getState())}.
      */
     public static class AutonomousSagaLoopRunner {
         public static LoopSummary executeLoop(
