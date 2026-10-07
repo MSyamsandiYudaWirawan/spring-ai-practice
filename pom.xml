@@ -26,9 +26,7 @@
         <module>phase05-ex02-advanced-harness</module>
         <module>phase06-ex01-evaluators</module>
         <module>phase06-ex02-advanced-judges</module>
-        <module>phase07-ex01-saga-loop</module>
-        <module>phase07-ex02-advanced-saga</module>
-        <module>phase08-production-service</module>
+        <module>phase07-ex01-vector-stores</module>
     </modules>
 
     <properties>
