@@ -27,6 +27,7 @@
         <module>phase06-ex01-evaluators</module>
         <module>phase06-ex02-advanced-judges</module>
         <module>phase07-ex01-vector-stores</module>
+        <module>phase07-ex02-rag-advisors</module>
     </modules>
 
     <properties>
