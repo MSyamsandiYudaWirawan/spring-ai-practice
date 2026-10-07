@@ -27,9 +27,9 @@ This repository provides **17 high-repetition deliberate practice drills (163 to
 
 ---
 
-## 🏗️ The 8-Phase Curriculum
+## 🏗️ The Curriculum & Roadmap
 
-Each phase contains progressive drills:
+Each foundational phase contains progressive drills:
 1. **Exercise 01:** Core repetition drill (building instinctive fluency on foundational mechanics).
 2. **Exercise 02:** Advanced resilient drill (edge cases, failure injection, circuit-breakers, and high-stress scenarios).
 
@@ -43,6 +43,17 @@ Each phase contains progressive drills:
 | **Phase 06** | [`phase06-ex01-evaluators`](phase06-ex01-evaluators/)<br>[`phase06-ex02-advanced-judges`](phase06-ex02-advanced-judges/) | Spring AI `Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, noise floor keep gates, rubric score parsers, pairwise A/B tournament judges. | 20 Scenarios |
 | **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking, embedding generation, cosine similarity, metadata filtering, MMR diversity re-ranking, deduplication, `DocumentRetriever`, contextual prompt augmentation, query expansion, HyDE, token budget packing. | 24 Scenarios |
 | **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, URI templates, log notifications, remote client discovery, multi-server federation, dynamic tool reloading, sampling, agentic gateway. | 24 Scenarios |
+
+### 🔮 Extensible Future Roadmap (In Planning)
+
+Because the production agentic ecosystem is rapidly advancing, this repository is designed as an open, extensible practice ground. The following advanced phases are currently in research and design:
+
+| Phase | Proposed Focus | Key Primitives & Scenarios | Status |
+|---|---|---|---|
+| **Phase 09** | **Multi-Agent Orchestration & Hierarchical Delegation** | Supervisor/coordinator routing, specialized sub-agent delegation, agent-to-agent message passing, consensus voting, worker handoffs. | 📋 *In Planning* |
+| **Phase 10** | **Long-Term Agent Memory & Context Compaction** | Semantic episodic memory recall, sliding-window conversation compaction, entity graph extraction, automated token-window budget truncation. | 📋 *In Planning* |
+| **Phase 11** | **Human-in-the-Loop (HITL) & Streaming Control Gates** | Interruptible reactive streaming (`Flux<ServerSentEvent>`), manual approval checkpoints for sensitive tool execution, pause-and-resume workflows. | 📋 *In Planning* |
+| **Phase 12** | **Durable State Machine Checkpointing & Crash Recovery** | Resilient agentic execution loops with Spring StateMachine / durable saga patterns, checkpointing cycle state to Postgres, graceful recovery from container restarts. | 📋 *In Planning* |
 
 ---
 
@@ -65,6 +76,7 @@ phaseXX-exYY-<name>/
 3. **Fail-Fast Domain Invariants:** Validate non-null boundaries, check regexes, and defend against corrupted LLM outputs immediately (`Objects.requireNonNull`, `isBlank()`).
 4. **Zero Flakiness:** All verifier requirements and mandatory error keywords are documented directly in the method Javadoc and exercise `README.md`.
 5. **Zero Token Cost:** All drills execute 100% offline in milliseconds using deterministic test seams.
+6. **Synthesize Endless Custom Drills with AI:** Because contracts, models, test doubles, and verifiers are strictly decoupled, this codebase acts as a pristine few-shot template. If you want more practice on a specific edge case, feed any drill and its verifier into Claude or ChatGPT and prompt it: *"Generate 5 new edge-case scenarios following this exact verifier pattern and contract."*
 
 ---
 
@@ -117,7 +129,7 @@ phaseXX-exYY-<name>/
 ## 🎯 Core Pedagogical Philosophy
 In complex agentic systems, pure LLM inference is small (~20%); the vast majority of engineering is deterministic plumbing, state machines, guardrails, schema repair, and isolated test harnesses.
 
-By completing these 8 phases, you will master writing these patterns cold — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems.
+By completing these foundational phases, you will master writing these patterns cold — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems — with an extensible architecture prepared for multi-agent swarms and durable state machines.
 
 ---
 

@@ -21,7 +21,8 @@
      - Method Javadoc/comments in the code-under-test (`*UnderTest.java`).
      - The exercise `README.md`.
      - In addition, verifiers must use case-resilient matching (`.toLowerCase().contains(...)`) with reasonable synonyms so tests are never flaky.
-  9. **Zero Specification Guesswork:** A failing test must indicate a real logic or contract breach, never a guessing game about secret verifier keywords.
+   9. **Zero Specification Guesswork:** A failing test must indicate a real logic or contract breach, never a guessing game about secret verifier keywords.
+   10. **Few-Shot Template for AI Drill Synthesis:** Because contracts, models, test doubles, and verifiers are strictly decoupled and self-contained, exercises act as clean few-shot templates. Developers can prompt an external LLM with any existing verifier and contract to synthesize endless custom edge-case scenarios on demand.
 
 ---
 
@@ -37,6 +38,10 @@
 | **Phase 06** | LLM-as-a-Judge & Evaluators | `KeepRule`, `EvalScorer`, ground-truth scoring (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
 | **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
+| **Phase 09** | Multi-Agent Orchestration & Hierarchical Delegation | Supervisor routing, specialized sub-agent handoffs, consensus voting | 📋 **IN PLANNING** | Future Roadmap Phase |
+| **Phase 10** | Long-Term Agent Memory & Context Compaction | Semantic episodic memory recall, sliding-window compaction, entity graphs | 📋 **IN PLANNING** | Future Roadmap Phase |
+| **Phase 11** | Human-in-the-Loop (HITL) & Streaming Control Gates | Reactive streaming approval gates, manual authorization checkpoints | 📋 **IN PLANNING** | Future Roadmap Phase |
+| **Phase 12** | Durable State Machine Checkpointing & Crash Recovery | Spring StateMachine, durable saga patterns, Postgres loop persistence | 📋 **IN PLANNING** | Future Roadmap Phase |
 
 ### Phase 01 Completed History:
 1. `phase01-ex01-chat-basics`: Core roles, prompt templating, builder defaults (3 scenarios). **PASSED (exit 0)**.
@@ -62,6 +67,20 @@
 ### Phase 08 Completed History:
 1. `phase08-ex01-mcp-server`: MCP Server Tool & Resource Specification, Schemas, URI Templates & Log Notifications (12 scenarios: `ServerCapabilitiesBuilder`, `ToolSpecificationGenerator`, `SyncToolExecutionHandler`, `ToolExecutionErrorWrapper`, `SpringAiToolCallbackAdapter`, `ResourceRegistrationHandler`, `PromptRegistrationHandler`, `ToolAllowlistSecurityFilter`, `McpServerAuditRecorder`, `EnterpriseMcpServerRegistry`, `ParameterizedResourceTemplateMatcher`, `McpProtocolLogNotificationDispatcher`). **PASSED (exit 0)**.
 2. `phase08-ex02-mcp-client`: MCP Client Integration, Multi-Server Tool Routing, Dynamic Tool Reloading & Sampling (12 scenarios: `McpClientAdapterBuilder`, `RemoteToolDefinitionAdapter`, `McpSyncToolCallbackAdapter`, `RemoteToolDiscoveryEngine`, `PrefixedToolNameResolver`, `RemoteResourceContentReader`, `RemotePromptTemplateRenderer`, `McpToolExecutionFaultHandler`, `MultiServerClientRegistry`, `EnterpriseAgenticGateway`, `DynamicToolListReloader`, `McpSamplingHandler`). **PASSED (exit 0)**.
+
+### Upcoming Roadmap Phases (In Planning):
+1. **Phase 09: Multi-Agent Orchestration & Hierarchical Delegation**
+   - *Target Mechanics:* Supervisor/coordinator router agents, specialized sub-agent task delegation, peer-to-peer message envelopes, consensus voting strategies, and worker handoffs.
+   - *Production Diagnostician Link:* Orchestrating specialized diagnostic sub-agents (e.g. MemoryAgent, LockContentionAgent, DiskIOAgent) under a single MasterCoordinator.
+2. **Phase 10: Long-Term Agent Memory & Sliding Context Compaction**
+   - *Target Mechanics:* Semantic episodic memory recall, sliding-window conversation compaction, entity graph extraction, automated token-window budget truncation, and persistent conversation snapshots.
+   - *Production Diagnostician Link:* Preserving multi-benchmark hypothesis history across agent runs without overflowing context boundaries.
+3. **Phase 11: Human-in-the-Loop (HITL) & Streaming Control Gates**
+   - *Target Mechanics:* Interruptible reactive streaming (`Flux<ServerSentEvent>`), manual approval checkpoints for sensitive tool execution, pause-and-resume workflows, and user clarification dialogues.
+   - *Production Diagnostician Link:* Gatekeeping high-impact runtime operations (e.g., git commits, container restarts, or JVM argument overrides) behind operator sign-off.
+4. **Phase 12: Durable State Machine Checkpointing & Crash Recovery**
+   - *Target Mechanics:* Resilient cyclic execution loops using Spring StateMachine / durable saga patterns, checkpointing cycle state to Postgres, and graceful recovery from container restarts or network partitions.
+   - *Production Diagnostician Link:* Robustly maintaining the `DECIDE -> APPLY -> MEASURE -> JUDGE` state machine across node crashes.
 
 ---
 
