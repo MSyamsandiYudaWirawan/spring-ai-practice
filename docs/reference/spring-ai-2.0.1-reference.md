@@ -1033,3 +1033,299 @@ Kubernetes rolling restarts must not terminate active agent loops mid-flight:
 - Implement `SmartLifecycle`.
 - On `stop(Runnable callback)`: set `isRunning = false` (reject new inbound requests with `ServiceDrainingException`).
 - Poll active request counter until $0$ (up to `maxWaitMs`), then execute callback to allow clean JVM shutdown.
+
+---
+
+## 16. Retrieval-Augmented Generation (RAG) & Vector Stores
+
+Spring AI 2.0.1 provides a modular, production-grade RAG framework decoupled into pre-retrieval, retrieval, post-retrieval, and generation phases.
+
+### 16.1 Key Dependencies
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-vector-store</artifactId>
+</dependency>
+<!-- For specific backends: pgvector, redis, qdrant, weaviate, neo4j, etc. -->
+```
+
+### 16.2 Core Document & Search Contracts
+
+#### `Document` Contract
+```java
+package org.springframework.ai.document;
+
+public class Document {
+    public Document(String text);
+    public Document(String text, Map<String, Object> metadata);
+    public Document(String id, String text, Map<String, Object> metadata);
+
+    public String getId();
+    public String getText();
+    public Map<String, Object> getMetadata();
+    public Double getScore();
+    public float[] getEmbedding();
+    public Document mutate();
+}
+```
+
+#### `VectorStore` Contract
+```java
+package org.springframework.ai.vectorstore;
+
+public interface VectorStore {
+    void add(List<Document> documents);
+    void delete(List<String> idList);
+    List<Document> similaritySearch(String query);
+    List<Document> similaritySearch(SearchRequest request);
+}
+```
+
+#### `SearchRequest` Fluent Builder
+```java
+SearchRequest request = SearchRequest.builder()
+        .query("out of memory error")
+        .topK(5)
+        .similarityThreshold(0.75)
+        .filterExpression("category == 'incident' && severity >= 3")
+        .build();
+```
+
+#### Metadata Filter DSL (`Filter.Expression` & `FilterExpressionBuilder`)
+Spring AI provides a type-safe metadata filtering DSL:
+```java
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+
+FilterExpressionBuilder b = new FilterExpressionBuilder();
+
+// Equals
+Filter.Expression expr = b.eq("tier", "enterprise").build();
+
+// In list
+Filter.Expression inExpr = b.in("environment", List.of("prod", "staging")).build();
+
+// Boolean Combinations
+Filter.Expression complex = b.and(
+        b.eq("status", "ACTIVE"),
+        b.or(b.eq("role", "ADMIN"), b.gte("clearanceLevel", 4))
+).build();
+```
+
+### 16.3 Text Splitting & Embedding Mechanics
+1. **Fixed Token / Word Boundary Chunking:**
+   - Overlap window ensures context continuity across chunk seams (e.g., chunk size 100, overlap 20).
+   - Invariant: `overlapTokens < chunkSizeTokens`.
+2. **Normalized Cosine Similarity:**
+   $$\text{CosineSimilarity}(\vec{A}, \vec{B}) = \frac{\vec{A} \cdot \vec{B}}{\|\vec{A}\|_2 \|\vec{B}\|_2}$$
+   - Guard against zero-vector division by zero: if magnitude is $0.0$, return $0.0$.
+   - Clamp numerical drift: `Math.max(-1.0, Math.min(1.0, similarity))`.
+3. **Reciprocal Rank Fusion (RRF):**
+   Combine keyword BM25 and vector semantic ranks:
+   $$\text{RRF}(d) = \sum_{m \in \{\text{keyword}, \text{semantic}\}} \frac{1}{60 + \text{rank}_m(d)}$$
+
+### 16.4 Spring AI Modular RAG Advisor Stack
+
+The Spring AI RAG pipeline follows four distinct lifecycle phases:
+
+```
+User Query ──► [Pre-Retrieval] ──► [Retrieval] ──► [Post-Retrieval] ──► [Augmentation / Advisor] ──► LLM Call
+                 • Multi-Query       • VectorStore     • Reranker            • Prompt Augmenter
+                 • Query Rewrite     • Metadata Filter • Deduplication       • Token Packing
+```
+
+#### 1. Document Retriever
+```java
+public interface DocumentRetriever {
+    List<Document> retrieve(Query query);
+}
+```
+Default implementation: `VectorStoreDocumentRetriever.builder().vectorStore(store).topK(5).similarityThreshold(0.7).build()`.
+
+#### 2. Query Transformation & Expansion
+- **`MultiQueryExpander`**: Generates $N$ semantic query variants using an LLM to mitigate lexical mismatch.
+- **`RewriteQueryTransformer`**: Resolves conversational pronouns (`"What about that one?"` -> `"What about the PetClinic database bottleneck?"`) using chat history.
+
+#### 3. Post-Retrieval Reranking & Joining
+- **`ConcatenationDocumentJoiner`**: Merges document lists from multi-query retrievals, deduplicating by document ID or text content.
+- **`DocumentPostProcessor`**: Custom reranking, metadata recency scoring, or diversity filtering (e.g., Maximal Marginal Relevance).
+
+#### 4. Contextual Query Augmentation & Advisor
+- **`ContextualQueryAugmenter`**: Formats documents into a contextual prompt block (`<context>...</context>`).
+- **`EmptyContextFallbackAugmenter`**: Handles empty retrieval results gracefully with pre-defined fallback prompt or out-of-domain notification.
+- **`RetrievalAugmentationAdvisor`**: Implements `CallAdvisor` to wire the entire pipeline into Spring AI `ChatClient`.
+
+```java
+RetrievalAugmentationAdvisor advisor = RetrievalAugmentationAdvisor.builder()
+        .documentRetriever(retriever)
+        .queryTransformers(List.of(rewriteTransformer))
+        .queryExpander(multiQueryExpander)
+        .documentJoiner(joiner)
+        .documentPostProcessors(List.of(reranker))
+        .queryAugmenter(augmenter)
+        .build();
+
+ChatClient client = ChatClient.builder(chatModel)
+        .defaultAdvisors(advisor)
+        .build();
+```
+
+---
+
+## 17. Model Context Protocol (MCP)
+
+Model Context Protocol (MCP) is an open standard created by Anthropic that standardizes how AI models connect to tools, data resources, and prompt templates across distributed environments. Spring AI 2.0.1 provides native first-class MCP server and client integration.
+
+### 17.1 Architecture Overview
+- **MCP Host**: The coordinating application (e.g. Spring Boot AI service, Claude Desktop).
+- **MCP Client**: Connects 1:1 to an MCP server, initiates tool calls, reads resources, and fetches prompts.
+- **MCP Server**: Lightweight process exposing domain-specific tools, resource files, and prompt templates over JSON-RPC 2.0.
+- **Transports**:
+  - `stdio`: Process-based standard input/output (local executables, Docker containers).
+  - `sse`: Server-Sent Events over HTTP (remote microservices).
+
+### 17.2 Dependencies
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-mcp</artifactId>
+    <version>2.0.1</version>
+</dependency>
+<dependency>
+    <groupId>io.modelcontextprotocol.sdk</groupId>
+    <artifactId>mcp-core</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+### 17.3 MCP Server Primitives (`phase08-ex01`)
+
+#### 1. Server Capabilities
+Declares what features the server supports during the initialization handshake:
+```java
+import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
+
+ServerCapabilities capabilities = ServerCapabilities.builder()
+        .tools(true)       // Enables tool execution
+        .resources(false, true) // subscribe=false, listChanged=true
+        .prompts(true)     // Enables prompt templates
+        .logging()         // Enables server log notifications
+        .build();
+```
+
+#### 2. Tool Specification & Schema Generation
+Tools expose JSON Schema for arguments:
+```java
+import io.modelcontextprotocol.spec.McpSchema.Tool;
+
+Tool tool = Tool.builder()
+        .name("query_metrics")
+        .description("Queries cluster telemetry metrics")
+        .inputSchema(Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "metric", Map.of("type", "string", "description", "Metric name"),
+                        "windowSeconds", Map.of("type", "integer", "description", "Window size")
+                ),
+                "required", List.of("metric")
+        ))
+        .build();
+```
+
+#### 3. Tool Execution & Error Handling (`SyncToolSpecification`)
+Spring AI wraps synchronous tool handlers into `SyncToolSpecification`:
+```java
+import org.springframework.ai.mcp.SyncToolSpecification;
+import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
+
+SyncToolSpecification spec = SyncToolSpecification.builder()
+        .tool(tool)
+        .callHandler((exchange, arguments) -> {
+            try {
+                String metric = (String) arguments.get("metric");
+                String telemetry = fetchMetric(metric);
+                return CallToolResult.builder()
+                        .isError(false)
+                        .content(List.of(new TextContent(telemetry)))
+                        .build();
+            } catch (Exception ex) {
+                // MCP protocol requires isError: true when a tool fails
+                return CallToolResult.builder()
+                        .isError(true)
+                        .content(List.of(new TextContent("Failed: " + ex.getMessage())))
+                        .build();
+            }
+        })
+        .build();
+```
+
+#### 4. Adapting Spring AI `ToolCallback` to MCP
+Convert standard Spring AI `@Tool` callbacks into MCP tool specifications:
+```java
+import org.springframework.ai.mcp.McpToolUtils;
+import org.springframework.ai.tool.ToolCallback;
+
+SyncToolSpecification syncSpec = McpToolUtils.toSyncToolSpecification(toolCallback);
+```
+
+#### 5. Resources & Prompts
+- **Resources**: URIs exposing data (`ResourceContents`, `TextResourceContents`, `BlobResourceContents`).
+- **Prompts**: Named prompt templates with parameterized arguments (`PromptMessage`, `GetPromptResult`).
+
+### 17.4 MCP Client Primitives (`phase08-ex02`)
+
+#### 1. Remote Tool Discovery & Name Prefixing
+When connecting to multiple MCP servers (e.g., GitHub server, Slack server, Database server), tool names may collide. Spring AI namespaces tools using `McpToolUtils.prefixedToolName`:
+```java
+import org.springframework.ai.mcp.McpToolUtils;
+
+// Prefix convention compresses words: "github" + "create_issue" -> "g_create_issue"
+String namespaced = McpToolUtils.prefixedToolName("github", "create_issue");
+```
+
+#### 2. Adapting Remote MCP Tools to Spring AI `ToolCallback`
+```java
+import org.springframework.ai.mcp.McpToolUtils;
+import org.springframework.ai.tool.ToolCallback;
+
+List<McpSchema.Tool> remoteTools = client.listTools();
+List<ToolCallback> callbacks = remoteTools.stream()
+        .map(t -> McpToolUtils.toToolCallback(client, t))
+        .toList();
+```
+
+#### 3. Federated Multi-Server Tool Routing
+Index tools by their prefixed names for $O(1)$ dispatch:
+```java
+public class MultiServerClientRegistry {
+    private final Map<String, McpClientAdapter> clients = new ConcurrentHashMap<>();
+    private final Map<String, McpClientAdapter> toolToClient = new ConcurrentHashMap<>();
+    private final Map<String, String> prefixedToOriginalTool = new ConcurrentHashMap<>();
+
+    public void register(String serverId, McpClientAdapter client) {
+        clients.put(serverId, client);
+        for (var tool : client.listTools()) {
+            String prefixed = McpToolUtils.prefixedToolName(serverId, tool.name());
+            toolToClient.put(prefixed, client);
+            prefixedToOriginalTool.put(prefixed, tool.name());
+        }
+    }
+
+    public CallToolResult execute(String prefixedToolName, Map<String, Object> arguments) {
+        McpClientAdapter client = toolToClient.get(prefixedToolName);
+        if (client == null) {
+            throw new McpClientBreachException("Unknown tool: " + prefixedToolName);
+        }
+        String originalName = prefixedToOriginalTool.get(prefixedToolName);
+        return client.callTool(originalName, arguments);
+    }
+}
+```
+
+#### 4. Registering MCP Callbacks with `ChatClient`
+```java
+ChatClient client = ChatClient.builder(chatModel)
+        .defaultToolCallbacks(federatedCallbacks)
+        .build();
+```
