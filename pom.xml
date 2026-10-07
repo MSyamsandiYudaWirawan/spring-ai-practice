@@ -28,6 +28,7 @@
         <module>phase06-ex02-advanced-judges</module>
         <module>phase07-ex01-vector-stores</module>
         <module>phase07-ex02-rag-advisors</module>
+        <module>phase08-ex01-mcp-server</module>
     </modules>
 
     <properties>
