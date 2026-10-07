@@ -36,8 +36,8 @@
 | **Phase 04** | Guardrails, Advisors & Token Budgets | `LoopConfig`, guardrail circuit-breakers (Step 9/12) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 05** | Deterministic Testing & Offline Harness | `AgentLoopFactory`, mock loop seams (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 06** | LLM-as-a-Judge & Evaluators | `KeepRule`, `EvalScorer`, ground-truth scoring (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 07** | The Saga Agent Loop (Capstone I) | Full `AgentLoop`, `revertTo`, `DiagnosticTriage` (Step 9/12) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 08** | Production Multi-Class Wiring & Spring Boot DI (Capstone II) | Multi-class Spring Boot microservice, auto-config, REST (Step 10/12) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
+| **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
+| **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 
 ### Phase 01 Completed History:
 1. `phase01-ex01-chat-basics`: Core roles, prompt templating, builder defaults (3 scenarios). **PASSED (exit 0)**.
@@ -55,6 +55,14 @@
 ### Phase 04 Completed History:
 1. `phase04-ex01-guardrail-advisors`: Production Agentic Guardrail Stack & Execution Budget Circuit-Breakers (10 scenarios: `AuditLoggingAdvisor`, `KeywordGuardrailAdvisor`, `SystemPromptEnforcingAdvisor`, `TokenBudgetAdvisor`, `CostCircuitBreakerAdvisor`, `LatencyGuardrailAdvisor`, `PiiMaskingAdvisor`, `OrderTrackingAdvisor`, default/call-level advisor assembly, and comprehensive integrated guardrail stack). **10/10 PASSED (exit 0)**.
 2. `phase04-ex02-resilient-guardrails`: Resilient Guardrails, Failover Routing, and Transactional Token Quotas (10 scenarios: `RuntimeContextAdvisor`, `SlidingWindowTruncationAdvisor`, `SlidingWindowRateLimiterAdvisor`, `ModelFailoverAdvisor`, `SchemaSelfHealingAdvisor`, `GroundingValidationAdvisor`, `TraceContextPropagationAdvisor`, `DynamicTokenQuotaAdvisor`, short-circuiting client, and production resilient guardrail stack). **10/10 PASSED (exit 0)**.
+
+### Phase 07 Completed History:
+1. `phase07-ex01-vector-stores`: In-Memory Vector Store, Token Text Splitting, Embedding Generation & Metadata Filtering (10 scenarios: `FixedTokenChunker`, `DeterministicEmbeddingGenerator`, `CosineSimilarityEngine`, `InMemoryVectorStoreEngine`, `MetadataFilteringEngine`, `BatchDocumentIngestionPipeline`, `ThresholdSimilaritySearchEngine`, `HybridKeywordVectorSearchEngine`, `DocumentLifecycleManager`, `AutonomousKnowledgeBaseIngestor`). **PASSED (exit 0)**.
+2. `phase07-ex02-rag-advisors`: Advanced RAG Advisors, Context Augmentation & Query Expansion (10 scenarios: `VectorStoreDocumentRetriever`, `FilterExpressionDocumentRetriever`, `ContextualQueryAugmenter`, `EmptyContextFallbackAugmenter`, `PriorityRerankingPostProcessor`, `MultiQueryExpander`, `RewriteQueryTransformer`, `ConcatenationDocumentJoiner`, `RetrievalAugmentationAdvisor`, `EnterpriseRagGateway`). **PASSED (exit 0)**.
+
+### Phase 08 Completed History:
+1. `phase08-ex01-mcp-server`: MCP Server Tool & Resource Specification, Schemas & Transport Handlers (10 scenarios: `ServerCapabilitiesBuilder`, `ToolSpecificationGenerator`, `SyncToolExecutionHandler`, `ToolExecutionErrorWrapper`, `SpringAiToolCallbackAdapter`, `ResourceRegistrationHandler`, `PromptRegistrationHandler`, `ToolAllowlistSecurityFilter`, `McpServerAuditRecorder`, `EnterpriseMcpServerRegistry`). **PASSED (exit 0)**.
+2. `phase08-ex02-mcp-client`: MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (10 scenarios: `McpClientAdapterBuilder`, `RemoteToolDiscoveryEngine`, `PrefixedToolNameResolver`, `MultiServerClientRegistry`, `FederatedToolExecutionDispatcher`, `McpToolExecutionFaultHandler`, `RemoteResourceContentReader`, `RemotePromptTemplateRenderer`, `McpChatClientAdvisorIntegrator`, `AutonomousMcpAgentGateway`). **PASSED (exit 0)**.
 
 ---
 
@@ -133,61 +141,73 @@
 
 ## 5. Active Workspace State (Phase 07: Exercises 01 & 02)
 
-### Exercise 01: Foundational Saga Agent Loop (`phase07-ex01-saga-loop`)
-- **Theme:** In-Memory Saga Agent Loop, State Machine, Compensation & Trajectory Auditing (10 Repetitive Scenarios)
-- **Pedagogical Mandate:** Cement Saga FSM transitions and in-memory Git-like trees:
-  1. `StateTransitionEngine`: FSM validator (`IDLE -> DECIDE -> APPLY -> MEASURE -> JUDGE -> COMPENSATE/FINISH`).
-  2. `VirtualWorkspaceMemory`: Atomic Git-like tree (`commit`, `revertTo`, immutable snapshots).
-  3. `DecideProposalExtractor`: DECIDE schema parsing with 1-shot feedback repair.
-  4. `ApplyAndCompensateStep`: APPLY phase with automatic rollback on compilation failure.
-  5. `NoiseFloorKeepGate`: MEASURE & JUDGE telemetry gate (P95/RPS floors + fail rate guard).
-  6. `IterationCapCircuitBreaker`: Hard turn cutoff throwing `"Saga guardrail breached: Maximum iterations"`.
-  7. `TokenBudgetGuardrail`: Token spend ceiling throwing `"Saga guardrail breached: Token budget"`.
-  8. `TrajectoryAuditRecorder`: Trajectory event recorder capturing all lifecycle phases.
-  9. `CheckpointRecoveryManager`: Save and resume state recovery preserving `lastKeptSha`.
-  10. `AutonomousSagaLoopRunner`: End-to-end multi-turn orchestrator running until target reached.
-- **Verification:** `mvn test-compile exec:java -pl phase07-ex01-saga-loop` (0/10 baseline fail gate).
-- **Target File:** [`phase07-ex01-saga-loop/src/main/java/phase07/SagaLoopUnderTest.java`](./phase07-ex01-saga-loop/src/main/java/phase07/SagaLoopUnderTest.java)
+### Exercise 01: Foundational Vector Stores & Ingestion (`phase07-ex01-vector-stores`)
+- **Theme:** In-Memory Vector Store, Token Text Splitting, Embedding Generation & Metadata Filtering (10 Repetitive Foundational Scenarios)
+- **Pedagogical Mandate:** Cement core vector store mechanics, vector search algorithms, and ingestion pipelines:
+  1. `FixedTokenChunker`: Text chunking by token/word boundary with configurable overlap.
+  2. `DeterministicEmbeddingGenerator`: Dimension-normalized float[] vector generation.
+  3. `CosineSimilarityEngine`: Dot product / magnitude cosine similarity calculation clamped to [-1.0, 1.0].
+  4. `InMemoryVectorStoreEngine`: Vector store supporting document addition with embeddings and top-K similarity search.
+  5. `MetadataFilteringEngine`: Key-value equality metadata filtering on retrieved search results.
+  6. `BatchDocumentIngestionPipeline`: Ingestion pipeline chunking raw text, generating embeddings, and storing documents.
+  7. `ThresholdSimilaritySearchEngine`: Cosine similarity search with minimum similarity threshold cutoff.
+  8. `HybridKeywordVectorSearchEngine`: Reciprocal Rank Fusion (RRF) combining keyword and semantic similarity scores.
+  9. `DocumentLifecycleManager`: Ingestion, update, and deletion of vector documents by ID.
+  10. `AutonomousKnowledgeBaseIngestor`: End-to-end ingestion and query pipeline with ingestion summaries.
+- **Verification:** `mvn test-compile exec:java -pl phase07-ex01-vector-stores` (0/10 baseline fail gate).
+- **Target File:** [`phase07-ex01-vector-stores/src/main/java/phase07/VectorStoreUnderTest.java`](./phase07-ex01-vector-stores/src/main/java/phase07/VectorStoreUnderTest.java)
 
-### Exercise 02: Advanced Saga Resilience (`phase07-ex02-advanced-saga`)
-- **Theme:** Advanced Saga Resilience, Speculative Branches, and HITL (10 Repetitive + Difficult Scenarios)
-- **Pedagogical Mandate:** Enterprise agent loop resilience without external dependencies:
-  1. `SpeculativeBranchManager`: Isolated multi-branch sandbox trials (`branch-A`, `branch-B`) and winner merge.
-  2. `MultiStageDiagnosticTriageEngine`: 4-stage failure escalation hierarchy (`STAGE_1` to `STAGE_4`).
-  3. `GuaranteedFinallyCompensationEngine`: Guaranteed finally-block rollback on unexpected JVM crash.
-  4. `SaddleSafeMechanismKeepEngine`: Full `KeepRule` v2 mechanism reduction (>50% reduction + tail bound).
-  5. `CyclicalPingPongDetector`: SHA-256 proposal hash cycle detector throwing `"Advanced Saga breach: Cyclical proposal"`.
-  6. `AdaptiveFailureFeedbackEnricher`: Failure trace injection with structured prompt headers.
-  7. `DynamicPhaseTokenBudgeter`: Partitioned per-phase token ceilings (`DECIDE`, `APPLY`, `MEASURE`, `JUDGE`).
-  8. `SplitBrainCheckpointValidator`: Split-brain divergence detection and fallback recovery.
-  9. `HumanInTheLoopApprovalGate`: Risk-based operator approval gate (`AUTO_APPROVE` vs `REQUIRE_HUMAN`).
-  10. `ResilientAutonomousChaosSagaOrchestrator`: Multi-turn chaos orchestrator recovering from simulated failures.
-- **Verification:** `mvn test-compile exec:java -pl phase07-ex02-advanced-saga` (0/10 baseline fail gate).
-- **Target File:** [`phase07-ex02-advanced-saga/src/main/java/phase07/AdvancedSagaUnderTest.java`](./phase07-ex02-advanced-saga/src/main/java/phase07/AdvancedSagaUnderTest.java)
+### Exercise 02: Advanced RAG Advisors & Query Transformation (`phase07-ex02-rag-advisors`)
+- **Theme:** Advanced RAG Advisors, Context Augmentation & Query Expansion (10 Repetitive + Difficult Scenarios)
+- **Pedagogical Mandate:** Master Spring AI RAG primitives, query expansion, and advisor interceptors:
+  1. `VectorStoreDocumentRetriever`: Top-K document retriever querying a VectorStore with a search query.
+  2. `FilterExpressionDocumentRetriever`: Metadata-filtered document retrieval using Spring AI `Filter.Expression`.
+  3. `ContextualQueryAugmenter`: Prompt augmentation formatting retrieved documents into structured context blocks.
+  4. `EmptyContextFallbackAugmenter`: Graceful degradation and fallback prompt when zero documents match.
+  5. `PriorityRerankingPostProcessor`: `DocumentPostProcessor` reranking documents by priority/recency metadata score.
+  6. `MultiQueryExpander`: LLM-powered query expansion generating alternative semantic queries.
+  7. `RewriteQueryTransformer`: Conversational query rewriting resolving ambiguous pronouns into standalone queries.
+  8. `ConcatenationDocumentJoiner`: Merging and deduplicating document lists from multi-query retrievals.
+  9. `RetrievalAugmentationAdvisor`: Full Spring AI `CallAdvisor` intercepting requests, retrieving context, and augmenting prompts.
+  10. `EnterpriseRagGateway`: Complete end-to-end RAG orchestrator with retrieval, threshold filtering, reranking, and generation.
+- **Verification:** `mvn test-compile exec:java -pl phase07-ex02-rag-advisors` (0/10 baseline fail gate).
+- **Target File:** [`phase07-ex02-rag-advisors/src/main/java/phase07/RagAdvisorUnderTest.java`](./phase07-ex02-rag-advisors/src/main/java/phase07/RagAdvisorUnderTest.java)
 
 ---
 
-## 6. Active Workspace State (Phase 08: Production Microservice Capstone)
+## 6. Active Workspace State (Phase 08: Model Context Protocol)
 
-### Phase 08: Production Autonomous Incident Triage Microservice (`phase08-production-service`)
-- **Theme:** Full Modular Production Spring Boot AI Microservice Capstone (Synthesizing Phases 01–07)
-- **Pedagogical Mandate:** Real-world enterprise microservice repository replacing the single-file test pattern:
-  1. `model/`: Domain models (`IncidentSeverity`, `DiagnosticTelemetry`, `TriageProposal`, `SagaState`, `TrajectoryEvent`, DTOs).
-  2. `config/`: Spring Boot `@ConfigurationProperties("agent.triage")` and `@Configuration` dependency injection beans.
-  3. `prompt/`: Dynamic templated incident prompts with variable substitution (Phase 01).
-  4. `parser/`: Resilient JSON extraction, markdown fence stripping, and 1-shot repair (Phase 02).
-  5. `tool/`: Sandboxed `@Tool` diagnostic beans (`K8sDiagnosticTool`, `JfrAnalysisTool`) with reflection discovery via `ToolCallbacks.from` (Phase 03).
-  6. `advisor/`: Spring AI `CallAdvisor` pipeline (`SecurityKeywordAdvisor` at Order 10, `TokenBudgetAdvisor` at Order 20) (Phase 04).
-  7. `evaluator/`: Telemetry keep gates vs noise floors and factual grounding evaluators (Phase 06).
-  8. `saga/`: In-memory Git-like workspace (`commit`, `revertTo`) and 6-phase Saga FSM orchestrator (Phase 07).
-  9. `repository/`: Thread-safe trajectory audit persistence (`InMemoryTrajectoryRepository`).
-  10. `health/`: Spring Boot Actuator `HealthIndicator` (`AgentHealthIndicator`) probing model availability.
-  11. `service/` & `web/`: `IncidentTriageService` and `IncidentTriageController` (`POST /api/incidents/triage`, `GET /api/incidents/{id}/trajectory`).
-- **Verification & Practice State:** 
-  - Complete starter stubs with rich TigerStyle Javadocs and `UnsupportedOperationException` active in `phase08-production-service/src/main/java/phase08/`.
-  - Full Architecture & Class Requirements: [`docs/phase08-production-service-specification.md`](./docs/phase08-production-service-specification.md).
-  - Sealed Golden Reference: [`docs/golden/phase08-production-service-golden.md`](./docs/golden/phase08-production-service-golden.md).
-  - Test Suite: 13 test files (32 tests total) ready to guide step-by-step TDD implementation.
+### Exercise 01: Foundational MCP Server (`phase08-ex01-mcp-server`)
+- **Theme:** MCP Server Tool & Resource Specification, Schemas & Transport Handlers (10 Repetitive Foundational Scenarios)
+- **Pedagogical Mandate:** Master Model Context Protocol (MCP) server specifications, JSON schema generation, and tool adapters:
+  1. `ServerCapabilitiesBuilder`: Building compliant MCP `ServerCapabilities` (tools, resources, prompts, logging).
+  2. `ToolSpecificationGenerator`: Converting tool specifications to compliant `McpSchema.Tool` JSON schema definitions.
+  3. `SyncToolExecutionHandler`: Registering and executing `SyncToolSpecification` with JSON argument parsing.
+  4. `ToolExecutionErrorWrapper`: Formatting exceptions into MCP error results (`isError: true`, content text error message).
+  5. `SpringAiToolCallbackAdapter`: Adapting Spring AI `ToolCallback` to MCP `SyncToolSpecification` via `McpToolUtils`.
+  6. `ResourceRegistrationHandler`: Exposing static/dynamic `Resource` endpoints and handling resource read requests.
+  7. `PromptRegistrationHandler`: Registering parameterized MCP `Prompt` templates with variable arguments.
+  8. `ToolAllowlistSecurityFilter`: Intercepting and enforcing authorized tool names, throwing `"Unauthorized MCP tool call"` on breaches.
+  9. `McpServerAuditRecorder`: Recording inbound tool call telemetry, latencies, and execution outcomes.
+  10. `EnterpriseMcpServerRegistry`: Central orchestrator registering tools, resources, prompts, and routing execution requests.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex01-mcp-server` (0/10 baseline fail gate).
+- **Target File:** [`phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java`](./phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java)
+
+### Exercise 02: Advanced MCP Client & Multi-Server Federation (`phase08-ex02-mcp-client`)
+- **Theme:** MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (10 Repetitive + Difficult Scenarios)
+- **Pedagogical Mandate:** Master remote MCP client discovery, tool namespacing, and federated agent execution:
+  1. `McpClientAdapterBuilder`: Configuring and instantiating `McpClientAdapter` with server metadata and connection info.
+  2. `RemoteToolDiscoveryEngine`: Fetching and adapting remote MCP tools into Spring AI `ToolCallback` instances.
+  3. `PrefixedToolNameResolver`: Namespacing remote tools (`McpToolUtils.prefixedToolName`) to prevent collision across servers.
+  4. `MultiServerClientRegistry`: Multi-server client registry maintaining connections and tool routing maps.
+  5. `FederatedToolExecutionDispatcher`: Routing prefixed tool calls to appropriate backend MCP client adapters.
+  6. `McpToolExecutionFaultHandler`: Wrapping downstream MCP client timeouts/transport errors into resilient error envelopes.
+  7. `RemoteResourceContentReader`: Reading remote MCP resources and converting to Spring AI `Document` instances.
+  8. `RemotePromptTemplateRenderer`: Fetching and rendering remote MCP prompts with variable substitutions.
+  9. `McpChatClientAdvisorIntegrator`: Binding MCP client tools to Spring AI `ChatClient.Builder` default callbacks.
+  10. `AutonomousMcpAgentGateway`: End-to-end agentic gateway orchestrating multi-server discovery, tool calls, and LLM responses.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex02-mcp-client` (0/10 baseline fail gate).
+- **Target File:** [`phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java`](./phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java)
 
 ---
 
@@ -206,29 +226,57 @@
 4. **Transparent Error Contracts & Non-Flaky Substring Assertions:**
    - Phase 06 Exercise 01 Scenario 10 requires `"Evaluation threshold breach"`.
    - Phase 06 Exercise 02 Scenario 10 requires `"Release benchmark gate breach"`.
-   - Phase 07 Exercise 01 Scenarios 6/7 require `"Saga guardrail breached"`.
-   - Phase 07 Exercise 02 Scenarios 5/7 require `"Advanced Saga breach"`.
+   - Phase 08 Exercise 01 Scenario 08 requires `"Unauthorized MCP tool call"`.
+   - Phase 08 Exercise 02 Scenario 06 requires `"MCP execution failure"`.
+5. **Spring AI MCP Tool Name Prefixing Behavior:**
+   - `McpToolUtils.prefixedToolName(serverPrefix, toolName)` uses an internal `shorten` function that compresses multi-letter server names to prefixes (e.g. `"github"` -> `"g"`, `"create_issue"` -> `"g_create_issue"`). Verifiers check tool names using `.endsWith(toolName)` or `McpToolUtils.prefixedToolName(...)`.
+   - In `MultiServerClientRegistry`, mapping both `prefixedName -> client` and `prefixedName -> originalToolName` guarantees $O(1)$ dispatch regardless of shortening conventions.
+6. **Spring AI `JsonHelper` API:**
+   - In Spring AI 2.0.1, the Map deserialization method on `JsonHelper` is `jsonHelper.fromJsonToMap(jsonString)` (do not use `.toMap(...)`).
+7. **`ChatClient.Builder` Callback Registration:**
+   - Prefer `chatClientBuilder.defaultToolCallbacks(List<ToolCallback>)` over varargs arrays to avoid deprecation warnings.
 
 ---
 
 ## 8. Quick Commands Cheatsheet
 
 ```powershell
+# Phase 01:
+mvn test-compile exec:java -pl phase01-ex01-chat-basics
+mvn test-compile exec:java -pl phase01-ex02-chat-advanced
+mvn test-compile exec:java -pl phase01-ex03-cloud-sre
+
+# Phase 02:
+mvn test-compile exec:java -pl phase02-ex01-structured-outputs
+mvn test-compile exec:java -pl phase02-ex02-resilient-decisions
+
+# Phase 03:
+mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing
+mvn test-compile exec:java -pl phase03-ex02-multi-tool-drills
+
+# Phase 04:
+mvn test-compile exec:java -pl phase04-ex01-guardrail-advisors
+mvn test-compile exec:java -pl phase04-ex02-resilient-guardrails
+
+# Phase 05:
+mvn test-compile exec:java -pl phase05-ex01-offline-harness
+mvn test-compile exec:java -pl phase05-ex02-advanced-harness
+
 # Phase 06:
 mvn test-compile exec:java -pl phase06-ex01-evaluators
 mvn test-compile exec:java -pl phase06-ex02-advanced-judges
 
 # Phase 07:
-mvn test-compile exec:java -pl phase07-ex01-saga-loop
-mvn test-compile exec:java -pl phase07-ex02-advanced-saga
+mvn test-compile exec:java -pl phase07-ex01-vector-stores
+mvn test-compile exec:java -pl phase07-ex02-rag-advisors
 
-# Phase 08 (Capstone Microservice):
-mvn test -pl phase08-production-service
-
-# Specific Phase 08 tests:
-mvn test -pl phase08-production-service -Dtest=IncidentTriageEndToEndIntegrationTest
-mvn test -pl phase08-production-service -Dtest=AutonomousSagaLoopTest
+# Phase 08:
+mvn test-compile exec:java -pl phase08-ex01-mcp-server
+mvn test-compile exec:java -pl phase08-ex02-mcp-client
 
 # Compile entire reactor across all 17 modules:
 mvn test-compile
+
+# Run all test suites across the reactor:
+mvn test
 ```

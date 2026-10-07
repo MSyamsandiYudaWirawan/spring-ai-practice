@@ -6,7 +6,7 @@
 [![Architecture](https://img.shields.io/badge/Style-TigerStyle-red.svg)](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Master the 80% of agentic engineering that tutorials skip:** structured schema repair, sandboxed tool execution, pre/post-call guardrails, deterministic offline harnesses, LLM-as-a-judge evaluators, and transactional Saga loops.
+> **Master the 80% of agentic engineering that tutorials skip:** structured schema repair, sandboxed tool execution, pre/post-call guardrails, deterministic offline harnesses, LLM-as-a-judge evaluators, in-memory RAG vector stores, and Model Context Protocol (MCP) server/client ecosystems.
 
 ---
 
@@ -20,18 +20,18 @@ In real-world enterprise agentic architectures (such as [**`agentic-performance-
 - **Advisor Guardrails:** Onion-layered interceptors for cost caps, token quotas with transactional rollback, PII redaction, and downstream model failover.
 - **Deterministic Offline Testing:** Scripted doubles, chaos matrix injection, streaming latency simulation, and virtual time seams (0 token cost, 100% deterministic, instant).
 - **LLM-as-a-Judge & Evaluators:** Relevancy, factuality, noise-floor telemetry keep gates, rubric parsers, and tournament judges.
-- **Transactional Saga Orchestration:** State machine transition engines, compensatory rollbacks (`revertTo`), and 4-stage diagnostic triage.
+- **RAG & Vector Stores:** Text chunking, deterministic vector embeddings, cosine similarity, metadata filtering, contextual query augmentation, and query expansion.
+- **Model Context Protocol (MCP):** MCP Server tool/resource/prompt specification exposure, MCP Client adapter integration, multi-server tool federation, and agentic gateway routing.
 
-This repository provides **16 high-repetition deliberate practice drills** and **1 production microservice capstone**, designed to build instinctive muscle memory across all core Spring AI primitives before assembling them into production agentic systems.
+This repository provides **17 high-repetition deliberate practice drills**, designed to build instinctive muscle memory across all core Spring AI primitives before assembling them into production agentic systems.
 
 ---
 
 ## 🏗️ The 8-Phase Curriculum
 
-Each phase contains two progressive drills:
+Each phase contains progressive drills:
 1. **Exercise 01:** Core repetition drill (building instinctive fluency on foundational mechanics).
 2. **Exercise 02:** Advanced resilient drill (edge cases, failure injection, circuit-breakers, and high-stress scenarios).
-3. **Phase 08:** End-to-end production microservice capstone synthesizing all phases.
 
 | Phase | Module | Focus | Scenarios |
 |---|---|---|---|
@@ -41,8 +41,8 @@ Each phase contains two progressive drills:
 | **Phase 04** | [`phase04-ex01-guardrail-advisors`](phase04-ex01-guardrail-advisors/)<br>[`phase04-ex02-resilient-guardrails`](phase04-ex02-resilient-guardrails/) | Spring AI `CallAdvisor` chain, security keyword circuit-breakers, dollar/token budget accumulators, sliding-window rate limiters, failover routing. | 20 Scenarios |
 | **Phase 05** | [`phase05-ex01-offline-harness`](phase05-ex01-offline-harness/)<br>[`phase05-ex02-advanced-harness`](phase05-ex02-advanced-harness/) | Deterministic test harnesses, scripted FIFO doubles, predicate routing, fault injection, outgoing prompt spies, chaos matrices, virtual clock seams. | 20 Scenarios |
 | **Phase 06** | [`phase06-ex01-evaluators`](phase06-ex01-evaluators/)<br>[`phase06-ex02-advanced-judges`](phase06-ex02-advanced-judges/) | Spring AI `Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, noise floor keep gates, rubric score parsers, pairwise A/B tournament judges. | 20 Scenarios |
-| **Phase 07** | [`phase07-ex01-saga-loop`](phase07-ex01-saga-loop/)<br>[`phase07-ex02-advanced-saga`](phase07-ex02-advanced-saga/) | State machine transition engine (`IDLE -> DECIDE -> APPLY -> MEASURE -> JUDGE -> FINISH`), compensatory rollback (`revertTo`), 4-stage failure triage. | 20 Scenarios |
-| **Phase 08** | [`phase08-production-service`](phase08-production-service/) | **Capstone:** Multi-class Spring Boot microservice assembly, `@ConfigurationProperties`, `@Bean` auto-config, REST controllers, Actuator health, `@SpringBootTest`. | 13 Classes / 32 Tests |
+| **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking, embedding generation, cosine similarity, metadata filtering, `DocumentRetriever`, contextual prompt augmentation, query expansion. | 20 Scenarios |
+| **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, remote client discovery, multi-server federation, agentic gateway. | 20 Scenarios |
 
 ---
 
@@ -118,13 +118,12 @@ phaseXX-exYY-<name>/
 
 This practice suite is the companion curriculum to [**`agentic-performance-diagnostician`**](https://github.com/syamsandi/agentic-performance-diagnostician) — an autonomous, self-healing Java performance engineering agent that uses Spring AI to analyze JFR telemetry, generate bytecode/configuration optimizations, execute canaries, and apply automated compensatory rollback on regression.
 
-By completing these 8 phases, you will understand every line of code inside enterprise autonomous agents — from prompt formatting to transactional Saga loops.
+By completing these 8 phases, you will understand every line of code inside enterprise autonomous agents — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems.
 
 ---
 
 ## 📖 Reference Documentation
 
-- [Phase 08 Microservice Capstone Specification](docs/phase08-production-service-specification.md)
 - [Spring AI 2.0.1 Reference Notes](docs/reference/spring-ai-2.0.1-reference.md)
 - [Sealed Golden Reference Solutions](docs/golden/)
 
