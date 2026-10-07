@@ -29,6 +29,7 @@
         <module>phase07-ex01-vector-stores</module>
         <module>phase07-ex02-rag-advisors</module>
         <module>phase08-ex01-mcp-server</module>
+        <module>phase08-ex02-mcp-client</module>
     </modules>
 
     <properties>
