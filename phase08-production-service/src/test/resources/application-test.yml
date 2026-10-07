@@ -1,9 +1,0 @@
-agent:
-  triage:
-    enabled: true
-    model-name: "offline-mock-llm"
-    max-iterations: 3
-    token-budget: 2000
-    temperature: 0.1
-    p95-floor-ms: 20.0
-    rps-floor: 10.0
