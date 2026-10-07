@@ -40,9 +40,11 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         System.out.println("\n-----------------------------------------------------------------");
-        System.out.printf("VERIFICATION SUMMARY: %d / 10 PASSED, %d FAILED%n", passed.get(), failed.get());
+        System.out.printf("VERIFICATION SUMMARY: %d / 12 PASSED, %d FAILED%n", passed.get(), failed.get());
         System.out.println("-----------------------------------------------------------------");
 
         if (failed.get() > 0) {
@@ -68,6 +70,8 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         Assertions.assertEquals(0, failed.get(), "Verifier detected scenario failures.");
     }
@@ -368,6 +372,163 @@ public class Verifier {
             if (summary.totalTokens() != 225) {
                 fail(name, "Expected 225 total tokens, got: " + summary.totalTokens());
                 return;
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario11(McpClientUnderTest underTest) {
+        String name = "Scenario 11: Dynamic Tool List Reloading & Registry Re-indexing";
+        try {
+            MultiServerClientRegistry registry = new MultiServerClientRegistry();
+
+            List<Tool> dynamicTools = new ArrayList<>();
+            dynamicTools.add(Tool.builder("list_pods").description("list pods").inputSchema(Map.of("type", "object")).build());
+
+            McpClientAdapter dynamicClient = new McpClientAdapter() {
+                @Override
+                public String serverName() {
+                    return "k8s";
+                }
+
+                @Override
+                public List<Tool> listTools() {
+                    return Collections.unmodifiableList(dynamicTools);
+                }
+
+                @Override
+                public CallToolResult callTool(String toolName, Map<String, Object> arguments) {
+                    return new CallToolResult(List.of(new TextContent("Executed " + toolName)), false, null, null);
+                }
+
+                @Override
+                public ReadResourceResult readResource(String uri) {
+                    return new ReadResourceResult(List.of());
+                }
+
+                @Override
+                public GetPromptResult getPrompt(String promptName, Map<String, Object> arguments) {
+                    return new GetPromptResult("desc", List.of());
+                }
+            };
+
+            registry.registerClient(dynamicClient);
+
+            // Initially 1 tool registered
+            List<String> toolsBefore = registry.listAllPrefixedTools();
+            String listPodsPrefixed = underTest.buildPrefixedToolName("k8s", "list_pods");
+            if (toolsBefore.size() != 1 || !toolsBefore.contains(listPodsPrefixed)) {
+                fail(name, "Expected 1 initial tool " + listPodsPrefixed + ", got: " + toolsBefore);
+                return;
+            }
+
+            // Server dynamically adds 2 new tools
+            dynamicTools.add(Tool.builder("restart_pod").description("restart pod").inputSchema(Map.of("type", "object")).build());
+            dynamicTools.add(Tool.builder("get_logs").description("get logs").inputSchema(Map.of("type", "object")).build());
+
+            ToolListReloadReport report = underTest.reloadServerTools(registry, "k8s");
+            if (report == null) {
+                fail(name, "reloadServerTools returned null report");
+                return;
+            }
+
+            if (!"k8s".equals(report.serverId()) || report.previousToolCount() != 1 || report.updatedToolCount() != 3) {
+                fail(name, "Report counts mismatched: expected (prev=1, updated=3), got: " + report);
+                return;
+            }
+
+            if (!report.activeToolNames().containsAll(List.of("list_pods", "restart_pod", "get_logs"))) {
+                fail(name, "Report active tools missing expected tools: " + report.activeToolNames());
+                return;
+            }
+
+            // Verify registry updated
+            List<String> toolsAfter = registry.listAllPrefixedTools();
+            if (toolsAfter.size() != 3) {
+                fail(name, "Expected registry to have 3 tools after reload, got: " + toolsAfter.size());
+                return;
+            }
+
+            // Test execution of newly reloaded tool
+            String restartPrefixed = underTest.buildPrefixedToolName("k8s", "restart_pod");
+            String res = registry.executePrefixedTool(restartPrefixed, Map.of());
+            if (!res.contains("Executed restart_pod")) {
+                fail(name, "Expected execution output 'Executed restart_pod', got: " + res);
+                return;
+            }
+
+            // Subtest: Unknown server breach
+            try {
+                underTest.reloadServerTools(registry, "unknown_server");
+                fail(name, "Expected McpClientBreachException for unknown server");
+                return;
+            } catch (McpClientBreachException expected) {
+                // pass
+            }
+
+            // Subtest: Argument validation
+            try {
+                underTest.reloadServerTools(null, "k8s");
+                fail(name, "Expected IllegalArgumentException for null registry");
+                return;
+            } catch (IllegalArgumentException expected) {
+                // pass
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario12(McpClientUnderTest underTest) {
+        String name = "Scenario 12: MCP Protocol Sampling Handler (Server-to-Client LLM Delegation)";
+        try {
+            FakeMcpChatModel chatModel = new FakeMcpChatModel();
+            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
+
+            // Subtest A: Successful sampling within token ceiling
+            chatModel.enqueue("Generated optimized query: SELECT id, name FROM accounts WHERE status = 'ACTIVE'");
+            chatModel.setTokenUsage(70, 25);
+
+            SamplingRequest request = new SamplingRequest("Optimize query for accounts", 100, 0.7);
+            SamplingResponse response = underTest.handleSamplingRequest(chatClientBuilder, request, 200);
+
+            if (response == null) {
+                fail(name, "handleSamplingRequest returned null response");
+                return;
+            }
+
+            if (!response.content().contains("SELECT id, name FROM accounts")) {
+                fail(name, "Expected completion content from chat model, got: " + response.content());
+                return;
+            }
+
+            if (response.tokensUsed() != 95) {
+                fail(name, "Expected 95 tokens used (70 prompt + 25 completion), got: " + response.tokensUsed());
+                return;
+            }
+
+            // Subtest B: Token ceiling breach
+            try {
+                SamplingRequest breachRequest = new SamplingRequest("Deep reasoning task", 350, 0.2);
+                underTest.handleSamplingRequest(chatClientBuilder, breachRequest, 200);
+                fail(name, "Expected McpClientBreachException when request.maxTokens exceeds ceiling");
+                return;
+            } catch (McpClientBreachException expected) {
+                // pass
+            }
+
+            // Subtest C: Argument validation
+            try {
+                underTest.handleSamplingRequest(null, request, 200);
+                fail(name, "Expected IllegalArgumentException for null builder");
+                return;
+            } catch (IllegalArgumentException expected) {
+                // pass
             }
 
             pass(name);

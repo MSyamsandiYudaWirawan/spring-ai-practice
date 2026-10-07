@@ -1145,10 +1145,14 @@ Default implementation: `VectorStoreDocumentRetriever.builder().vectorStore(stor
 #### 2. Query Transformation & Expansion
 - **`MultiQueryExpander`**: Generates $N$ semantic query variants using an LLM to mitigate lexical mismatch.
 - **`RewriteQueryTransformer`**: Resolves conversational pronouns (`"What about that one?"` -> `"What about the PetClinic database bottleneck?"`) using chat history.
+- **`HydeQueryTransformer` (HyDE)**: Hypothetical Document Embeddings. Generates a synthetic candidate document using an LLM, embeds the synthetic document, and queries the vector store to find true documents nearest to the answer space.
 
-#### 3. Post-Retrieval Reranking & Joining
+#### 3. Post-Retrieval Reranking, Deduplication & Budget Packing
 - **`ConcatenationDocumentJoiner`**: Merges document lists from multi-query retrievals, deduplicating by document ID or text content.
-- **`DocumentPostProcessor`**: Custom reranking, metadata recency scoring, or diversity filtering (e.g., Maximal Marginal Relevance).
+- **`DocumentPostProcessor`**: Custom reranking, metadata recency scoring, or diversity filtering.
+- **`MaximalMarginalRelevanceSearchEngine` (MMR)**: Re-ranks candidate documents to balance relevance to the query against redundancy with already selected documents ($\lambda \cdot \text{Sim}(d_i, q) - (1 - \lambda) \cdot \max_{d_j \in S} \text{Sim}(d_i, d_j)$).
+- **`ContentHashDeduplicationPipeline`**: Computes deterministic SHA-256 digests over chunk text and metadata to guarantee idempotent ingestion and eliminate duplicate chunks.
+- **`TokenBudgetPacker`**: Packs retrieved documents up to a strict token ceiling, dynamically truncating or omitting documents to prevent context window overflow.
 
 #### 4. Contextual Query Augmentation & Advisor
 - **`ContextualQueryAugmenter`**: Formats documents into a contextual prompt block (`<context>...</context>`).
@@ -1273,6 +1277,12 @@ SyncToolSpecification syncSpec = McpToolUtils.toSyncToolSpecification(toolCallba
 - **Resources**: URIs exposing data (`ResourceContents`, `TextResourceContents`, `BlobResourceContents`).
 - **Prompts**: Named prompt templates with parameterized arguments (`PromptMessage`, `GetPromptResult`).
 
+#### 6. Parameterized Resource URI Templates (RFC 6570)
+MCP servers can expose dynamic resource templates with named path parameters (e.g. `"metrics://{cluster}/{service}/{metric}"`). When a client reads a concrete URI, the template matcher extracts the variables into a map for handler routing.
+
+#### 7. MCP Protocol Log Notifications & Level Filtering
+Servers can emit structured log notifications (`notifications/message`) to clients with severity levels (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Dispatchers enforce minimum severity thresholds to prevent log flooding.
+
 ### 17.4 MCP Client Primitives (`phase08-ex02`)
 
 #### 1. Remote Tool Discovery & Name Prefixing
@@ -1329,3 +1339,9 @@ ChatClient client = ChatClient.builder(chatModel)
         .defaultToolCallbacks(federatedCallbacks)
         .build();
 ```
+
+#### 5. Dynamic Tool List Reloading (`notifications/tools/list_changed`)
+MCP servers notify clients when their tool registry changes. Clients invalidate cached tool schemas for that specific server, re-query `listTools()`, update prefixed routing entries, and emit a `ToolListReloadReport`.
+
+#### 6. MCP Sampling Protocol (Server-to-Client Reverse LLM Delegation)
+In the MCP sampling protocol (`sampling/createMessage`), servers request LLM completions from the client application. The client executes the prompt using its configured `ChatClient`, enforces token ceilings, and returns the completion to the server.

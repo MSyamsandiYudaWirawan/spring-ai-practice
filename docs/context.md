@@ -36,8 +36,8 @@
 | **Phase 04** | Guardrails, Advisors & Token Budgets | `LoopConfig`, guardrail circuit-breakers (Step 9/12) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 05** | Deterministic Testing & Offline Harness | `AgentLoopFactory`, mock loop seams (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 06** | LLM-as-a-Judge & Evaluators | `KeepRule`, `EvalScorer`, ground-truth scoring (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
+| **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
+| **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
 
 ### Phase 01 Completed History:
 1. `phase01-ex01-chat-basics`: Core roles, prompt templating, builder defaults (3 scenarios). **PASSED (exit 0)**.
@@ -57,12 +57,12 @@
 2. `phase04-ex02-resilient-guardrails`: Resilient Guardrails, Failover Routing, and Transactional Token Quotas (10 scenarios: `RuntimeContextAdvisor`, `SlidingWindowTruncationAdvisor`, `SlidingWindowRateLimiterAdvisor`, `ModelFailoverAdvisor`, `SchemaSelfHealingAdvisor`, `GroundingValidationAdvisor`, `TraceContextPropagationAdvisor`, `DynamicTokenQuotaAdvisor`, short-circuiting client, and production resilient guardrail stack). **10/10 PASSED (exit 0)**.
 
 ### Phase 07 Completed History:
-1. `phase07-ex01-vector-stores`: In-Memory Vector Store, Token Text Splitting, Embedding Generation & Metadata Filtering (10 scenarios: `FixedTokenChunker`, `DeterministicEmbeddingGenerator`, `CosineSimilarityEngine`, `InMemoryVectorStoreEngine`, `MetadataFilteringEngine`, `BatchDocumentIngestionPipeline`, `ThresholdSimilaritySearchEngine`, `HybridKeywordVectorSearchEngine`, `DocumentLifecycleManager`, `AutonomousKnowledgeBaseIngestor`). **PASSED (exit 0)**.
-2. `phase07-ex02-rag-advisors`: Advanced RAG Advisors, Context Augmentation & Query Expansion (10 scenarios: `VectorStoreDocumentRetriever`, `FilterExpressionDocumentRetriever`, `ContextualQueryAugmenter`, `EmptyContextFallbackAugmenter`, `PriorityRerankingPostProcessor`, `MultiQueryExpander`, `RewriteQueryTransformer`, `ConcatenationDocumentJoiner`, `RetrievalAugmentationAdvisor`, `EnterpriseRagGateway`). **PASSED (exit 0)**.
+1. `phase07-ex01-vector-stores`: In-Memory Vector Store, Token Text Splitting, Embedding Generation, Metadata Filtering, MMR Diversity & Deduplication (12 scenarios: `FixedTokenChunker`, `DeterministicEmbeddingGenerator`, `CosineSimilarityEngine`, `InMemoryVectorStoreEngine`, `MetadataFilteringEngine`, `BatchDocumentIngestionPipeline`, `ThresholdSimilaritySearchEngine`, `HybridKeywordVectorSearchEngine`, `DocumentLifecycleManager`, `AutonomousKnowledgeBaseIngestor`, `MaximalMarginalRelevanceSearchEngine`, `ContentHashDeduplicationPipeline`). **PASSED (exit 0)**.
+2. `phase07-ex02-rag-advisors`: Advanced RAG Advisors, Context Augmentation, Query Expansion, HyDE & Token Budget Packing (12 scenarios: `VectorStoreDocumentRetriever`, `FilterExpressionDocumentRetriever`, `ContextualQueryAugmenter`, `EmptyContextFallbackAugmenter`, `PriorityRerankingPostProcessor`, `MultiQueryExpander`, `RewriteQueryTransformer`, `ConcatenationDocumentJoiner`, `RetrievalAugmentationAdvisor`, `EnterpriseRagGateway`, `HydeQueryTransformer`, `TokenBudgetPacker`). **PASSED (exit 0)**.
 
 ### Phase 08 Completed History:
-1. `phase08-ex01-mcp-server`: MCP Server Tool & Resource Specification, Schemas & Transport Handlers (10 scenarios: `ServerCapabilitiesBuilder`, `ToolSpecificationGenerator`, `SyncToolExecutionHandler`, `ToolExecutionErrorWrapper`, `SpringAiToolCallbackAdapter`, `ResourceRegistrationHandler`, `PromptRegistrationHandler`, `ToolAllowlistSecurityFilter`, `McpServerAuditRecorder`, `EnterpriseMcpServerRegistry`). **PASSED (exit 0)**.
-2. `phase08-ex02-mcp-client`: MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (10 scenarios: `McpClientAdapterBuilder`, `RemoteToolDiscoveryEngine`, `PrefixedToolNameResolver`, `MultiServerClientRegistry`, `FederatedToolExecutionDispatcher`, `McpToolExecutionFaultHandler`, `RemoteResourceContentReader`, `RemotePromptTemplateRenderer`, `McpChatClientAdvisorIntegrator`, `AutonomousMcpAgentGateway`). **PASSED (exit 0)**.
+1. `phase08-ex01-mcp-server`: MCP Server Tool & Resource Specification, Schemas, URI Templates & Log Notifications (12 scenarios: `ServerCapabilitiesBuilder`, `ToolSpecificationGenerator`, `SyncToolExecutionHandler`, `ToolExecutionErrorWrapper`, `SpringAiToolCallbackAdapter`, `ResourceRegistrationHandler`, `PromptRegistrationHandler`, `ToolAllowlistSecurityFilter`, `McpServerAuditRecorder`, `EnterpriseMcpServerRegistry`, `ParameterizedResourceTemplateMatcher`, `McpProtocolLogNotificationDispatcher`). **PASSED (exit 0)**.
+2. `phase08-ex02-mcp-client`: MCP Client Integration, Multi-Server Tool Routing, Dynamic Tool Reloading & Sampling (12 scenarios: `McpClientAdapterBuilder`, `RemoteToolDefinitionAdapter`, `McpSyncToolCallbackAdapter`, `RemoteToolDiscoveryEngine`, `PrefixedToolNameResolver`, `RemoteResourceContentReader`, `RemotePromptTemplateRenderer`, `McpToolExecutionFaultHandler`, `MultiServerClientRegistry`, `EnterpriseAgenticGateway`, `DynamicToolListReloader`, `McpSamplingHandler`). **PASSED (exit 0)**.
 
 ---
 
@@ -142,7 +142,7 @@
 ## 5. Active Workspace State (Phase 07: Exercises 01 & 02)
 
 ### Exercise 01: Foundational Vector Stores & Ingestion (`phase07-ex01-vector-stores`)
-- **Theme:** In-Memory Vector Store, Token Text Splitting, Embedding Generation & Metadata Filtering (10 Repetitive Foundational Scenarios)
+- **Theme:** In-Memory Vector Store, Token Text Splitting, Embedding Generation & Metadata Filtering (12 Repetitive Foundational Scenarios)
 - **Pedagogical Mandate:** Cement core vector store mechanics, vector search algorithms, and ingestion pipelines:
   1. `FixedTokenChunker`: Text chunking by token/word boundary with configurable overlap.
   2. `DeterministicEmbeddingGenerator`: Dimension-normalized float[] vector generation.
@@ -154,11 +154,13 @@
   8. `HybridKeywordVectorSearchEngine`: Reciprocal Rank Fusion (RRF) combining keyword and semantic similarity scores.
   9. `DocumentLifecycleManager`: Ingestion, update, and deletion of vector documents by ID.
   10. `AutonomousKnowledgeBaseIngestor`: End-to-end ingestion and query pipeline with ingestion summaries.
-- **Verification:** `mvn test-compile exec:java -pl phase07-ex01-vector-stores` (0/10 baseline fail gate).
+  11. `MaximalMarginalRelevanceSearchEngine`: MMR diversity re-ranking balancing relevance vs redundancy.
+  12. `ContentHashDeduplicationPipeline`: SHA-256 chunk deduplication and idempotent knowledge ingestion.
+- **Verification:** `mvn test-compile exec:java -pl phase07-ex01-vector-stores` (0/12 baseline fail gate).
 - **Target File:** [`phase07-ex01-vector-stores/src/main/java/phase07/VectorStoreUnderTest.java`](./phase07-ex01-vector-stores/src/main/java/phase07/VectorStoreUnderTest.java)
 
 ### Exercise 02: Advanced RAG Advisors & Query Transformation (`phase07-ex02-rag-advisors`)
-- **Theme:** Advanced RAG Advisors, Context Augmentation & Query Expansion (10 Repetitive + Difficult Scenarios)
+- **Theme:** Advanced RAG Advisors, Context Augmentation & Query Expansion (12 Repetitive + Difficult Scenarios)
 - **Pedagogical Mandate:** Master Spring AI RAG primitives, query expansion, and advisor interceptors:
   1. `VectorStoreDocumentRetriever`: Top-K document retriever querying a VectorStore with a search query.
   2. `FilterExpressionDocumentRetriever`: Metadata-filtered document retrieval using Spring AI `Filter.Expression`.
@@ -170,7 +172,9 @@
   8. `ConcatenationDocumentJoiner`: Merging and deduplicating document lists from multi-query retrievals.
   9. `RetrievalAugmentationAdvisor`: Full Spring AI `CallAdvisor` intercepting requests, retrieving context, and augmenting prompts.
   10. `EnterpriseRagGateway`: Complete end-to-end RAG orchestrator with retrieval, threshold filtering, reranking, and generation.
-- **Verification:** `mvn test-compile exec:java -pl phase07-ex02-rag-advisors` (0/10 baseline fail gate).
+  11. `HydeQueryTransformer`: Hypothetical Document Embeddings generating synthetic passages for retrieval.
+  12. `TokenBudgetPacker`: Context packing dynamically truncating documents to fit strictly within a token ceiling.
+- **Verification:** `mvn test-compile exec:java -pl phase07-ex02-rag-advisors` (0/12 baseline fail gate).
 - **Target File:** [`phase07-ex02-rag-advisors/src/main/java/phase07/RagAdvisorUnderTest.java`](./phase07-ex02-rag-advisors/src/main/java/phase07/RagAdvisorUnderTest.java)
 
 ---
@@ -178,7 +182,7 @@
 ## 6. Active Workspace State (Phase 08: Model Context Protocol)
 
 ### Exercise 01: Foundational MCP Server (`phase08-ex01-mcp-server`)
-- **Theme:** MCP Server Tool & Resource Specification, Schemas & Transport Handlers (10 Repetitive Foundational Scenarios)
+- **Theme:** MCP Server Tool & Resource Specification, Schemas & Transport Handlers (12 Repetitive Foundational Scenarios)
 - **Pedagogical Mandate:** Master Model Context Protocol (MCP) server specifications, JSON schema generation, and tool adapters:
   1. `ServerCapabilitiesBuilder`: Building compliant MCP `ServerCapabilities` (tools, resources, prompts, logging).
   2. `ToolSpecificationGenerator`: Converting tool specifications to compliant `McpSchema.Tool` JSON schema definitions.
@@ -187,26 +191,30 @@
   5. `SpringAiToolCallbackAdapter`: Adapting Spring AI `ToolCallback` to MCP `SyncToolSpecification` via `McpToolUtils`.
   6. `ResourceRegistrationHandler`: Exposing static/dynamic `Resource` endpoints and handling resource read requests.
   7. `PromptRegistrationHandler`: Registering parameterized MCP `Prompt` templates with variable arguments.
-  8. `ToolAllowlistSecurityFilter`: Intercepting and enforcing authorized tool names, throwing `"Unauthorized MCP tool call"` on breaches.
+  8. `ToolAllowlistSecurityFilter`: Intercepting and enforcing authorized tool names.
   9. `McpServerAuditRecorder`: Recording inbound tool call telemetry, latencies, and execution outcomes.
   10. `EnterpriseMcpServerRegistry`: Central orchestrator registering tools, resources, prompts, and routing execution requests.
-- **Verification:** `mvn test-compile exec:java -pl phase08-ex01-mcp-server` (0/10 baseline fail gate).
+  11. `ParameterizedResourceTemplateMatcher`: RFC 6570 URI template variable matching and extraction.
+  12. `McpProtocolLogNotificationDispatcher`: Protocol log notification dispatching with severity threshold filtering.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex01-mcp-server` (0/12 baseline fail gate).
 - **Target File:** [`phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java`](./phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java)
 
 ### Exercise 02: Advanced MCP Client & Multi-Server Federation (`phase08-ex02-mcp-client`)
-- **Theme:** MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (10 Repetitive + Difficult Scenarios)
+- **Theme:** MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (12 Repetitive + Difficult Scenarios)
 - **Pedagogical Mandate:** Master remote MCP client discovery, tool namespacing, and federated agent execution:
-  1. `McpClientAdapterBuilder`: Configuring and instantiating `McpClientAdapter` with server metadata and connection info.
-  2. `RemoteToolDiscoveryEngine`: Fetching and adapting remote MCP tools into Spring AI `ToolCallback` instances.
-  3. `PrefixedToolNameResolver`: Namespacing remote tools (`McpToolUtils.prefixedToolName`) to prevent collision across servers.
-  4. `MultiServerClientRegistry`: Multi-server client registry maintaining connections and tool routing maps.
-  5. `FederatedToolExecutionDispatcher`: Routing prefixed tool calls to appropriate backend MCP client adapters.
-  6. `McpToolExecutionFaultHandler`: Wrapping downstream MCP client timeouts/transport errors into resilient error envelopes.
-  7. `RemoteResourceContentReader`: Reading remote MCP resources and converting to Spring AI `Document` instances.
-  8. `RemotePromptTemplateRenderer`: Fetching and rendering remote MCP prompts with variable substitutions.
-  9. `McpChatClientAdvisorIntegrator`: Binding MCP client tools to Spring AI `ChatClient.Builder` default callbacks.
-  10. `AutonomousMcpAgentGateway`: End-to-end agentic gateway orchestrating multi-server discovery, tool calls, and LLM responses.
-- **Verification:** `mvn test-compile exec:java -pl phase08-ex02-mcp-client` (0/10 baseline fail gate).
+  1. `ClientCapabilities`: Declaring client protocol features (`roots`, `sampling`).
+  2. `ToolDefinitionAdapter`: Converting MCP `Tool` schemas to Spring AI `ToolDefinition`.
+  3. `ToolCallbackAdapter`: Bridging MCP synchronous tool invocations to Spring AI `ToolCallback`.
+  4. `MultiToolDiscovery`: Batch adapting client tool catalogs to callback providers.
+  5. `PrefixedToolNameResolver`: Generating namespaced tool identifiers to avoid collisions.
+  6. `ResourceContextFormatter`: Fetching MCP resources and formatting them into prompt contexts.
+  7. `PromptMessageTextFetcher`: Retrieving parameterized prompt templates hosted on MCP servers.
+  8. `ToolExecutionResilience`: Defensive error boundaries catching failures and formatting error signals.
+  9. `MultiServerClientRegistry`: Multi-server client registry maintaining connections and tool routing maps.
+  10. `EnterpriseAgenticGateway`: End-to-end agentic gateway orchestrating multi-server discovery, tool calls, and LLM responses.
+  11. `DynamicToolListReloader`: Invalidating cached tool definitions upon server catalog updates and re-indexing active tools.
+  12. `McpSamplingHandler`: Server-to-client LLM delegation (sampling protocol) under token ceilings.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex02-mcp-client` (0/12 baseline fail gate).
 - **Target File:** [`phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java`](./phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java)
 
 ---

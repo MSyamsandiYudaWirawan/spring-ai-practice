@@ -11,6 +11,8 @@ In **Phase 07 Exercise 01**, you build foundational muscle memory on Spring AI's
 - Incremental document deletion and re-indexing.
 - Zero-cost in-memory embedding cache decorator.
 - End-to-end knowledge ingestion and retrieval verification gateway.
+- Maximal Marginal Relevance (MMR) diversity search re-ranking.
+- Content-hash idempotent ingestion and compaction pipeline.
 
 ---
 
@@ -25,7 +27,7 @@ In **Phase 07 Exercise 01**, you build foundational muscle memory on Spring AI's
 
 ---
 
-## 10 Scenarios Breakdown
+## 12 Scenarios Breakdown
 
 | # | Component | Key Responsibility |
 |---|---|---|
@@ -39,6 +41,8 @@ In **Phase 07 Exercise 01**, you build foundational muscle memory on Spring AI's
 | **08** | `DocumentLifecycleManager` | Atomically deletes obsolete document IDs and indexes fresh document versions. |
 | **09** | `CachedEmbeddingDecorator` | Caches computed float vectors in memory to eliminate redundant embedding calls. |
 | **10** | `KnowledgeIngestionGateway` | Ingests raw articles into chunked vector store entries and enforces searchability gates. |
+| **11** | `MaximalMarginalRelevanceSearchEngine` | Re-ranks candidates using MMR diversity penalties ($\lambda \cdot \text{sim}(d,q) - (1-\lambda) \max \text{sim}(d,s)$). |
+| **12** | `ContentHashDeduplicationPipeline` | Computes SHA-256 hashes of normalized chunks to skip redundant embeddings and prevent duplicate indexing. |
 
 ---
 

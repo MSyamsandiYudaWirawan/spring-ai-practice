@@ -56,6 +56,51 @@ public final class McpClientContracts {
     }
 
     /**
+     * Report produced when an MCP server's tool catalog is dynamically reloaded.
+     */
+    public record ToolListReloadReport(
+            String serverId,
+            int previousToolCount,
+            int updatedToolCount,
+            List<String> activeToolNames
+    ) {
+        public ToolListReloadReport {
+            Objects.requireNonNull(serverId, "serverId cannot be null");
+            activeToolNames = activeToolNames == null ? List.of() : List.copyOf(activeToolNames);
+        }
+    }
+
+    /**
+     * Server-to-client LLM completion sampling request (MCP protocol reverse delegation).
+     */
+    public record SamplingRequest(
+            String prompt,
+            int maxTokens,
+            double temperature
+    ) {
+        public SamplingRequest {
+            if (prompt == null || prompt.isBlank()) {
+                throw new IllegalArgumentException("prompt cannot be blank");
+            }
+            if (maxTokens <= 0) {
+                throw new IllegalArgumentException("maxTokens must be > 0");
+            }
+        }
+    }
+
+    /**
+     * Response returned to an MCP server after client-side LLM sampling execution.
+     */
+    public record SamplingResponse(
+            String content,
+            int tokensUsed
+    ) {
+        public SamplingResponse {
+            Objects.requireNonNull(content, "content cannot be null");
+        }
+    }
+
+    /**
      * Exception thrown when an MCP client encounter a tool breach, unknown server, or quota violation.
      */
     public static class McpClientBreachException extends RuntimeException {

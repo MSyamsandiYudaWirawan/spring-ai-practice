@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Phase 08 Exercise 01: Model Context Protocol (MCP) Server Architecture & Protocol Specifications.
@@ -26,6 +28,8 @@ import java.util.function.Function;
  * 8. Security Allowlist & Tool Filter
  * 9. MCP Server Telemetry & Audit Recorder
  * 10. Composite Enterprise MCP Server Registry & Router
+ * 11. Parameterized Resource Template URI Matcher
+ * 12. MCP Protocol Log Notification Dispatcher & Level Filter
  */
 public class McpServerUnderTest {
 
@@ -257,6 +261,68 @@ public class McpServerUnderTest {
 
         public McpAuditReport getAuditReport() {
             return auditRecorder.getReport();
+        }
+    }
+
+    /**
+     * Scenario 11: Parameterized Resource Template URI Matcher.
+     * <p>
+     * Instructions:
+     * - Validate registeredTemplates != null and requestedUri != null && !requestedUri.isBlank();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - For each template in registeredTemplates:
+     *   - Extract named parameter tokens enclosed in braces {paramName} (e.g. "metrics://{cluster}/{service}/{metric}").
+     *   - Convert the template into a regex pattern where each {param} matches non-slash segments ([^/]+).
+     *   - If requestedUri matches the pattern:
+     *     - Extract path variable name-value pairs into Map<String, String>.
+     *     - Return new MatchedResourceRoute(template, requestedUri, pathVariables).
+     * - If no registered template matches requestedUri:
+     *   throw new McpRegistryBreachException("Unmatched resource URI template: " + requestedUri).
+     */
+    public static class ParameterizedResourceTemplateMatcher {
+        public static MatchedResourceRoute matchTemplate(List<String> registeredTemplates, String requestedUri) {
+            // DEFECT: Returns null
+            if (registeredTemplates == null || requestedUri == null || requestedUri.isBlank()) {
+                throw new IllegalArgumentException("Invalid template matcher arguments");
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter.
+     * <p>
+     * Instructions:
+     * - Initialize with default minLevel = McpLogLevel.INFO.
+     * - setMinimumLevel(level): validate non-null and update minLevel.
+     * - dispatchLog(message):
+     *   - Validate message != null.
+     *   - If message.level().isEnabledFor(minLevel):
+     *     - Add to thread-safe emittedLogs list.
+     *     - Return true (dispatched).
+     *   - Else:
+     *     - Return false (filtered out due to severity).
+     * - getEmittedLogs(): return unmodifiable list of emitted log messages.
+     */
+    public static class McpProtocolLogNotificationDispatcher {
+        private McpLogLevel minLevel = McpLogLevel.INFO;
+        private final List<McpLogMessage> emittedLogs = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        public void setMinimumLevel(McpLogLevel level) {
+            // DEFECT: No-op
+        }
+
+        public boolean dispatchLog(McpLogMessage message) {
+            // DEFECT: Always returns false
+            return false;
+        }
+
+        public List<McpLogMessage> getEmittedLogs() {
+            return Collections.unmodifiableList(emittedLogs);
+        }
+
+        public McpLogLevel getMinLevel() {
+            return minLevel;
         }
     }
 }

@@ -40,9 +40,11 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         System.out.println("\n-----------------------------------------------------------------");
-        System.out.printf("VERIFICATION SUMMARY: %d / 10 PASSED, %d FAILED%n", passed.get(), failed.get());
+        System.out.printf("VERIFICATION SUMMARY: %d / 12 PASSED, %d FAILED%n", passed.get(), failed.get());
         System.out.println("-----------------------------------------------------------------");
 
         if (failed.get() > 0) {
@@ -68,6 +70,8 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         Assertions.assertEquals(0, failed.get(), "Verifier detected scenario failures.");
     }
@@ -463,6 +467,129 @@ public class Verifier {
             McpAuditReport report = registry.getAuditReport();
             if (report.totalCalls() != 1 || report.successCount() != 1) {
                 fail(name, "Expected exactly 1 successful tool call in audit report, got: " + report);
+                return;
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario11(McpServerUnderTest underTest) {
+        String name = "Scenario 11: Parameterized Resource Template URI Matcher";
+        try {
+            List<String> templates = List.of(
+                    "metrics://{cluster}/{service}/{metric}",
+                    "logs://{cluster}/{service}"
+            );
+
+            // Subtest A: Exact match with 3 path variables
+            MatchedResourceRoute match1 = ParameterizedResourceTemplateMatcher.matchTemplate(
+                    templates,
+                    "metrics://prod-east/payment-svc/p99"
+            );
+
+            if (match1 == null) {
+                fail(name, "matchTemplate returned null for valid URI");
+                return;
+            }
+            if (!"metrics://{cluster}/{service}/{metric}".equals(match1.uriTemplate())) {
+                fail(name, "Expected template 'metrics://{cluster}/{service}/{metric}', got: " + match1.uriTemplate());
+                return;
+            }
+            if (!"prod-east".equals(match1.pathVariables().get("cluster")) ||
+                    !"payment-svc".equals(match1.pathVariables().get("service")) ||
+                    !"p99".equals(match1.pathVariables().get("metric"))) {
+                fail(name, "Unexpected pathVariables: " + match1.pathVariables());
+                return;
+            }
+
+            // Subtest B: Match second template with 2 path variables
+            MatchedResourceRoute match2 = ParameterizedResourceTemplateMatcher.matchTemplate(
+                    templates,
+                    "logs://staging-west/auth-svc"
+            );
+            if (match2 == null || !"logs://{cluster}/{service}".equals(match2.uriTemplate()) ||
+                    !"staging-west".equals(match2.pathVariables().get("cluster")) ||
+                    !"auth-svc".equals(match2.pathVariables().get("service"))) {
+                fail(name, "Failed matching second template: " + match2);
+                return;
+            }
+
+            // Subtest C: Unmatched URI throws McpRegistryBreachException
+            try {
+                ParameterizedResourceTemplateMatcher.matchTemplate(templates, "config://prod/database");
+                fail(name, "Expected McpRegistryBreachException for unmatched URI");
+                return;
+            } catch (McpRegistryBreachException expected) {
+                // Expected
+            }
+
+            // Subtest D: Argument validation throws IllegalArgumentException
+            try {
+                ParameterizedResourceTemplateMatcher.matchTemplate(null, "metrics://a/b/c");
+                fail(name, "Expected IllegalArgumentException for null template list");
+                return;
+            } catch (IllegalArgumentException expected) {
+                // Expected
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario12(McpServerUnderTest underTest) {
+        String name = "Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter";
+        try {
+            McpProtocolLogNotificationDispatcher dispatcher = new McpProtocolLogNotificationDispatcher();
+
+            // Default minLevel is INFO
+            if (dispatcher.getMinLevel() != McpLogLevel.INFO) {
+                fail(name, "Expected default minLevel to be INFO, got: " + dispatcher.getMinLevel());
+                return;
+            }
+
+            // Subtest A: DEBUG filtered out under INFO
+            boolean d1 = dispatcher.dispatchLog(new McpLogMessage(
+                    McpLogLevel.DEBUG, "engine.core", "Detailed tick trace", Map.of("tick", 100)
+            ));
+            if (d1 || !dispatcher.getEmittedLogs().isEmpty()) {
+                fail(name, "Expected DEBUG message to be filtered out under default INFO level");
+                return;
+            }
+
+            // Subtest B: INFO and ERROR accepted under INFO
+            boolean d2 = dispatcher.dispatchLog(new McpLogMessage(
+                    McpLogLevel.INFO, "engine.core", "Service started", Map.of("port", 8080)
+            ));
+            boolean d3 = dispatcher.dispatchLog(new McpLogMessage(
+                    McpLogLevel.ERROR, "engine.db", "Connection timeout", Map.of("db", "primary")
+            ));
+            if (!d2 || !d3 || dispatcher.getEmittedLogs().size() != 2) {
+                fail(name, "Expected INFO and ERROR logs to be dispatched, count: " + dispatcher.getEmittedLogs().size());
+                return;
+            }
+
+            // Subtest C: Lower threshold to DEBUG allows DEBUG
+            dispatcher.setMinimumLevel(McpLogLevel.DEBUG);
+            boolean d4 = dispatcher.dispatchLog(new McpLogMessage(
+                    McpLogLevel.DEBUG, "engine.core", "Cache hit: key_123", Map.of()
+            ));
+            if (!d4 || dispatcher.getEmittedLogs().size() != 3) {
+                fail(name, "Expected DEBUG log to be dispatched when minLevel=DEBUG");
+                return;
+            }
+
+            // Subtest D: Raise threshold to ERROR filters WARNING
+            dispatcher.setMinimumLevel(McpLogLevel.ERROR);
+            boolean d5 = dispatcher.dispatchLog(new McpLogMessage(
+                    McpLogLevel.WARNING, "engine.disk", "Disk usage at 85%", Map.of()
+            ));
+            if (d5 || dispatcher.getEmittedLogs().size() != 3) {
+                fail(name, "Expected WARNING log to be filtered out when minLevel=ERROR");
                 return;
             }
 

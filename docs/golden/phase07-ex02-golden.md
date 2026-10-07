@@ -1,7 +1,9 @@
 # Phase 07 Exercise 02: Golden Reference Solution
 
 ## Overview
-This golden solution implements **Modular RAG Advisors, Pre/Post Retrieval Pipelines, and the Enterprise RAG Gateway** using native Spring AI 2.0.1 RAG components (`org.springframework.ai.rag.*`).
+This golden solution implements **Modular RAG Advisors, Pre/Post Retrieval Pipelines, HyDE Query Transformation, Token-Budget Context Packing, and the Enterprise RAG Gateway** across all 12 scenarios using native Spring AI 2.0.1 RAG components (`org.springframework.ai.rag.*`).
+
+Verified: `12 PASSED, 0 FAILED (exit code 0)`
 
 ## Verified Solution Code
 
@@ -230,6 +232,81 @@ public class RagAdvisorUnderTest {
                 : "";
 
         return new RagGatewayResponse(answer, citations, totalTokens, true);
+    }
+
+    /**
+     * Scenario 11: Hypothetical Document Embeddings (HyDE) Query Transformer.
+     */
+    public QueryTransformer buildHydeTransformer(ChatClient.Builder chatClientBuilder, String hypotheticalPromptTemplate) {
+        if (chatClientBuilder == null || hypotheticalPromptTemplate == null || hypotheticalPromptTemplate.isBlank()) {
+            throw new IllegalArgumentException("Invalid transformer arguments");
+        }
+
+        return (Query query) -> {
+            if (query == null || query.text() == null || query.text().isBlank()) {
+                return query;
+            }
+
+            String promptText = hypotheticalPromptTemplate.replace("{query}", query.text());
+            String hypothetical = chatClientBuilder.build().prompt().user(promptText).call().content();
+
+            if (hypothetical == null || hypothetical.isBlank()) {
+                return query;
+            }
+
+            return query.mutate().text(hypothetical.trim()).build();
+        };
+    }
+
+    /**
+     * Scenario 12: Token-Budget Context Packing & Dynamic Truncator.
+     */
+    public PackedContext packContextWithinBudget(List<Document> documents, int maxTokens, String delimiter) {
+        if (documents == null || maxTokens <= 0 || delimiter == null) {
+            throw new IllegalArgumentException("Invalid context packing parameters");
+        }
+
+        if (documents.isEmpty()) {
+            return new PackedContext("", 0, 0, 0, List.of());
+        }
+
+        int delimTokens = (int) Math.ceil(delimiter.length() / 4.0);
+        List<String> packedTexts = new ArrayList<>();
+        List<String> packedDocIds = new ArrayList<>();
+        int currentTokens = 0;
+        int droppedCount = 0;
+
+        for (int i = 0; i < documents.size(); i++) {
+            Document doc = documents.get(i);
+            String docText = doc.getText() != null ? doc.getText() : "";
+            int docTokens = (int) Math.ceil(docText.length() / 4.0);
+
+            if (packedTexts.isEmpty()) {
+                if (docTokens <= maxTokens) {
+                    packedTexts.add(docText);
+                    packedDocIds.add(doc.getId());
+                    currentTokens = docTokens;
+                } else {
+                    int maxChars = maxTokens * 4;
+                    String truncated = docText.length() > maxChars ? docText.substring(0, maxChars) : docText;
+                    packedTexts.add(truncated);
+                    packedDocIds.add(doc.getId());
+                    currentTokens = (int) Math.ceil(truncated.length() / 4.0);
+                }
+            } else {
+                if (currentTokens + delimTokens + docTokens <= maxTokens) {
+                    packedTexts.add(docText);
+                    packedDocIds.add(doc.getId());
+                    currentTokens += (delimTokens + docTokens);
+                } else {
+                    droppedCount = documents.size() - i;
+                    break;
+                }
+            }
+        }
+
+        String packedContent = String.join(delimiter, packedTexts);
+        return new PackedContext(packedContent, currentTokens, packedTexts.size(), droppedCount, packedDocIds);
     }
 }
 ```

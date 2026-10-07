@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 8. Tool Execution Resilience & Error Boundary
  * 9. Multi-Server Client Registry & Unified Tool Dispatcher
  * 10. End-to-End Enterprise Agentic Gateway with MCP Tool Calling
+ * 11. Dynamic Tool List Reloading & Registry Re-indexing
+ * 12. MCP Protocol Sampling Handler (Server-to-Client LLM Delegation)
  */
 public class McpClientUnderTest {
 
@@ -162,6 +164,11 @@ public class McpClientUnderTest {
             return null;
         }
 
+        public ToolListReloadReport reloadTools(String serverId) {
+            // DEFECT: Returns null
+            return null;
+        }
+
         public Map<String, McpClientAdapter> getClients() {
             return Collections.unmodifiableMap(clients);
         }
@@ -183,6 +190,48 @@ public class McpClientUnderTest {
             MultiServerClientRegistry registry,
             ChatClient.Builder chatClientBuilder,
             AgentExecutionRequest request
+    ) {
+        // DEFECT: Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 11: Dynamic Tool List Reloading & Registry Re-indexing.
+     * <p>
+     * Instructions:
+     * - Validate registry != null and serverId != null && !serverId.isBlank();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Delegate to registry.reloadTools(serverId).
+     * - In registry.reloadTools(serverId):
+     *   - If serverId is not registered in clients:
+     *     throw new McpClientBreachException("Unknown server: " + serverId).
+     *   - Identify all current tools for serverId, count them (previousToolCount),
+     *     and remove their mappings from toolToClient and toolToOriginalName.
+     *   - Fetch updated tools from client.listTools().
+     *   - Re-index new tools with McpToolUtils.prefixedToolName(serverId, tool.name()).
+     *   - Return ToolListReloadReport(serverId, previousToolCount, newTools.size(), activeToolNames).
+     */
+    public ToolListReloadReport reloadServerTools(MultiServerClientRegistry registry, String serverId) {
+        // DEFECT: Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 12: MCP Protocol Sampling Handler (Server-to-Client LLM Delegation).
+     * <p>
+     * Instructions:
+     * - Validate chatClientBuilder != null and request != null;
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - If request.maxTokens() > tokenCeiling:
+     *   throw new McpClientBreachException("Requested tokens " + request.maxTokens() + " exceeds ceiling " + tokenCeiling);
+     * - Build ChatClient from chatClientBuilder and execute prompt(request.prompt()).
+     * - Extract completion text and tokens used from ChatResponse metadata.
+     * - Return new SamplingResponse(completionText, tokensUsed).
+     */
+    public SamplingResponse handleSamplingRequest(
+            ChatClient.Builder chatClientBuilder,
+            SamplingRequest request,
+            int tokenCeiling
     ) {
         // DEFECT: Returns null
         return null;

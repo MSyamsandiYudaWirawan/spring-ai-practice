@@ -12,6 +12,8 @@ This exercise teaches the official Model Context Protocol (MCP) Java SDK (`io.mo
 - **Security Allowlists:** Enforcing tool execution allowlists and role gates.
 - **Server Telemetry & Auditing:** Tracking total tool executions, success rates, errors, and per-tool frequency.
 - **Enterprise MCP Server Registry:** Managing composite tool, resource, and prompt catalogs with unified dispatch and error boundaries.
+- **Resource URI Template Matching:** Parsing RFC 6570 URI templates with path variable extraction.
+- **MCP Protocol Log Notifications:** Dispatching structured protocol log notifications with severity filtering.
 
 ---
 
@@ -36,6 +38,10 @@ This exercise teaches the official Model Context Protocol (MCP) Java SDK (`io.mo
    - Audit tool invocations, failures, and per-tool call metrics.
 10. **Scenario 10: Composite Enterprise MCP Server Registry & Router**
     - Orchestrate tool, resource, and prompt dispatch with security and auditing.
+11. **Scenario 11: Parameterized Resource Template URI Matcher**
+    - Match requested resource URIs against dynamic parameterized templates and extract path variables.
+12. **Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter**
+    - Filter and dispatch protocol log notifications based on configured severity thresholds (`McpLogLevel`).
 
 ---
 

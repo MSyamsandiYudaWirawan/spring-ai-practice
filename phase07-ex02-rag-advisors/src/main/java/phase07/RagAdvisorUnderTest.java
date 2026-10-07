@@ -29,6 +29,8 @@ import java.util.Map;
  * 8. ConcatenationDocumentJoiner Multi-Query Merging
  * 9. RetrievalAugmentationAdvisor End-to-End ChatClient Binding
  * 10. Guardrailed Enterprise Multi-Tenant RAG Gateway
+ * 11. Hypothetical Document Embeddings (HyDE) Query Transformer
+ * 12. Token-Budget Context Packing & Dynamic Truncator
  */
 public class RagAdvisorUnderTest {
 
@@ -195,6 +197,54 @@ public class RagAdvisorUnderTest {
             ChatClient.Builder chatClientBuilder,
             VectorStore store
     ) {
+        // DEFECT: Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 11: Hypothetical Document Embeddings (HyDE) Query Transformer.
+     * <p>
+     * Instructions:
+     * - Validate chatClientBuilder != null and hypotheticalPromptTemplate != null && !hypotheticalPromptTemplate.isBlank();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Return a QueryTransformer implementation:
+     *   - If query == null || query.text() == null || query.text().isBlank(), return query.
+     *   - Build ChatClient from builder.
+     *   - Format user prompt by replacing "{query}" with query.text().
+     *   - Call chatClient.prompt().user(userPrompt).call().content().
+     *   - If returned content is null or blank:
+     *     return query (graceful fallback to original query).
+     *   - Else:
+     *     return query.mutate().text(returnedContent.trim()).build().
+     */
+    public QueryTransformer buildHydeTransformer(ChatClient.Builder chatClientBuilder, String hypotheticalPromptTemplate) {
+        // DEFECT: Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 12: Token-Budget Context Packing & Dynamic Truncator.
+     * <p>
+     * Instructions:
+     * - Validate documents != null, maxTokens > 0, and delimiter != null;
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Helper token estimator: (int) Math.ceil(text.length() / 4.0).
+     * - Greedily pack document texts up to maxTokens:
+     *   - If documents list is empty: return PackedContext("", 0, 0, 0, List.of()).
+     *   - For each document:
+     *     - docTokens = estimateTokens(doc.getText()).
+     *     - If packedDocs is empty:
+     *       - If docTokens <= maxTokens: pack full doc.
+     *       - Else: truncate text to (maxTokens * 4) chars and pack truncated doc.
+     *     - Else:
+     *       - If (currentTokens + delimTokens + docTokens) <= maxTokens:
+     *         pack full doc.
+     *       - Else:
+     *         increment droppedDocumentCount for this and remaining docs; stop loop.
+     * - Join packed texts with delimiter.
+     * - Return PackedContext(joinedText, currentTokens, packedDocs.size(), droppedCount, packedIds).
+     */
+    public PackedContext packContextWithinBudget(List<Document> documents, int maxTokens, String delimiter) {
         // DEFECT: Returns null
         return null;
     }

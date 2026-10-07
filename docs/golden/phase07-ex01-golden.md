@@ -1,9 +1,9 @@
-# Golden Solution: Phase 07 Exercise 01 (Vector Stores, In-Memory Embeddings & Semantic Filtering)
+# Golden Solution: Phase 07 Exercise 01 (Vector Stores, In-Memory Embeddings, Semantic Filtering & MMR)
 
 ## Overview
-This golden solution implements all 10 scenarios of `phase07-ex01-vector-stores`, providing complete, tested implementations of normalized `Document` creation, token-bounded document splitting via `TokenTextSplitter`, unit L2 vector normalization, `SimpleVectorStore` indexing, top-K ranked retrieval, cutoff similarity threshold gating, `FilterExpressionBuilder` metadata filters, document lifecycle updates, cached embedding decorators, and end-to-end ingestion gateways.
+This golden solution implements all 12 scenarios of `phase07-ex01-vector-stores`, providing complete, tested implementations of normalized `Document` creation, token-bounded document splitting via `TokenTextSplitter`, unit L2 vector normalization, `SimpleVectorStore` indexing, top-K ranked retrieval, cutoff similarity threshold gating, `FilterExpressionBuilder` metadata filters, document lifecycle updates, cached embedding decorators, end-to-end ingestion gateways, Maximal Marginal Relevance (MMR) diversity re-ranking, and content-hash idempotent ingestion pipelines.
 
-Verified: `10 PASSED, 0 FAILED (exit code 0)`
+Verified: `12 PASSED, 0 FAILED (exit code 0)`
 
 ---
 
@@ -25,6 +25,9 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import phase07.VectorStoreContracts.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -288,6 +291,152 @@ public class VectorStoreUnderTest {
 
             List<String> chunkIds = allChunks.stream().map(Document::getId).toList();
             return new IngestionReport(rawItems.size(), allChunks.size(), allChunks.size(), chunkIds);
+        }
+    }
+
+    public static class MaximalMarginalRelevanceSearchEngine {
+        public static List<SearchResult> searchMmr(
+                VectorStore vectorStore,
+                EmbeddingModel embeddingModel,
+                String query,
+                MmrConfig config
+        ) {
+            if (vectorStore == null || embeddingModel == null || query == null || query.isBlank() || config == null) {
+                throw new IllegalArgumentException("Inputs must not be null or blank");
+            }
+
+            float[] queryVector = embeddingModel.embed(query);
+            int candidateK = config.topK() * config.candidateFetchMultiplier();
+
+            List<Document> candidates = vectorStore.similaritySearch(
+                    SearchRequest.builder().query(query).topK(candidateK).build()
+            );
+
+            if (candidates.isEmpty()) {
+                return List.of();
+            }
+
+            Map<String, float[]> docEmbeddings = new HashMap<>();
+            for (Document doc : candidates) {
+                float[] emb = embeddingModel.embed(doc.getText());
+                docEmbeddings.put(doc.getId(), emb);
+            }
+
+            List<Document> selected = new ArrayList<>();
+            List<Document> remaining = new ArrayList<>(candidates);
+            int targetCount = Math.min(config.topK(), candidates.size());
+
+            while (selected.size() < targetCount && !remaining.isEmpty()) {
+                Document bestDoc = null;
+                double bestMmr = Double.NEGATIVE_INFINITY;
+
+                for (Document cand : remaining) {
+                    float[] candEmb = docEmbeddings.get(cand.getId());
+                    double simToQuery = cosineSimilarity(candEmb, queryVector);
+
+                    double maxSimToSelected = 0.0;
+                    for (Document sel : selected) {
+                        float[] selEmb = docEmbeddings.get(sel.getId());
+                        double simToSel = cosineSimilarity(candEmb, selEmb);
+                        if (simToSel > maxSimToSelected) {
+                            maxSimToSelected = simToSel;
+                        }
+                    }
+
+                    double mmr = config.lambda() * simToQuery - (1.0 - config.lambda()) * maxSimToSelected;
+                    if (mmr > bestMmr) {
+                        bestMmr = mmr;
+                        bestDoc = cand;
+                    }
+                }
+
+                if (bestDoc != null) {
+                    selected.add(bestDoc);
+                    remaining.remove(bestDoc);
+                } else {
+                    break;
+                }
+            }
+
+            List<SearchResult> results = new ArrayList<>();
+            for (Document doc : selected) {
+                float[] emb = docEmbeddings.get(doc.getId());
+                double score = cosineSimilarity(emb, queryVector);
+                results.add(new SearchResult(doc.getId(), doc.getText(), doc.getMetadata(), score));
+            }
+            return results;
+        }
+
+        private static double cosineSimilarity(float[] u, float[] v) {
+            if (u == null || v == null || u.length == 0 || v.length == 0) return 0.0;
+            int n = Math.min(u.length, v.length);
+            double dot = 0.0;
+            double normU = 0.0;
+            double normV = 0.0;
+            for (int i = 0; i < n; i++) {
+                dot += (double) u[i] * v[i];
+                normU += (double) u[i] * u[i];
+                normV += (double) v[i] * v[i];
+            }
+            if (normU <= 1e-9 || normV <= 1e-9) return 0.0;
+            double sim = dot / (Math.sqrt(normU) * Math.sqrt(normV));
+            return Math.max(-1.0, Math.min(1.0, sim));
+        }
+    }
+
+    public static class ContentHashDeduplicationPipeline {
+        private final Set<String> indexedHashes = ConcurrentHashMap.newKeySet();
+
+        public DedupReport ingestWithDeduplication(VectorStore vectorStore, List<Document> incomingDocuments) {
+            if (vectorStore == null || incomingDocuments == null) {
+                throw new IllegalArgumentException("Inputs must not be null");
+            }
+
+            List<Document> toIndex = new ArrayList<>();
+            List<String> indexedIds = new ArrayList<>();
+            int duplicatesSkipped = 0;
+
+            for (Document doc : incomingDocuments) {
+                String normalized = doc.getText() != null ? doc.getText().trim().toLowerCase() : "";
+                String hash = sha256(normalized);
+
+                if (indexedHashes.contains(hash)) {
+                    duplicatesSkipped++;
+                } else {
+                    indexedHashes.add(hash);
+                    Map<String, Object> meta = new HashMap<>(doc.getMetadata());
+                    meta.put("contentHash", hash);
+                    meta.put("indexedAt", Instant.now().toString());
+
+                    Document enriched = doc.mutate().metadata(meta).build();
+                    toIndex.add(enriched);
+                    indexedIds.add(doc.getId());
+                }
+            }
+
+            if (!toIndex.isEmpty()) {
+                vectorStore.add(toIndex);
+            }
+
+            return new DedupReport(incomingDocuments.size(), toIndex.size(), duplicatesSkipped, indexedIds);
+        }
+
+        public Set<String> getIndexedHashes() {
+            return Collections.unmodifiableSet(indexedHashes);
+        }
+
+        private static String sha256(String text) {
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                byte[] encoded = digest.digest(text.getBytes(StandardCharsets.UTF_8));
+                StringBuilder hex = new StringBuilder();
+                for (byte b : encoded) {
+                    hex.append(String.format("%02x", b));
+                }
+                return hex.toString();
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("SHA-256 not available", e);
+            }
         }
     }
 }

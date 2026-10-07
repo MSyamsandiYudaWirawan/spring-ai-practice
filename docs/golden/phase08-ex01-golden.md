@@ -19,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Phase 08 Exercise 01: Model Context Protocol (MCP) Server Architecture & Protocol Specifications.
@@ -278,6 +280,78 @@ public class McpServerUnderTest {
             return auditRecorder.getReport();
         }
     }
+
+    /**
+     * Scenario 11: Parameterized Resource Template URI Matcher.
+     */
+    public static class ParameterizedResourceTemplateMatcher {
+        public static MatchedResourceRoute matchTemplate(List<String> registeredTemplates, String requestedUri) {
+            if (registeredTemplates == null || requestedUri == null || requestedUri.isBlank()) {
+                throw new IllegalArgumentException("Invalid template matcher arguments");
+            }
+            Pattern tokenPattern = Pattern.compile("\\{([a-zA-Z0-9_]+)\\}");
+            for (String template : registeredTemplates) {
+                if (template == null) continue;
+                Matcher m = tokenPattern.matcher(template);
+                List<String> paramNames = new ArrayList<>();
+                StringBuilder regex = new StringBuilder("^");
+                int lastEnd = 0;
+                while (m.find()) {
+                    regex.append(Pattern.quote(template.substring(lastEnd, m.start())));
+                    paramNames.add(m.group(1));
+                    regex.append("([^/]+)");
+                    lastEnd = m.end();
+                }
+                regex.append(Pattern.quote(template.substring(lastEnd)));
+                regex.append("$");
+
+                Pattern compiled = Pattern.compile(regex.toString());
+                Matcher uriMatcher = compiled.matcher(requestedUri);
+                if (uriMatcher.matches()) {
+                    Map<String, String> pathVars = new LinkedHashMap<>();
+                    for (int i = 0; i < paramNames.size(); i++) {
+                        pathVars.put(paramNames.get(i), uriMatcher.group(i + 1));
+                    }
+                    return new MatchedResourceRoute(template, requestedUri, pathVars);
+                }
+            }
+            throw new McpRegistryBreachException("Unmatched resource URI template: " + requestedUri);
+        }
+    }
+
+    /**
+     * Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter.
+     */
+    public static class McpProtocolLogNotificationDispatcher {
+        private volatile McpLogLevel minLevel = McpLogLevel.INFO;
+        private final List<McpLogMessage> emittedLogs = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        public void setMinimumLevel(McpLogLevel level) {
+            if (level == null) {
+                throw new IllegalArgumentException("McpLogLevel cannot be null");
+            }
+            this.minLevel = level;
+        }
+
+        public boolean dispatchLog(McpLogMessage message) {
+            if (message == null) {
+                throw new IllegalArgumentException("McpLogMessage cannot be null");
+            }
+            if (message.level().isEnabledFor(minLevel)) {
+                emittedLogs.add(message);
+                return true;
+            }
+            return false;
+        }
+
+        public List<McpLogMessage> getEmittedLogs() {
+            return Collections.unmodifiableList(emittedLogs);
+        }
+
+        public McpLogLevel getMinLevel() {
+            return minLevel;
+        }
+    }
 }
 ```
 
@@ -287,5 +361,6 @@ mvn clean test-compile exec:java -pl phase08-ex01-mcp-server
 ```
 Output:
 ```
-VERIFICATION SUMMARY: 10 / 10 PASSED, 0 FAILED
+VERIFICATION SUMMARY: 12 / 12 PASSED, 0 FAILED
 ```
+

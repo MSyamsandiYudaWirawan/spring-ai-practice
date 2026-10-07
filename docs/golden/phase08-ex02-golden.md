@@ -184,6 +184,38 @@ public class McpClientUnderTest {
             return "";
         }
 
+        public ToolListReloadReport reloadTools(String serverId) {
+            if (serverId == null || !clients.containsKey(serverId)) {
+                throw new McpClientBreachException("Unknown server: " + serverId);
+            }
+            McpClientAdapter client = clients.get(serverId);
+
+            List<String> oldPrefixedKeys = new ArrayList<>();
+            for (Map.Entry<String, McpClientAdapter> entry : toolToClient.entrySet()) {
+                if (entry.getValue().equals(client)) {
+                    oldPrefixedKeys.add(entry.getKey());
+                }
+            }
+            int previousCount = oldPrefixedKeys.size();
+            for (String key : oldPrefixedKeys) {
+                toolToClient.remove(key);
+                toolToOriginalName.remove(key);
+            }
+
+            List<Tool> newTools = client.listTools();
+            List<String> activeToolNames = new ArrayList<>();
+            if (newTools != null) {
+                for (Tool t : newTools) {
+                    activeToolNames.add(t.name());
+                    String prefixed = McpToolUtils.prefixedToolName(serverId, t.name());
+                    toolToClient.put(prefixed, client);
+                    toolToOriginalName.put(prefixed, t.name());
+                }
+            }
+
+            return new ToolListReloadReport(serverId, previousCount, activeToolNames.size(), activeToolNames);
+        }
+
         public Map<String, McpClientAdapter> getClients() {
             return Collections.unmodifiableMap(clients);
         }
@@ -253,6 +285,48 @@ public class McpClientUnderTest {
 
         return new AgentExecutionSummary(answer, executedTools, totalTokens, true);
     }
+
+    /**
+     * Scenario 11: Dynamic Tool List Reloading & Registry Re-indexing.
+     */
+    public ToolListReloadReport reloadServerTools(MultiServerClientRegistry registry, String serverId) {
+        if (registry == null || serverId == null || serverId.isBlank()) {
+            throw new IllegalArgumentException("Invalid reloadServerTools arguments");
+        }
+        return registry.reloadTools(serverId);
+    }
+
+    /**
+     * Scenario 12: MCP Protocol Sampling Handler (Server-to-Client LLM Delegation).
+     */
+    public SamplingResponse handleSamplingRequest(
+            ChatClient.Builder chatClientBuilder,
+            SamplingRequest request,
+            int tokenCeiling
+    ) {
+        if (chatClientBuilder == null || request == null) {
+            throw new IllegalArgumentException("Arguments cannot be null");
+        }
+        if (request.maxTokens() > tokenCeiling) {
+            throw new McpClientBreachException("Requested tokens " + request.maxTokens() + " exceeds ceiling " + tokenCeiling);
+        }
+
+        ChatClient chatClient = chatClientBuilder.build();
+        ChatResponse response = chatClient.prompt()
+                .user(request.prompt())
+                .call()
+                .chatResponse();
+
+        String content = (response != null && response.getResult() != null && response.getResult().getOutput() != null)
+                ? response.getResult().getOutput().getText()
+                : "";
+
+        int tokensUsed = (response != null && response.getMetadata().getUsage() != null)
+                ? response.getMetadata().getUsage().getTotalTokens()
+                : 0;
+
+        return new SamplingResponse(content, tokensUsed);
+    }
 }
 ```
 
@@ -262,5 +336,5 @@ mvn clean test-compile exec:java -pl phase08-ex02-mcp-client
 ```
 Output:
 ```
-VERIFICATION SUMMARY: 10 / 10 PASSED, 0 FAILED
+VERIFICATION SUMMARY: 12 / 12 PASSED, 0 FAILED
 ```

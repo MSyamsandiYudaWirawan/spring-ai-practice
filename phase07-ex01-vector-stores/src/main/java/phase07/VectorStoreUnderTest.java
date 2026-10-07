@@ -13,6 +13,9 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import phase07.VectorStoreContracts.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,9 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Exercise implementation under test for Phase 07 Exercise 01:
- * Vector Stores, In-Memory Embeddings, Document Chunking and Semantic Filtering.
+ * Vector Stores, In-Memory Embeddings, Document Chunking, Semantic Filtering and MMR.
  * <p>
- * Students implement all 10 scenarios in this file.
+ * Students implement all 12 scenarios in this file.
  */
 public class VectorStoreUnderTest {
 
@@ -303,6 +306,88 @@ public class VectorStoreUnderTest {
                 throw new IllegalArgumentException("Invalid gateway parameters");
             }
             return new IngestionReport(0, 0, 0, List.of());
+        }
+    }
+
+    /**
+     * Scenario 11: Maximal Marginal Relevance (MMR) Diversity Search Engine.
+     * <p>
+     * Instructions:
+     * - Validate vectorStore != null, embeddingModel != null, query != null && !query.isBlank(), and config != null;
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Generate query embedding: float[] queryEmbedding = embeddingModel.embed(query).
+     * - Determine candidate pool size: candidateK = config.topK() * config.candidateFetchMultiplier().
+     * - Retrieve candidate documents via vectorStore.similaritySearch(
+     *     SearchRequest.builder().query(query).topK(candidateK).build()
+     *   ).
+     * - If candidates is empty, return List.of().
+     * - For each candidate document, resolve its embedding vector (float[]) via embeddingModel.embed(doc.getText()).
+     * - Helper cosine similarity between float[] u and v:
+     *   dotProduct / (sqrt(sum(u_i^2)) * sqrt(sum(v_i^2))). Return 0.0 if either norm is 0.
+     * - Run greedy MMR selection loop:
+     *   - Maintain List<Document> selected = new ArrayList<>()
+     *   - Maintain List<Document> remaining = new ArrayList<>(candidates)
+     *   - Target count = Math.min(config.topK(), candidates.size())
+     *   - While selected.size() < targetCount and !remaining.isEmpty():
+     *     - For each candidate d in remaining:
+     *       - simToQuery = cosineSimilarity(emb(d), queryEmbedding)
+     *       - maxSimToSelected = 0.0
+     *       - For each s in selected:
+     *         maxSimToSelected = Math.max(maxSimToSelected, cosineSimilarity(emb(d), emb(s)))
+     *       - mmrScore = config.lambda() * simToQuery - (1.0 - config.lambda()) * maxSimToSelected
+     *     - Pick candidate with highest mmrScore. Transfer from remaining to selected.
+     * - Map selected documents to List<SearchResult> using doc.getId(), doc.getText(), doc.getMetadata(),
+     *   and score = cosineSimilarity(emb(doc), queryEmbedding).
+     * - Return list of SearchResult.
+     */
+    public static class MaximalMarginalRelevanceSearchEngine {
+        public static List<SearchResult> searchMmr(
+                VectorStore vectorStore,
+                EmbeddingModel embeddingModel,
+                String query,
+                MmrConfig config
+        ) {
+            // DEFECT (Scenario 11): Returns empty list without computing MMR
+            if (vectorStore == null || embeddingModel == null || query == null || query.isBlank() || config == null) {
+                throw new IllegalArgumentException("Inputs must not be null or blank");
+            }
+            return List.of();
+        }
+    }
+
+    /**
+     * Scenario 12: Content-Hash Ingestion Deduplication & Compaction Pipeline.
+     * <p>
+     * Instructions:
+     * - Validate vectorStore != null and incomingDocuments != null; throw {@link IllegalArgumentException} otherwise.
+     * - Maintain an internal thread-safe set of known content hashes (e.g. Set<String> indexedHashes = ConcurrentHashMap.newKeySet()).
+     * - For each Document doc in incomingDocuments:
+     *   - Normalize content: doc.getText().trim().toLowerCase().
+     *   - Compute SHA-256 hex digest of normalized content.
+     *   - If indexedHashes contains the digest:
+     *     - Increment duplicateSkippedCount.
+     *   - Else:
+     *     - Register digest into indexedHashes.
+     *     - Enrich document metadata with "contentHash" -> digest and "indexedAt" -> Instant.now().toString().
+     *     - Add enriched document to toIndex list.
+     *     - Increment newOrUpdatedCount.
+     * - If !toIndex.isEmpty():
+     *   - Call vectorStore.add(toIndex).
+     * - Return DedupReport(incomingDocuments.size(), newOrUpdatedCount, duplicateSkippedCount, indexedDocIds).
+     */
+    public static class ContentHashDeduplicationPipeline {
+        private final Set<String> indexedHashes = ConcurrentHashMap.newKeySet();
+
+        public DedupReport ingestWithDeduplication(VectorStore vectorStore, List<Document> incomingDocuments) {
+            // DEFECT (Scenario 12): Returns empty report without indexing
+            if (vectorStore == null || incomingDocuments == null) {
+                throw new IllegalArgumentException("Inputs must not be null");
+            }
+            return new DedupReport(incomingDocuments.size(), 0, incomingDocuments.size(), List.of());
+        }
+
+        public Set<String> getIndexedHashes() {
+            return Collections.unmodifiableSet(indexedHashes);
         }
     }
 }

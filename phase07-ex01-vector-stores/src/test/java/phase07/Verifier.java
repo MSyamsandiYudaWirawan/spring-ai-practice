@@ -66,6 +66,8 @@ public class Verifier {
         if (selected == 0 || selected == 8) list.add(verifyScenario8());
         if (selected == 0 || selected == 9) list.add(verifyScenario9());
         if (selected == 0 || selected == 10) list.add(verifyScenario10());
+        if (selected == 0 || selected == 11) list.add(verifyScenario11());
+        if (selected == 0 || selected == 12) list.add(verifyScenario12());
         return list;
     }
 
@@ -396,6 +398,125 @@ public class Verifier {
             return new ScenarioResult(10, name, true, "OK");
         } catch (Throwable t) {
             return new ScenarioResult(10, name, false, "Exception: " + t.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario11() {
+        String name = "MaximalMarginalRelevanceSearchEngine (MMR Diversity Re-ranking)";
+        try {
+            // Guard test
+            try {
+                MaximalMarginalRelevanceSearchEngine.searchMmr(null, null, null, null);
+                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException for null arguments");
+            } catch (IllegalArgumentException expected) {}
+
+            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
+            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+
+            // Seed 4 documents: doc1 and doc2 are near-duplicates; doc3 is kubernetes config; doc4 is postgresql
+            Document doc1 = Document.builder().id("doc-1").text("Kubernetes pod OOMKilled memory limit exceeded container restart").build();
+            Document doc2 = Document.builder().id("doc-2").text("Container OOMKilled kubernetes memory limit exceeded pod restart").build();
+            Document doc3 = Document.builder().id("doc-3").text("ConfigMap environment variable misconfiguration in kubernetes cluster").build();
+            Document doc4 = Document.builder().id("doc-4").text("PostgreSQL database connection pool timeout exhaustion").build();
+
+            store.add(List.of(doc1, doc2, doc3, doc4));
+
+            MmrConfig config = new MmrConfig(2, 0.5, 2);
+            List<SearchResult> mmrResults = MaximalMarginalRelevanceSearchEngine.searchMmr(
+                    store, embeddingModel, "kubernetes pod memory OOMKilled restart", config
+            );
+
+            if (mmrResults == null || mmrResults.isEmpty()) {
+                return new ScenarioResult(11, name, false, "MMR returned null or empty result list");
+            }
+
+            if (mmrResults.size() != 2) {
+                return new ScenarioResult(11, name, false, "Expected exactly 2 MMR results, got: " + mmrResults.size());
+            }
+
+            // In MMR with lambda 0.5, doc1 is chosen first.
+            // doc2 is an almost identical duplicate of doc1, so doc3 should be prioritized over doc2 for diversity
+            List<String> returnedIds = mmrResults.stream().map(SearchResult::id).toList();
+            if (!returnedIds.contains("doc-1")) {
+                return new ScenarioResult(11, name, false, "Expected primary relevant doc 'doc-1' to be selected in MMR");
+            }
+            if (returnedIds.contains("doc-2") && !returnedIds.contains("doc-3")) {
+                return new ScenarioResult(11, name, false, "MMR failed to diversify: selected duplicate 'doc-2' instead of diverse 'doc-3'");
+            }
+
+            // Verify scores are populated and non-negative
+            for (SearchResult r : mmrResults) {
+                if (Double.isNaN(r.score()) || r.score() <= 0.0) {
+                    return new ScenarioResult(11, name, false, "Invalid similarity score in SearchResult: " + r.score());
+                }
+            }
+
+            return new ScenarioResult(11, name, true, "OK");
+        } catch (Throwable t) {
+            return new ScenarioResult(11, name, false, "Exception: " + t.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario12() {
+        String name = "ContentHashDeduplicationPipeline (Idempotent Chunk Ingestion)";
+        try {
+            // Guard test
+            ContentHashDeduplicationPipeline pipeline = new ContentHashDeduplicationPipeline();
+            try {
+                pipeline.ingestWithDeduplication(null, null);
+                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException for null arguments");
+            } catch (IllegalArgumentException expected) {}
+
+            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
+            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+
+            // Batch 1: 3 documents (doc1 and doc3 have identical content after trim/case normalization)
+            Document doc1 = Document.builder().id("doc-1").text("JVM garbage collection pause latency spikes").build();
+            Document doc2 = Document.builder().id("doc-2").text("HikariCP database pool saturation timeout").build();
+            Document doc3 = Document.builder().id("doc-3").text("  jvm garbage collection pause latency spikes  ").build();
+
+            DedupReport report1 = pipeline.ingestWithDeduplication(store, List.of(doc1, doc2, doc3));
+            if (report1 == null) {
+                return new ScenarioResult(12, name, false, "Pipeline returned null report for batch 1");
+            }
+            if (report1.totalSubmitted() != 3) {
+                return new ScenarioResult(12, name, false, "Batch 1: expected totalSubmitted=3, got: " + report1.totalSubmitted());
+            }
+            if (report1.newOrUpdatedCount() != 2) {
+                return new ScenarioResult(12, name, false, "Batch 1: expected newOrUpdatedCount=2, got: " + report1.newOrUpdatedCount());
+            }
+            if (report1.duplicateSkippedCount() != 1) {
+                return new ScenarioResult(12, name, false, "Batch 1: expected duplicateSkippedCount=1, got: " + report1.duplicateSkippedCount());
+            }
+            if (!report1.indexedIds().contains("doc-1") || !report1.indexedIds().contains("doc-2") || report1.indexedIds().contains("doc-3")) {
+                return new ScenarioResult(12, name, false, "Batch 1: indexed IDs mismatch: " + report1.indexedIds());
+            }
+
+            // Batch 2: Resubmit doc1 under new ID, plus new doc4
+            Document doc1Resubmitted = Document.builder().id("doc-1-replay").text("jvm garbage collection pause latency spikes").build();
+            Document doc4 = Document.builder().id("doc-4").text("Tomcat thread pool exhaustion").build();
+
+            DedupReport report2 = pipeline.ingestWithDeduplication(store, List.of(doc1Resubmitted, doc4));
+            if (report2.totalSubmitted() != 2) {
+                return new ScenarioResult(12, name, false, "Batch 2: expected totalSubmitted=2, got: " + report2.totalSubmitted());
+            }
+            if (report2.newOrUpdatedCount() != 1) {
+                return new ScenarioResult(12, name, false, "Batch 2: expected newOrUpdatedCount=1, got: " + report2.newOrUpdatedCount());
+            }
+            if (report2.duplicateSkippedCount() != 1) {
+                return new ScenarioResult(12, name, false, "Batch 2: expected duplicateSkippedCount=1, got: " + report2.duplicateSkippedCount());
+            }
+            if (!report2.indexedIds().contains("doc-4") || report2.indexedIds().contains("doc-1-replay")) {
+                return new ScenarioResult(12, name, false, "Batch 2: indexed IDs mismatch: " + report2.indexedIds());
+            }
+
+            if (pipeline.getIndexedHashes().size() != 3) {
+                return new ScenarioResult(12, name, false, "Expected 3 indexed hashes in pipeline, got: " + pipeline.getIndexedHashes().size());
+            }
+
+            return new ScenarioResult(12, name, true, "OK");
+        } catch (Throwable t) {
+            return new ScenarioResult(12, name, false, "Exception: " + t.getMessage());
         }
     }
 

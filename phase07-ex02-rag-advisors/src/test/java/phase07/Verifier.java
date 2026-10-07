@@ -45,9 +45,11 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         System.out.println("\n-----------------------------------------------------------------");
-        System.out.printf("VERIFICATION SUMMARY: %d / 10 PASSED, %d FAILED%n", passed.get(), failed.get());
+        System.out.printf("VERIFICATION SUMMARY: %d / 12 PASSED, %d FAILED%n", passed.get(), failed.get());
         System.out.println("-----------------------------------------------------------------");
 
         if (failed.get() > 0) {
@@ -73,6 +75,8 @@ public class Verifier {
         testScenario08(underTest);
         testScenario09(underTest);
         testScenario10(underTest);
+        testScenario11(underTest);
+        testScenario12(underTest);
 
         org.junit.jupiter.api.Assertions.assertEquals(0, failed.get(), "Verifier detected scenario failures.");
     }
@@ -472,6 +476,116 @@ public class Verifier {
 
             if (successResp.totalTokens() != 250) {
                 fail(name, "Expected 250 total tokens, got: " + successResp.totalTokens());
+                return;
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario11(RagAdvisorUnderTest underTest) {
+        String name = "Scenario 11: Hypothetical Document Embeddings (HyDE Query Transformer)";
+        try {
+            FakeRagChatModel chatModel = new FakeRagChatModel();
+            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
+            String template = "Write a technical answer for query: {query}";
+
+            QueryTransformer transformer = underTest.buildHydeTransformer(chatClientBuilder, template);
+            if (transformer == null) {
+                fail(name, "buildHydeTransformer returned null");
+                return;
+            }
+
+            // Subtest 1: Successful hypothetical document generation
+            chatModel.enqueue("HikariCP connection pool timeout is mitigated by tuning maximumPoolSize and leakDetectionThreshold.");
+            Query inputQuery = new Query("How to fix database timeout?");
+            Query transformed = transformer.transform(inputQuery);
+
+            if (transformed == null || transformed.text() == null) {
+                fail(name, "Transformed query is null or has null text");
+                return;
+            }
+
+            if (!transformed.text().contains("HikariCP connection pool timeout")) {
+                fail(name, "Expected transformed query to contain hypothetical answer, got: " + transformed.text());
+                return;
+            }
+
+            // Verify prompt was sent with {query} replaced
+            org.springframework.ai.chat.prompt.Prompt lastPrompt = chatModel.getLastPrompt();
+            String promptText = (lastPrompt != null && lastPrompt.getInstructions() != null && !lastPrompt.getInstructions().isEmpty())
+                    ? lastPrompt.getInstructions().get(0).getText() : "";
+            if (!promptText.contains("How to fix database timeout?")) {
+                fail(name, "Expected LLM prompt to contain original query formatted in template");
+                return;
+            }
+
+            // Subtest 2: Fallback when LLM returns blank content
+            chatModel.enqueue("   ");
+            Query fallbackResult = transformer.transform(inputQuery);
+            if (!"How to fix database timeout?".equals(fallbackResult.text())) {
+                fail(name, "Expected fallback to original query on blank LLM output, got: " + fallbackResult.text());
+                return;
+            }
+
+            pass(name);
+        } catch (Throwable t) {
+            fail(name, t.getMessage());
+        }
+    }
+
+    private static void testScenario12(RagAdvisorUnderTest underTest) {
+        String name = "Scenario 12: Token-Budget Context Packing & Dynamic Truncator";
+        try {
+            Document d1 = Document.builder().id("d1").text("A".repeat(80)).build();  // ~20 tokens
+            Document d2 = Document.builder().id("d2").text("B".repeat(120)).build(); // ~30 tokens
+            Document d3 = Document.builder().id("d3").text("C".repeat(160)).build(); // ~40 tokens
+
+            // Subtest 1: Budget allows d1 and d2, but not d3 (maxTokens = 60)
+            PackedContext result = underTest.packContextWithinBudget(List.of(d1, d2, d3), 60, "\n---\n");
+            if (result == null) {
+                fail(name, "packContextWithinBudget returned null");
+                return;
+            }
+
+            if (result.packedDocumentCount() != 2) {
+                fail(name, "Expected 2 packed documents, got: " + result.packedDocumentCount());
+                return;
+            }
+
+            if (result.droppedDocumentCount() != 1) {
+                fail(name, "Expected 1 dropped document, got: " + result.droppedDocumentCount());
+                return;
+            }
+
+            if (!result.packedDocIds().equals(List.of("d1", "d2"))) {
+                fail(name, "Expected packed doc IDs [d1, d2], got: " + result.packedDocIds());
+                return;
+            }
+
+            if (!result.packedContent().contains("A".repeat(80)) || !result.packedContent().contains("B".repeat(120))) {
+                fail(name, "Packed content missing full document text");
+                return;
+            }
+
+            // Subtest 2: Single oversized document gets truncated to budget
+            Document hugeDoc = Document.builder().id("huge").text("X".repeat(500)).build(); // ~125 tokens
+            PackedContext truncResult = underTest.packContextWithinBudget(List.of(hugeDoc), 30, "\n");
+            if (truncResult.packedDocumentCount() != 1) {
+                fail(name, "Expected 1 truncated document packed, got: " + truncResult.packedDocumentCount());
+                return;
+            }
+            if (truncResult.totalEstimatedTokens() > 30) {
+                fail(name, "Truncated tokens exceed maxTokens: " + truncResult.totalEstimatedTokens());
+                return;
+            }
+
+            // Subtest 3: Empty input
+            PackedContext emptyResult = underTest.packContextWithinBudget(List.of(), 50, "\n");
+            if (emptyResult.packedDocumentCount() != 0 || !emptyResult.packedContent().isEmpty()) {
+                fail(name, "Expected empty packed context for empty input");
                 return;
             }
 

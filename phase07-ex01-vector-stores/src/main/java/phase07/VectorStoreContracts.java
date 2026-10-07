@@ -87,6 +87,35 @@ public final class VectorStoreContracts {
     }
 
     /**
+     * Configuration for Maximal Marginal Relevance (MMR) diversity search.
+     */
+    public record MmrConfig(
+            int topK,
+            double lambda,
+            int candidateFetchMultiplier
+    ) {
+        public MmrConfig {
+            if (topK < 1) throw new IllegalArgumentException("topK must be >= 1");
+            if (lambda < 0.0 || lambda > 1.0) throw new IllegalArgumentException("lambda must be between 0.0 and 1.0");
+            if (candidateFetchMultiplier < 1) throw new IllegalArgumentException("candidateFetchMultiplier must be >= 1");
+        }
+    }
+
+    /**
+     * Audit report emitted by the content-hash deduplication ingestion pipeline.
+     */
+    public record DedupReport(
+            int totalSubmitted,
+            int newOrUpdatedCount,
+            int duplicateSkippedCount,
+            List<String> indexedIds
+    ) {
+        public DedupReport {
+            indexedIds = indexedIds != null ? List.copyOf(indexedIds) : List.of();
+        }
+    }
+
+    /**
      * Exception thrown when vector store integrity or search verification gates fail.
      * <p>
      * Contract requirement: Message MUST contain "VectorStore constraint breached" (case-insensitive).

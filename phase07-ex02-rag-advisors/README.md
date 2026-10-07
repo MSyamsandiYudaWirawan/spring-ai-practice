@@ -34,6 +34,10 @@ This exercise teaches production RAG design patterns using Spring AI 2.0.1's nat
    - Bind advisor into `ChatClient.builder().defaultAdvisors(advisor)`.
 10. **Scenario 10: Guardrailed Enterprise Multi-Tenant RAG Gateway**
     - Production RAG gate: validate request, enforce tenant clearance, query vector store, post-process results, call ChatClient, and return citations and token metrics.
+11. **Scenario 11: Hypothetical Document Embeddings (HyDE) Query Transformer**
+    - Pre-generate synthetic answer passages using an LLM to query the vector store in answer space, with graceful fallback to the original query on empty output.
+12. **Scenario 12: Token-Budget Context Packing & Dynamic Truncator**
+    - Greedily pack retrieved documents up to a strict context window token ceiling, cleanly truncating oversized documents and auditing packed vs dropped documents.
 
 ---
 

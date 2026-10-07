@@ -70,6 +70,36 @@ public final class RagAdvisorContracts {
     }
 
     /**
+     * Audit log for Hypothetical Document Embedding (HyDE) query transformation.
+     */
+    public record HydeTransformationResult(
+            String originalQuery,
+            String hypotheticalDocument,
+            boolean fallbackToOriginal
+    ) {
+        public HydeTransformationResult {
+            Objects.requireNonNull(originalQuery, "originalQuery cannot be null");
+            Objects.requireNonNull(hypotheticalDocument, "hypotheticalDocument cannot be null");
+        }
+    }
+
+    /**
+     * Result of packing retrieved documents into a finite token budget.
+     */
+    public record PackedContext(
+            String packedContent,
+            int totalEstimatedTokens,
+            int packedDocumentCount,
+            int droppedDocumentCount,
+            List<String> packedDocIds
+    ) {
+        public PackedContext {
+            Objects.requireNonNull(packedContent, "packedContent cannot be null");
+            packedDocIds = packedDocIds == null ? List.of() : List.copyOf(packedDocIds);
+        }
+    }
+
+    /**
      * Exception thrown when the Enterprise RAG Gateway encounters a clearance violation,
      * tenant breach, or disallowed empty context.
      */

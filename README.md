@@ -23,7 +23,7 @@ In real-world enterprise agentic architectures (such as [**`agentic-performance-
 - **RAG & Vector Stores:** Text chunking, deterministic vector embeddings, cosine similarity, metadata filtering, contextual query augmentation, and query expansion.
 - **Model Context Protocol (MCP):** MCP Server tool/resource/prompt specification exposure, MCP Client adapter integration, multi-server tool federation, and agentic gateway routing.
 
-This repository provides **17 high-repetition deliberate practice drills**, designed to build instinctive muscle memory across all core Spring AI primitives before assembling them into production agentic systems.
+This repository provides **17 high-repetition deliberate practice drills (163 total scenarios)**, designed to build instinctive muscle memory across all core Spring AI primitives before assembling them into production agentic systems.
 
 ---
 
@@ -41,8 +41,8 @@ Each phase contains progressive drills:
 | **Phase 04** | [`phase04-ex01-guardrail-advisors`](phase04-ex01-guardrail-advisors/)<br>[`phase04-ex02-resilient-guardrails`](phase04-ex02-resilient-guardrails/) | Spring AI `CallAdvisor` chain, security keyword circuit-breakers, dollar/token budget accumulators, sliding-window rate limiters, failover routing. | 20 Scenarios |
 | **Phase 05** | [`phase05-ex01-offline-harness`](phase05-ex01-offline-harness/)<br>[`phase05-ex02-advanced-harness`](phase05-ex02-advanced-harness/) | Deterministic test harnesses, scripted FIFO doubles, predicate routing, fault injection, outgoing prompt spies, chaos matrices, virtual clock seams. | 20 Scenarios |
 | **Phase 06** | [`phase06-ex01-evaluators`](phase06-ex01-evaluators/)<br>[`phase06-ex02-advanced-judges`](phase06-ex02-advanced-judges/) | Spring AI `Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, noise floor keep gates, rubric score parsers, pairwise A/B tournament judges. | 20 Scenarios |
-| **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking, embedding generation, cosine similarity, metadata filtering, `DocumentRetriever`, contextual prompt augmentation, query expansion. | 20 Scenarios |
-| **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, remote client discovery, multi-server federation, agentic gateway. | 20 Scenarios |
+| **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking, embedding generation, cosine similarity, metadata filtering, MMR diversity re-ranking, deduplication, `DocumentRetriever`, contextual prompt augmentation, query expansion, HyDE, token budget packing. | 24 Scenarios |
+| **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, URI templates, log notifications, remote client discovery, multi-server federation, dynamic tool reloading, sampling, agentic gateway. | 24 Scenarios |
 
 ---
 
