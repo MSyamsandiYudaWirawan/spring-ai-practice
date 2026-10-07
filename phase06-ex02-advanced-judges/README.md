@@ -10,7 +10,7 @@ In **Phase 06 Exercise 02**, you tackle **repetitive and difficult** production 
 - Answer relevance and query drift gates.
 - Anchor-based calibrated rubrics to eliminate LLM grade inflation.
 - Adversarial safety, jailbreak, and system prompt exfiltration refusal grading.
-- Saddle-Safe mechanism keep rules (the complete `KeepRule` v2 from `agentic-performance-diagnostician`).
+- Saddle-Safe mechanism keep rules (deterministic telemetry keep gate with noise floors and fail-rate guards).
 - Multi-turn agent trajectory audits detecting redundant tool loops and cyclical ping-pongs.
 - Statistical inter-judge agreement (Cohen's Kappa calibration).
 - Autonomous benchmark suite orchestrator and production release gates.

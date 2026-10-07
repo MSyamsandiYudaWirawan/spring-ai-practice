@@ -796,7 +796,7 @@ Claim:
 ---
 
 ### 13.4 Deterministic Telemetry Gating (`KeepRule` v2)
-In autonomous agentic architectures (like `agentic-performance-diagnostician`), qualitative LLM evaluation must be paired with mathematical threshold gates to prevent accepting illusory improvements caused by telemetry noise.
+In autonomous agentic architectures, qualitative LLM evaluation must be paired with mathematical threshold gates to prevent accepting illusory improvements caused by telemetry noise.
 
 ```java
 public class NoiseFloorEvaluator {

@@ -1,7 +1,7 @@
 # Golden Solution: Phase 06 Exercise 02 (Advanced LLM Judges, Bias Mitigation & Trajectory Evaluation)
 
 ## Overview
-This golden solution implements all 10 scenarios of `phase06-ex02-advanced-judges`, providing advanced implementations of pairwise A/B tournament judges with position bias swapping, self-consistency majority voting, claim-level attribution for RAG systems, query drift detection, anchor-calibrated rubrics, adversarial safety refusal judges, saddle-safe mechanism keep rules (`KeepRule` v2 from `agentic-performance-diagnostician`), agent trajectory efficiency audits, statistical Cohen's Kappa calibration, and autonomous release benchmark suite gates.
+This golden solution implements all 10 scenarios of `phase06-ex02-advanced-judges`, providing advanced implementations of pairwise A/B tournament judges with position bias swapping, self-consistency majority voting, claim-level attribution for RAG systems, query drift detection, anchor-calibrated rubrics, adversarial safety refusal judges, saddle-safe mechanism keep rules (deterministic telemetry keep gates), agent trajectory efficiency audits, statistical Cohen's Kappa calibration, and autonomous release benchmark suite gates.
 
 Verified: `10 PASSED, 0 FAILED (exit code 0)`
 

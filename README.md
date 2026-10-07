@@ -1,4 +1,4 @@
-# Spring AI Practice Ground: Enterprise Agentic Engineering Drills
+# Spring AI Practice Ground: Agentic Engineering Drills
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -14,7 +14,7 @@
 
 Most Spring AI guides demonstrate a single `.prompt().user("Hello").call().content()` call and stop there.
 
-In real-world enterprise agentic architectures (such as [**`agentic-performance-diagnostician`**](https://github.com/syamsandi/agentic-performance-diagnostician)), **pure LLM inference accounts for only ~20% of the codebase**. The remaining 80% consists of:
+In real-world agentic architectures, **pure LLM inference accounts for only ~20% of the codebase**. The remaining 80% consists of:
 - **Resilient Structured Outputs:** Preamble/markdown fence stripping, discriminated union extraction, and closed-loop one-shot schema repair.
 - **Sandboxed Tool Calling:** Hard turn bounds, path traversal containment, file-size circuit breakers, and audit logging.
 - **Advisor Guardrails:** Onion-layered interceptors for cost caps, token quotas with transactional rollback, PII redaction, and downstream model failover.
@@ -114,11 +114,10 @@ phaseXX-exYY-<name>/
 
 ---
 
-## 🔗 Reference Architecture Connection
+## 🎯 Core Pedagogical Philosophy
+In complex agentic systems, pure LLM inference is small (~20%); the vast majority of engineering is deterministic plumbing, state machines, guardrails, schema repair, and isolated test harnesses.
 
-This practice suite is the companion curriculum to [**`agentic-performance-diagnostician`**](https://github.com/syamsandi/agentic-performance-diagnostician) — an autonomous, self-healing Java performance engineering agent that uses Spring AI to analyze JFR telemetry, generate bytecode/configuration optimizations, execute canaries, and apply automated compensatory rollback on regression.
-
-By completing these 8 phases, you will understand every line of code inside enterprise autonomous agents — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems.
+By completing these 8 phases, you will master writing these patterns cold — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems.
 
 ---
 

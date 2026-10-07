@@ -196,9 +196,9 @@ public class AdvancedJudgeUnderTest {
     }
 
     /**
-     * Scenario 7: Diagnostician Saddle-Safe Mechanism Keep Rule Evaluator.
+     * Scenario 7: Saddle-Safe Mechanism Telemetry Keep Rule Evaluator.
      * <p>
-     * Instructions (from agentic-performance-diagnostician KeepRule v2):
+     * Instructions (Telemetry Gating KeepRule):
      * - p95Improve = ref.latency().p95() - result.latency().p95()
      * - rpsImprove = result.rps() - ref.rps()
      * - rpsImproved = rpsImprove > floors.rpsFloor()

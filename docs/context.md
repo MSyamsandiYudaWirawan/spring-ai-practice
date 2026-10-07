@@ -7,8 +7,7 @@
 ## 1. High-Level Mission & Pedagogical Protocol
 
 - **Target Goal:** Bridge the gap from Spring AI beginner to authoring production-grade agentic architectures with cold muscle memory.
-- **Reference Codebase Status:** The reference project [`agentic-performance-diagnostician`](https://github.com/syamsandi/agentic-performance-diagnostician) has achieved **v1.0 Capstone Completion (Steps 0–12 fully implemented and verify-gated)**. 
-- **Core Value Proposition:** This practice repository enables engineers to build instinctive muscle memory across Spring AI primitives in isolation before assembling them into full-scale autonomous diagnostic systems like `agentic-performance-diagnostician`.
+- **Core Value Proposition:** This practice repository enables engineers to build instinctive muscle memory across Spring AI primitives in isolation before assembling them into full-scale autonomous diagnostic and remediation systems.
 - **Core Problem Solved:** In complex agentic systems, pure LLM inference is ~20% of the code; 80% is plumbing, state management, schema validation, guardrails, and deterministic testing. Repetitive, isolated muscle-memory drills build the confidence needed to write this code cold.
 - **Pedagogical Rules of Engagement:**
   1. **Strict Seam Separation:** Code-under-test (`*UnderTest.java`) is the **ONLY** file modified by the user. Rulers, contracts, mocks, and verifiers are immutable.

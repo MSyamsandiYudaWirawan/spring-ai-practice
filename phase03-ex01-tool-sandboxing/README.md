@@ -1,7 +1,7 @@
 # Phase 03 Exercise 01 â€” Autonomous Diagnostic Tool Sandboxing & Execution Bounding
 
-**Theme:** Multi-Turn Tool Calling (`@Tool`), Path Traversal Sandboxing, Exception Isolation, and Turn-Scoped Tool Bounding (8 Production Scenarios).  
-**Diagnostician Mapping:** Directly implements [`BoundedReadSource`](https://github.com/syamsandi/agentic-performance-diagnostician/agent-core/src/main/java/io/diag/agent/loop/BoundedReadSource.java) from [`agentic-performance-diagnostician`](https://github.com/syamsandi/agentic-performance-diagnostician) (Step 8/9). Enforces: *"AI proposes, pipeline disposes. Model only reads; loop applies."*
+**Theme:** Multi-Turn Tool Calling (`@Tool`), Path Traversal Sandboxing, Exception Isolation, and Turn-Scoped Tool Bounding (8 Scenarios).  
+**Architectural Principle:** Enforces: *"AI proposes, pipeline disposes. Model only reads; loop applies."*
 
 ---
 

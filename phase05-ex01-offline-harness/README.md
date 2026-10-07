@@ -2,7 +2,7 @@
 
 ## Purpose & Pedagogical Architecture
 In complex agentic and Spring AI architectures, testing against live LLMs causes flakiness, latency, and costs. Trying to mock Spring AI's internal `ChatClient` builder chain directly is painful. 
-The architectural solution used in production (and in [`agentic-performance-diagnostician`](https://github.com/syamsandi/agentic-performance-diagnostician)) is a **boundary seam**:
+The architectural solution used in resilient architectures is a **boundary seam**:
 - Application loops talk to an interface we own: `ChatPort`.
 - In production, `SpringAiChatPort` adapts `ChatPort` to Spring AI's `ChatClient`.
 - In tests, deterministic test doubles (`ScriptedChatPort`, `PredicateRoutingChatPort`, `FaultInjectingChatPort`, `PromptCapturingChatPort`, `BudgetEnforcingChatPort`) run 100% offline in < 500ms with zero live API calls.

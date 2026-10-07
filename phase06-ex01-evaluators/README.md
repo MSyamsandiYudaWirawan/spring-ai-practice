@@ -2,8 +2,8 @@
 
 ## Mission Overview
 In **Phase 06 Exercise 01**, you master the foundational evaluation interfaces and contracts of Spring AI and deterministic metric gates.
-In production agentic architectures (such as [`agentic-performance-diagnostician`](https://github.com/syamsandi/agentic-performance-diagnostician)), evaluating whether an AI recommendation improved system health or answered a query requires both:
-1. **Deterministic mathematical gates** (e.g. `NoiseFloorEvaluator` from `KeepRule` v2 and `GroundTruthAccuracyEvaluator` from `EvalScorer`).
+In robust agentic architectures, evaluating whether an AI recommendation improved system health or answered a query requires both:
+1. **Deterministic mathematical gates** (e.g. `NoiseFloorEvaluator` and `GroundTruthAccuracyEvaluator`).
 2. **Spring AI LLM-as-a-Judge evaluators** (`Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, rubric-based judging, and multi-criteria scoring).
 
 This drill provides 10 high-repetition scenarios building instinctive muscle memory on creating, adapting, and chaining evaluators.
