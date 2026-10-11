@@ -8,17 +8,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
- *
- * Seeded with defects across 8 scenarios in FinTech Fraud & Risk Operations:
- * - Scenario 1: Role separation in transaction analysis.
- * - Scenario 2: Parameterized dispute template with Map parameters.
- * - Scenario 3: Parameterized system prompt specification.
- * - Scenario 4: Call-level ChatOptions overrides for high-risk transfers.
- * - Scenario 5: Multi-turn history replay preserving Message types.
- * - Scenario 6: Few-shot in-context learning priming with AssistantMessage.
- * - Scenario 7: ChatClient mutation via .mutate() for expedited operations.
- * - Scenario 8: Token usage audit extraction from ChatResponse metadata.
+ * Service under test — Phase 01 Exercise 02: Advanced ChatClient & FinTech Operations.
+ * <p>
+ * Practice mode: Contains intentional defects across all 15 drills (0/15 passing).
+ * Follow the tiered progressive hints in Verifier output to implement each gate.
  */
 public class FraudOpsServiceUnderTest {
 
@@ -35,24 +28,29 @@ public class FraudOpsServiceUnderTest {
     }
 
     /**
-     * Scenario 1: Role separation.
-     * System instructions must be set via .system(complianceRole), and transaction details via .user(...).
+     * Drills 1 & 2: Role separation and fail-fast boundary invariants.
      */
     public String analyzeTransaction(String complianceRole, FraudModelContracts.Transaction tx) {
-        // DEFECT (Scenario 1): Concatenates compliance role into user message.
+        // DEFECT (Drills 1 & 2): Concatenates role into user prompt without fail-fast validation.
         return chatClient.prompt()
-                .user("Compliance: " + complianceRole + "\nTransaction: " + tx.toString())
+                .user("Compliance: " + complianceRole + "\nTransaction: " + (tx != null ? tx.toString() : "null"))
                 .call()
                 .content();
     }
 
     /**
-     * Scenario 2: Parameterized template using a Map.
-     * Must use FraudModelContracts.DISPUTE_TEMPLATE with .user(u -> u.text(...).params(Map.of(...)))
-     * Placeholders: "customerName", "disputeId", "amount", "currency", "reason"
+     * Drill 3: Parameterized system prompt specification.
+     */
+    public String configureRegionalAuditor(String jurisdiction, String standard, String auditQuery) {
+        // DEFECT (Drill 3): Returns null without configuring parameterized SystemSpec.
+        return null;
+    }
+
+    /**
+     * Drills 4, 5 & 6: Parameterized template using a Map with special character preservation.
      */
     public String draftDisputeNotice(FraudModelContracts.DisputeNotice dispute) {
-        // DEFECT (Scenario 2): Sends raw template without parameter bindings.
+        // DEFECT (Drills 4, 5 & 6): Dispatches raw un-substituted template and lacks null-check.
         return chatClient.prompt()
                 .user(FraudModelContracts.DISPUTE_TEMPLATE)
                 .call()
@@ -60,82 +58,42 @@ public class FraudOpsServiceUnderTest {
     }
 
     /**
-     * Scenario 3: Parameterized system prompt specification.
-     * Must use .system(s -> s.text(REGIONAL_AUDITOR_SYSTEM_TEMPLATE).param("jurisdiction", ...).param("standard", ...))
-     * and .user(auditQuery).
-     */
-    public String configureRegionalAuditor(String jurisdiction, String standard, String auditQuery) {
-        // DEFECT (Scenario 3): Uses static base system prompt and puts jurisdiction into user query.
-        return chatClient.prompt()
-                .user("Jurisdiction: " + jurisdiction + ", Standard: " + standard + "\nQuery: " + auditQuery)
-                .call()
-                .content();
-    }
-
-    /**
-     * Scenario 4: Call-level options override.
-     * Must override options on this specific prompt call:
-     * - temperature: FraudModelContracts.OVERRIDE_TEMPERATURE (0.0)
-     * - maxTokens:   FraudModelContracts.OVERRIDE_MAX_TOKENS (500)
+     * Drills 7, 8 & 9: Call-level options override with fail-fast validation.
      */
     public String auditHighRiskTransfer(String transferDetails) {
-        // DEFECT (Scenario 4): Dispatches without overriding options, inheriting client's higher temperature (0.7).
-        return chatClient.prompt()
-                .user(transferDetails)
-                .call()
-                .content();
+        // DEFECT (Drills 7, 8 & 9): Returns null without configuring call-level options override.
+        return null;
     }
 
     /**
-     * Scenario 5: Multi-turn history replay.
-     * Must supply previous conversation messages via .messages(history) and append latestCustomerMessage via .user(...).
+     * Drills 10 & 11: Multi-turn history replay with boundary validation.
      */
     public String continueDisputeDialogue(List<Message> history, String latestCustomerMessage) {
-        // DEFECT (Scenario 5): Ignores history and only sends the latest message.
-        return chatClient.prompt()
-                .user(latestCustomerMessage)
-                .call()
-                .content();
+        // DEFECT (Drills 10 & 11): Returns null without chaining message history.
+        return null;
     }
 
     /**
-     * Scenario 6: Few-shot in-context learning priming.
-     * Must prepend CLASSIFICATION_FEW_SHOTS as alternating UserMessage and AssistantMessage pairs,
-     * followed by customerInquiry as the final user message.
+     * Drill 12: Few-shot in-context learning priming.
      */
     public String classifyTransactionIntent(String customerInquiry) {
-        // DEFECT (Scenario 6): Dispatches customer inquiry with zero examples.
-        return chatClient.prompt()
-                .user(customerInquiry)
-                .call()
-                .content();
+        // DEFECT (Drill 12): Returns null without prepending few-shot example pairs.
+        return null;
     }
 
     /**
-     * Scenario 7: ChatClient mutation via .mutate().
-     * Must derive a new ChatClient by calling this.chatClient.mutate():
-     * - defaultSystem: EXPEDITED_SYSTEM_PROMPT
-     * - defaultOptions: temperature = 0.1
-     * The original this.chatClient must remain unmutated.
+     * Drill 13: ChatClient mutation via .mutate().
      */
     public ChatClient deriveExpeditedClient() {
-        // DEFECT (Scenario 7): Returns base chatClient instead of mutated instance.
-        return this.chatClient;
+        // DEFECT (Drill 13): Returns null without deriving mutated ChatClient.
+        return null;
     }
 
     /**
-     * Scenario 8: Token usage audit extraction.
-     * Must dispatch operationalPrompt and return AuditResult containing:
-     * - output text content
-     * - promptTokens from ChatResponse metadata Usage
-     * - completionTokens from ChatResponse metadata Usage
+     * Drills 14 & 15: Token usage audit extraction from ChatResponse metadata.
      */
     public FraudModelContracts.AuditResult executeWithTokenAudit(String operationalPrompt) {
-        // DEFECT (Scenario 8): Calls .content() directly, discarding metadata and returning 0 tokens.
-        String content = chatClient.prompt()
-                .user(operationalPrompt)
-                .call()
-                .content();
-        return new FraudModelContracts.AuditResult(content, 0L, 0L);
+        // DEFECT (Drills 14 & 15): Returns null without querying chatResponse metadata.
+        return null;
     }
 }

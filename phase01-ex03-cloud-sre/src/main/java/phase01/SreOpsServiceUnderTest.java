@@ -8,19 +8,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
- *
- * Seeded with defects across 10 scenarios in Kubernetes Cloud SRE operations:
- * - Scenario 1: Boundary validation and role separation in pod crash analysis.
- * - Scenario 2: Parameterized resource exhaustion alert template.
- * - Scenario 3: Conditional environment policy injection.
- * - Scenario 4: Defensive token auditing with nullable Usage metadata.
- * - Scenario 5: Canary analysis client derivation via .mutate().
- * - Scenario 6: Fine-grained ChatOptions with stopSequences and penalties.
- * - Scenario 7: Alert classification with few-shot priming.
- * - Scenario 8: Multi-turn troubleshooting session history replay.
- * - Scenario 9: System envelope augmentation for incident paging.
- * - Scenario 10: Fail-fast structural invariant enforcement on response.
+ * Service under test — Phase 01 Exercise 03: Cloud SRE & Kubernetes Operations.
+ * <p>
+ * Practice mode: Contains intentional defects across all 15 drills (0/15 passing).
+ * Follow the tiered progressive hints in Verifier output to implement each gate.
  */
 public class SreOpsServiceUnderTest {
 
@@ -37,13 +28,10 @@ public class SreOpsServiceUnderTest {
     }
 
     /**
-     * Scenario 1: Boundary validation and role separation.
-     * Invariants: clusterId, namespace, podLogs must NOT be null or blank.
-     * System message: "Cluster: " + clusterId + " | Namespace: " + namespace
-     * User message:   podLogs
+     * Drills 1 & 2: Boundary validation and role separation.
      */
     public String analyzePodCrash(String clusterId, String namespace, String podLogs) {
-        // DEFECT (Scenario 1): Missing boundary checks and concatenates into user message.
+        // DEFECT (Drills 1 & 2): Concatenates into user message without boundary checks.
         return chatClient.prompt()
                 .user("Cluster: " + clusterId + " | Namespace: " + namespace + "\nLogs:\n" + podLogs)
                 .call()
@@ -51,12 +39,18 @@ public class SreOpsServiceUnderTest {
     }
 
     /**
-     * Scenario 2: Template parameter binding with complex types.
-     * Must use SreModelContracts.RESOURCE_ALERT_TEMPLATE with .user(u -> u.text(...).params(Map.of(...)))
-     * Placeholders: "serviceName", "cpuPercent", "memoryBytes", "p99LatencySec", "errorCodes"
+     * Drill 3: Incident paging dynamic system envelope.
+     */
+    public String applyIncidentPagingEnvelope(String onCallEngineer, String incidentQuery) {
+        // DEFECT (Drill 3): Returns null without configuring paging system envelope.
+        return null;
+    }
+
+    /**
+     * Drills 4 & 5: Parameterized resource exhaustion alert template with fail-fast validation.
      */
     public String renderResourceExhaustionAlert(SreModelContracts.AlertDetails alert) {
-        // DEFECT (Scenario 2): Dispatches raw template without binding parameters.
+        // DEFECT (Drills 4 & 5): Dispatches raw un-substituted template and lacks null-check.
         return chatClient.prompt()
                 .user(SreModelContracts.RESOURCE_ALERT_TEMPLATE)
                 .call()
@@ -64,108 +58,58 @@ public class SreOpsServiceUnderTest {
     }
 
     /**
-     * Scenario 3: Conditional environment policy injection.
-     * Invariants: env and anomalyDescription must not be null.
-     * If env == PRODUCTION: system prompt must use PROD_POLICY.
-     * Else: system prompt must use NON_PROD_POLICY.
-     * User message: anomalyDescription.
+     * Drill 6: Conditional environment policy injection.
      */
     public String triageWithEnvironmentPolicy(SreModelContracts.Environment env, String anomalyDescription) {
-        // DEFECT (Scenario 3): Uses static base system prompt, ignoring env policy completely.
-        return chatClient.prompt()
-                .user(anomalyDescription)
-                .call()
-                .content();
+        // DEFECT (Drill 6): Returns null without branching on environment policy.
+        return null;
     }
 
     /**
-     * Scenario 4: Defensive token auditing with nullable Usage metadata.
-     * Must execute diagnosis and extract prompt and completion tokens safely into SreAudit.
-     */
-    public SreModelContracts.SreAudit executeIncidentDiagnosisWithAudit(String incidentReport) {
-        // DEFECT (Scenario 4): Calls .content() directly, returning 0 tokens.
-        String content = chatClient.prompt()
-                .user(incidentReport)
-                .call()
-                .content();
-        return new SreModelContracts.SreAudit(content, 0L, 0L);
-    }
-
-    /**
-     * Scenario 5: Client mutation with parameterized template.
-     * Must derive a canary analysis ChatClient via .mutate():
-     * - Invariants: canaryTrafficPercent between 0.0 and 100.0.
-     * - defaultSystem: CANARY_SYSTEM_TEMPLATE with param "trafficPercent".
-     * - defaultOptions: temperature = 0.1.
-     */
-    public ChatClient deriveCanaryAnalysisClient(double canaryTrafficPercent) {
-        // DEFECT (Scenario 5): Returns base client without mutation.
-        return this.chatClient;
-    }
-
-    /**
-     * Scenario 6: Fine-grained ChatOptions.
-     * Must configure call-level options:
-     * - temperature: DETERMINISTIC_TEMPERATURE (0.0)
-     * - maxTokens: RUNBOOK_MAX_TOKENS (300)
-     * - stopSequences: RUNBOOK_STOP_SEQUENCES
-     * - frequencyPenalty: RUNBOOK_FREQUENCY_PENALTY (0.5)
+     * Drills 7, 8 & 9: Fine-grained ChatOptions with immutability and fail-fast validation.
      */
     public String generateDeterministicRunbook(String alertName) {
-        // DEFECT (Scenario 6): Dispatches without overriding options.
-        return chatClient.prompt()
-                .user(alertName)
-                .call()
-                .content();
+        // DEFECT (Drills 7, 8 & 9): Returns null without setting fine-grained ChatOptions.
+        return null;
     }
 
     /**
-     * Scenario 7: Alert classification with few-shot priming.
-     * Must prepend REMEDIATION_FEW_SHOTS as alternating UserMessage/AssistantMessage pairs,
-     * followed by failureSymptom as the final user message.
-     */
-    public String classifyRemediationAction(String failureSymptom) {
-        // DEFECT (Scenario 7): Dispatches with zero few-shot examples.
-        return chatClient.prompt()
-                .user(failureSymptom)
-                .call()
-                .content();
-    }
-
-    /**
-     * Scenario 8: Multi-turn troubleshooting session history replay.
-     * Must include all previous messages via .messages(history) followed by userReply via .user(...).
+     * Drills 10 & 11: Multi-turn troubleshooting session history replay with boundary validation.
      */
     public String continueTroubleshootingSession(List<Message> history, String userReply) {
-        // DEFECT (Scenario 8): Ignores history and only sends userReply.
-        return chatClient.prompt()
-                .user(userReply)
-                .call()
-                .content();
+        // DEFECT (Drills 10 & 11): Returns null without chaining message history.
+        return null;
     }
 
     /**
-     * Scenario 9: System envelope augmentation for incident paging.
-     * System prompt template: "ON-CALL DISPATCH TO: {engineer}\n" + BASE_SRE_SYSTEM_PROMPT.
+     * Drill 12: Alert classification with few-shot priming.
      */
-    public String applyIncidentPagingEnvelope(String onCallEngineer, String incidentQuery) {
-        // DEFECT (Scenario 9): Concatenates envelope into user message.
-        return chatClient.prompt()
-                .user("Dispatcher: " + onCallEngineer + "\nQuery: " + incidentQuery)
-                .call()
-                .content();
+    public String classifyRemediationAction(String failureSymptom) {
+        // DEFECT (Drill 12): Returns null without prepending few-shot remediation pairs.
+        return null;
     }
 
     /**
-     * Scenario 10: Fail-fast structural invariant enforcement on response.
-     * Must call .chatResponse(), validate non-null output text, and throw IllegalStateException
-     * if empty or malformed.
+     * Drill 13: Canary analysis client derivation via .mutate().
+     */
+    public ChatClient deriveCanaryAnalysisClient(double canaryTrafficPercent) {
+        // DEFECT (Drill 13): Returns null without deriving mutated canary client.
+        return null;
+    }
+
+    /**
+     * Drill 14: Token usage audit extraction from ChatResponse metadata.
+     */
+    public SreModelContracts.SreAudit executeIncidentDiagnosisWithAudit(String incidentReport) {
+        // DEFECT (Drill 14): Returns null without extracting token usage metadata.
+        return null;
+    }
+
+    /**
+     * Drill 15: Fail-fast structural invariant enforcement on response.
      */
     public String safeExecuteDiagnosis(String query) {
-        // DEFECT (Scenario 10): Blindly calls .content() without structure validation.
-        return chatClient.prompt()
-                .user(query)
-                .call()
-                .content();
+        // DEFECT (Drill 15): Returns null without inspecting chatResponse output structure.
+        return null;
     }
 }

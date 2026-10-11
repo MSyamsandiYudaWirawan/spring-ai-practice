@@ -29,12 +29,16 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p>
  * DO NOT MODIFY THIS FILE.
  * <p>
- * Exits with status 99 on FAIL.
- * Exits with status 0 on PASS.
+ * Exits with status 99 on FAIL (k6 convention: findings detected).
+ * Exits with status 0 on PASS (all gates cleared).
  */
 public class Verifier {
 
-    public record ScenarioResult(int scenarioNumber, String name, boolean passed, String errorDetail) {}
+    public record ScenarioResult(int scenarioNumber, String name, boolean passed, String errorDetail, List<String> hints) {
+        public ScenarioResult(int scenarioNumber, String name, boolean passed, String errorDetail) {
+            this(scenarioNumber, name, passed, errorDetail, List.of());
+        }
+    }
 
     public static void main(String[] args) {
         int selected = 0;
@@ -92,6 +96,11 @@ public class Verifier {
 
     private static ScenarioResult verifyScenario1(RagAdvisorUnderTest underTest) {
         String name = "VectorStoreDocumentRetriever (Basic Top-K Retrieval)";
+        List<String> hints = List.of(
+                "VectorStoreDocumentRetriever adapts a Spring AI VectorStore into the DocumentRetriever interface.",
+                "Throw IllegalArgumentException if vectorStore is null or topK < 1.",
+                "VectorStoreDocumentRetriever.builder().vectorStore(store).topK(topK).build();"
+        );
         try {
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
             SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
@@ -102,31 +111,36 @@ public class Verifier {
 
             try {
                 underTest.buildBasicRetriever(null, 2);
-                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on null store");
+                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on null store", hints);
             } catch (IllegalArgumentException expected) {}
 
             try {
                 underTest.buildBasicRetriever(store, 0);
-                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on topK < 1");
+                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on topK < 1", hints);
             } catch (IllegalArgumentException expected) {}
 
             DocumentRetriever retriever = underTest.buildBasicRetriever(store, 2);
             if (retriever == null) {
-                return new ScenarioResult(1, name, false, "buildBasicRetriever returned null");
+                return new ScenarioResult(1, name, false, "buildBasicRetriever returned null", hints);
             }
 
             List<Document> retrieved = retriever.retrieve(new Query("Kubernetes"));
             if (retrieved.isEmpty()) {
-                return new ScenarioResult(1, name, false, "Retriever returned empty documents");
+                return new ScenarioResult(1, name, false, "Retriever returned empty documents", hints);
             }
-            return new ScenarioResult(1, name, true, "OK");
+            return new ScenarioResult(1, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(1, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(1, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario2(RagAdvisorUnderTest underTest) {
         String name = "VectorStoreDocumentRetriever (Threshold-Gated Cutoff)";
+        List<String> hints = List.of(
+                "VectorStoreDocumentRetriever supports similarityThreshold for cutoff filtering.",
+                "Validate similarityThreshold is within [0.0, 1.0]; throw IllegalArgumentException if out of bounds.",
+                "VectorStoreDocumentRetriever.builder().vectorStore(store).topK(topK).similarityThreshold(threshold).build();"
+        );
         try {
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
             SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
@@ -137,34 +151,39 @@ public class Verifier {
 
             try {
                 underTest.buildThresholdRetriever(store, 5, -0.1);
-                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold < 0.0");
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold < 0.0", hints);
             } catch (IllegalArgumentException expected) {}
 
             try {
                 underTest.buildThresholdRetriever(store, 5, 1.5);
-                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold > 1.0");
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold > 1.0", hints);
             } catch (IllegalArgumentException expected) {}
 
             DocumentRetriever retriever = underTest.buildThresholdRetriever(store, 5, 0.9);
             if (retriever == null) {
-                return new ScenarioResult(2, name, false, "buildThresholdRetriever returned null");
+                return new ScenarioResult(2, name, false, "buildThresholdRetriever returned null", hints);
             }
 
             List<Document> docs = retriever.retrieve(new Query("PostgreSQL high replication lag"));
             if (docs.isEmpty()) {
-                return new ScenarioResult(2, name, false, "Expected high-similarity document to be retrieved");
+                return new ScenarioResult(2, name, false, "Expected high-similarity document to be retrieved", hints);
             }
             if (docs.stream().anyMatch(d -> "other".equals(d.getId()))) {
-                return new ScenarioResult(2, name, false, "Unrelated document should have been filtered by threshold");
+                return new ScenarioResult(2, name, false, "Unrelated document should have been filtered by threshold", hints);
             }
-            return new ScenarioResult(2, name, true, "OK");
+            return new ScenarioResult(2, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(2, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(2, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario3(RagAdvisorUnderTest underTest) {
         String name = "VectorStoreDocumentRetriever (FilterExpression Constrained)";
+        List<String> hints = List.of(
+                "VectorStoreDocumentRetriever can be constrained by a Filter.Expression.",
+                "Throw IllegalArgumentException if filterExpression is null.",
+                "VectorStoreDocumentRetriever.builder().vectorStore(store).topK(topK).filterExpression(filter).build();"
+        );
         try {
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
             SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
@@ -177,21 +196,21 @@ public class Verifier {
 
             try {
                 underTest.buildFilterExpressionRetriever(store, 5, null);
-                return new ScenarioResult(3, name, false, "Expected IllegalArgumentException on null filter");
+                return new ScenarioResult(3, name, false, "Expected IllegalArgumentException on null filter", hints);
             } catch (IllegalArgumentException expected) {}
 
             DocumentRetriever retriever = underTest.buildFilterExpressionRetriever(store, 5, filter);
             if (retriever == null) {
-                return new ScenarioResult(3, name, false, "buildFilterExpressionRetriever returned null");
+                return new ScenarioResult(3, name, false, "buildFilterExpressionRetriever returned null", hints);
             }
 
             List<Document> docs = retriever.retrieve(new Query("Database deadlock"));
             if (docs.size() != 1 || !"d-prod".equals(docs.get(0).getId())) {
-                return new ScenarioResult(3, name, false, "Expected only d-prod to match filter expression, got: " + docs.stream().map(Document::getId).toList());
+                return new ScenarioResult(3, name, false, "Expected only d-prod to match filter expression, got: " + docs.stream().map(Document::getId).toList(), hints);
             }
-            return new ScenarioResult(3, name, true, "OK");
+            return new ScenarioResult(3, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(3, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(3, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
@@ -201,15 +220,20 @@ public class Verifier {
 
     private static ScenarioResult verifyScenario4(RagAdvisorUnderTest underTest) {
         String name = "ContextualQueryAugmenter (Custom Document Formatter)";
+        List<String> hints = List.of(
+                "ContextualQueryAugmenter formats retrieved documents into text and injects them into the user prompt.",
+                "Use ContextualQueryAugmenter.builder().documentFormatter(...) with custom prefix and source tag.",
+                "ContextualQueryAugmenter.builder().documentFormatter(docs -> docs.stream().map(d -> prefix + d.getMetadata().getOrDefault(\"source\", \"unknown\") + \": \" + d.getText()).collect(Collectors.joining(\"\\n\"))).build();"
+        );
         try {
             try {
                 underTest.buildCustomFormattedAugmenter(null, true);
-                return new ScenarioResult(4, name, false, "Expected IllegalArgumentException on null headerPrefix");
+                return new ScenarioResult(4, name, false, "Expected IllegalArgumentException on null headerPrefix", hints);
             } catch (IllegalArgumentException expected) {}
 
             QueryAugmenter augmenter = underTest.buildCustomFormattedAugmenter("SOURCE_", true);
             if (augmenter == null) {
-                return new ScenarioResult(4, name, false, "buildCustomFormattedAugmenter returned null");
+                return new ScenarioResult(4, name, false, "buildCustomFormattedAugmenter returned null", hints);
             }
 
             List<Document> docs = List.of(
@@ -219,66 +243,76 @@ public class Verifier {
 
             Query augmented = augmenter.augment(new Query("diagnose issue"), docs);
             if (augmented == null || augmented.text() == null) {
-                return new ScenarioResult(4, name, false, "Augmenter returned null augmented query");
+                return new ScenarioResult(4, name, false, "Augmenter returned null augmented query", hints);
             }
             if (!augmented.text().contains("SOURCE_datadog: CPU spike")) {
-                return new ScenarioResult(4, name, false, "Formatted document missing expected prefix and source");
+                return new ScenarioResult(4, name, false, "Formatted document missing expected prefix and source", hints);
             }
             if (!augmented.text().contains("SOURCE_unknown: Disk full")) {
-                return new ScenarioResult(4, name, false, "Default source 'unknown' not applied");
+                return new ScenarioResult(4, name, false, "Default source 'unknown' not applied", hints);
             }
-            return new ScenarioResult(4, name, true, "OK");
+            return new ScenarioResult(4, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(4, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(4, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario5(RagAdvisorUnderTest underTest) {
         String name = "ContextualQueryAugmenter (Custom PromptTemplate Placeholders)";
+        List<String> hints = List.of(
+                "ContextualQueryAugmenter allows overriding the prompt template containing {context} and {query} placeholders.",
+                "Validate promptTemplate is not null.",
+                "ContextualQueryAugmenter.builder().promptTemplate(promptTemplate).build();"
+        );
         try {
             try {
                 underTest.buildTemplatedAugmenter(null);
-                return new ScenarioResult(5, name, false, "Expected IllegalArgumentException on null promptTemplate");
+                return new ScenarioResult(5, name, false, "Expected IllegalArgumentException on null promptTemplate", hints);
             } catch (IllegalArgumentException expected) {}
 
             PromptTemplate template = new PromptTemplate("=== KNOWLEDGE ===\n{context}\n=== QUESTION ===\n{query}");
             QueryAugmenter augmenter = underTest.buildTemplatedAugmenter(template);
             if (augmenter == null) {
-                return new ScenarioResult(5, name, false, "buildTemplatedAugmenter returned null");
+                return new ScenarioResult(5, name, false, "buildTemplatedAugmenter returned null", hints);
             }
 
             List<Document> docs = List.of(Document.builder().id("1").text("Root cause is OOM.").build());
             Query augmented = augmenter.augment(new Query("What happened?"), docs);
 
             if (augmented == null || !augmented.text().contains("=== KNOWLEDGE ===") || !augmented.text().contains("Root cause is OOM.")) {
-                return new ScenarioResult(5, name, false, "Custom template markers not found in augmented query text");
+                return new ScenarioResult(5, name, false, "Custom template markers not found in augmented query text", hints);
             }
-            return new ScenarioResult(5, name, true, "OK");
+            return new ScenarioResult(5, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(5, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(5, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario6(RagAdvisorUnderTest underTest) {
         String name = "ContextualQueryAugmenter (Fallback Empty Context Guard)";
+        List<String> hints = List.of(
+                "ContextualQueryAugmenter can supply an explicit fallback message when no documents are retrieved.",
+                "Reject blank fallback messages with IllegalArgumentException.",
+                "ContextualQueryAugmenter.builder().emptyContextText(fallbackMessage).build();"
+        );
         try {
             try {
                 underTest.buildFallbackGuardedAugmenter("   ");
-                return new ScenarioResult(6, name, false, "Expected IllegalArgumentException on blank fallbackMessage");
+                return new ScenarioResult(6, name, false, "Expected IllegalArgumentException on blank fallbackMessage", hints);
             } catch (IllegalArgumentException expected) {}
 
             QueryAugmenter augmenter = underTest.buildFallbackGuardedAugmenter("No relevant documentation was found for this query.");
             if (augmenter == null) {
-                return new ScenarioResult(6, name, false, "buildFallbackGuardedAugmenter returned null");
+                return new ScenarioResult(6, name, false, "buildFallbackGuardedAugmenter returned null", hints);
             }
 
             Query augmentedEmpty = augmenter.augment(new Query("find secrets"), List.of());
             if (augmentedEmpty == null || !augmentedEmpty.text().contains("No relevant documentation was found")) {
-                return new ScenarioResult(6, name, false, "Empty context fallback message was not applied");
+                return new ScenarioResult(6, name, false, "Empty context fallback message was not applied", hints);
             }
-            return new ScenarioResult(6, name, true, "OK");
+            return new ScenarioResult(6, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(6, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(6, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
@@ -288,10 +322,15 @@ public class Verifier {
 
     private static ScenarioResult verifyScenario7(RagAdvisorUnderTest underTest) {
         String name = "DocumentPostProcessor (ID Deduplication)";
+        List<String> hints = List.of(
+                "DocumentPostProcessor filters or mutates retrieved documents before prompt augmentation.",
+                "Deduplicate documents by ID while preserving first-seen order.",
+                "(query, docs) -> { Set<String> seen = new HashSet<>(); return docs.stream().filter(d -> seen.add(d.getId())).toList(); };"
+        );
         try {
             DocumentPostProcessor postProcessor = underTest.buildDeduplicatingPostProcessor();
             if (postProcessor == null) {
-                return new ScenarioResult(7, name, false, "buildDeduplicatingPostProcessor returned null");
+                return new ScenarioResult(7, name, false, "buildDeduplicatingPostProcessor returned null", hints);
             }
 
             List<Document> duplicates = List.of(
@@ -302,28 +341,33 @@ public class Verifier {
 
             List<Document> processed = postProcessor.process(new Query("q"), duplicates);
             if (processed == null || processed.size() != 2) {
-                return new ScenarioResult(7, name, false, "Expected 2 documents after deduplication, got: " + (processed == null ? "null" : processed.size()));
+                return new ScenarioResult(7, name, false, "Expected 2 documents after deduplication, got: " + (processed == null ? "null" : processed.size()), hints);
             }
             if (!"version 1".equals(processed.get(0).getText())) {
-                return new ScenarioResult(7, name, false, "Expected first occurrence to be preserved");
+                return new ScenarioResult(7, name, false, "Expected first occurrence to be preserved", hints);
             }
-            return new ScenarioResult(7, name, true, "OK");
+            return new ScenarioResult(7, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(7, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(7, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario8(RagAdvisorUnderTest underTest) {
         String name = "DocumentPostProcessor (Metadata Priority Ranking & Truncation)";
+        List<String> hints = List.of(
+                "DocumentPostProcessor can re-rank retrieved documents by custom metadata properties.",
+                "Throw IllegalArgumentException if maxDocs < 1; sort descending by metadata 'priority'.",
+                "(query, docs) -> docs.stream().sorted((a, b) -> Integer.compare(getPrio(b), getPrio(a))).limit(maxDocs).toList();"
+        );
         try {
             try {
                 underTest.buildPriorityRankingPostProcessor(0);
-                return new ScenarioResult(8, name, false, "Expected IllegalArgumentException on maxDocs < 1");
+                return new ScenarioResult(8, name, false, "Expected IllegalArgumentException on maxDocs < 1", hints);
             } catch (IllegalArgumentException expected) {}
 
             DocumentPostProcessor postProcessor = underTest.buildPriorityRankingPostProcessor(2);
             if (postProcessor == null) {
-                return new ScenarioResult(8, name, false, "buildPriorityRankingPostProcessor returned null");
+                return new ScenarioResult(8, name, false, "buildPriorityRankingPostProcessor returned null", hints);
             }
 
             List<Document> unranked = List.of(
@@ -334,28 +378,33 @@ public class Verifier {
 
             List<Document> ranked = postProcessor.process(new Query("q"), unranked);
             if (ranked == null || ranked.size() != 2) {
-                return new ScenarioResult(8, name, false, "Expected 2 truncated documents, got: " + (ranked == null ? "null" : ranked.size()));
+                return new ScenarioResult(8, name, false, "Expected 2 truncated documents, got: " + (ranked == null ? "null" : ranked.size()), hints);
             }
             if (!"high".equals(ranked.get(0).getId()) || !"mid".equals(ranked.get(1).getId())) {
-                return new ScenarioResult(8, name, false, "Documents not ordered descending by priority");
+                return new ScenarioResult(8, name, false, "Documents not ordered descending by priority", hints);
             }
-            return new ScenarioResult(8, name, true, "OK");
+            return new ScenarioResult(8, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(8, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(8, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario9(RagAdvisorUnderTest underTest) {
         String name = "DocumentPostProcessor (Score-Gated Filtering)";
+        List<String> hints = List.of(
+                "DocumentPostProcessor can drop documents whose similarity score is below a strict cutoff.",
+                "Validate minScore >= 0.0; documents with null scores or score < minScore are discarded.",
+                "(query, docs) -> docs.stream().filter(d -> d.getScore() != null && d.getScore() >= minScore).toList();"
+        );
         try {
             try {
                 underTest.buildScoreGatingPostProcessor(-0.1);
-                return new ScenarioResult(9, name, false, "Expected IllegalArgumentException on minScore < 0.0");
+                return new ScenarioResult(9, name, false, "Expected IllegalArgumentException on minScore < 0.0", hints);
             } catch (IllegalArgumentException expected) {}
 
             DocumentPostProcessor postProcessor = underTest.buildScoreGatingPostProcessor(0.75);
             if (postProcessor == null) {
-                return new ScenarioResult(9, name, false, "buildScoreGatingPostProcessor returned null");
+                return new ScenarioResult(9, name, false, "buildScoreGatingPostProcessor returned null", hints);
             }
 
             List<Document> scoredDocs = List.of(
@@ -366,11 +415,11 @@ public class Verifier {
 
             List<Document> filtered = postProcessor.process(new Query("q"), scoredDocs);
             if (filtered == null || filtered.size() != 1 || !"good".equals(filtered.get(0).getId())) {
-                return new ScenarioResult(9, name, false, "Expected only 'good' document with score >= 0.75, got: " + (filtered == null ? "null" : filtered.stream().map(Document::getId).toList()));
+                return new ScenarioResult(9, name, false, "Expected only 'good' document with score >= 0.75, got: " + (filtered == null ? "null" : filtered.stream().map(Document::getId).toList()), hints);
             }
-            return new ScenarioResult(9, name, true, "OK");
+            return new ScenarioResult(9, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(9, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(9, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
@@ -380,66 +429,81 @@ public class Verifier {
 
     private static ScenarioResult verifyScenario10(RagAdvisorUnderTest underTest) {
         String name = "MultiQueryExpander (Pre-Retrieval Query Expansion)";
+        List<String> hints = List.of(
+                "MultiQueryExpander uses an LLM to generate multiple alternative search queries for higher recall.",
+                "Throw IllegalArgumentException on null chatClientBuilder or numberOfQueries < 1.",
+                "MultiQueryExpander.builder().chatClientBuilder(builder).numberOfQueries(n).includeOriginal(includeOrig).build();"
+        );
         try {
             ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
 
             try {
                 underTest.buildMultiQueryExpander(null, 3, true);
-                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on null chatClientBuilder");
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on null chatClientBuilder", hints);
             } catch (IllegalArgumentException expected) {}
 
             try {
                 underTest.buildMultiQueryExpander(dummyBuilder, 0, true);
-                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on numberOfQueries < 1");
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on numberOfQueries < 1", hints);
             } catch (IllegalArgumentException expected) {}
 
             QueryExpander expander = underTest.buildMultiQueryExpander(dummyBuilder, 3, true);
             if (expander == null) {
-                return new ScenarioResult(10, name, false, "buildMultiQueryExpander returned null");
+                return new ScenarioResult(10, name, false, "buildMultiQueryExpander returned null", hints);
             }
-            return new ScenarioResult(10, name, true, "OK");
+            return new ScenarioResult(10, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(10, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(10, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario11(RagAdvisorUnderTest underTest) {
         String name = "RewriteQueryTransformer (System-Targeted Query Rewriting)";
+        List<String> hints = List.of(
+                "RewriteQueryTransformer reframes the user prompt into a query optimized for a target search system.",
+                "Validate targetSearchSystem is not blank.",
+                "RewriteQueryTransformer.builder().chatClientBuilder(builder).targetSearchSystem(system).build();"
+        );
         try {
             ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
 
             try {
                 underTest.buildRewriteTransformer(dummyBuilder, "  ");
-                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException on blank targetSearchSystem");
+                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException on blank targetSearchSystem", hints);
             } catch (IllegalArgumentException expected) {}
 
             QueryTransformer transformer = underTest.buildRewriteTransformer(dummyBuilder, "Elasticsearch BM25");
             if (transformer == null) {
-                return new ScenarioResult(11, name, false, "buildRewriteTransformer returned null");
+                return new ScenarioResult(11, name, false, "buildRewriteTransformer returned null", hints);
             }
-            return new ScenarioResult(11, name, true, "OK");
+            return new ScenarioResult(11, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(11, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(11, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario12(RagAdvisorUnderTest underTest) {
         String name = "TranslationQueryTransformer (Multilingual Target Language Transformation)";
+        List<String> hints = List.of(
+                "TranslationQueryTransformer translates the user query into the target index language.",
+                "Validate targetLanguage is not null or blank.",
+                "TranslationQueryTransformer.builder().chatClientBuilder(builder).targetLanguage(lang).build();"
+        );
         try {
             ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
 
             try {
                 underTest.buildTranslationTransformer(dummyBuilder, "");
-                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException on blank targetLanguage");
+                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException on blank targetLanguage", hints);
             } catch (IllegalArgumentException expected) {}
 
             QueryTransformer transformer = underTest.buildTranslationTransformer(dummyBuilder, "Japanese");
             if (transformer == null) {
-                return new ScenarioResult(12, name, false, "buildTranslationTransformer returned null");
+                return new ScenarioResult(12, name, false, "buildTranslationTransformer returned null", hints);
             }
-            return new ScenarioResult(12, name, true, "OK");
+            return new ScenarioResult(12, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(12, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(12, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
@@ -449,10 +513,15 @@ public class Verifier {
 
     private static ScenarioResult verifyScenario13(RagAdvisorUnderTest underTest) {
         String name = "RetrievalAugmentationAdvisor (Basic DocumentRetriever Binding)";
+        List<String> hints = List.of(
+                "RetrievalAugmentationAdvisor binds document retrieval into the ChatClient execution pipeline.",
+                "Throw IllegalArgumentException on null DocumentRetriever.",
+                "RetrievalAugmentationAdvisor.builder().documentRetriever(retriever).build();"
+        );
         try {
             try {
                 underTest.buildBasicAdvisor(null);
-                return new ScenarioResult(13, name, false, "Expected IllegalArgumentException on null retriever");
+                return new ScenarioResult(13, name, false, "Expected IllegalArgumentException on null retriever", hints);
             } catch (IllegalArgumentException expected) {}
 
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
@@ -461,16 +530,21 @@ public class Verifier {
 
             RetrievalAugmentationAdvisor advisor = underTest.buildBasicAdvisor(retriever);
             if (advisor == null) {
-                return new ScenarioResult(13, name, false, "buildBasicAdvisor returned null");
+                return new ScenarioResult(13, name, false, "buildBasicAdvisor returned null", hints);
             }
-            return new ScenarioResult(13, name, true, "OK");
+            return new ScenarioResult(13, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(13, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(13, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario14(RagAdvisorUnderTest underTest) {
         String name = "RetrievalAugmentationAdvisor (Retriever & QueryAugmenter Chaining)";
+        List<String> hints = List.of(
+                "RetrievalAugmentationAdvisor chains a DocumentRetriever with a custom QueryAugmenter.",
+                "Throw IllegalArgumentException on null retriever or queryAugmenter.",
+                "RetrievalAugmentationAdvisor.builder().documentRetriever(retriever).queryAugmenter(augmenter).build();"
+        );
         try {
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
             SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
@@ -479,21 +553,26 @@ public class Verifier {
 
             try {
                 underTest.buildAugmentedAdvisor(retriever, null);
-                return new ScenarioResult(14, name, false, "Expected IllegalArgumentException on null queryAugmenter");
+                return new ScenarioResult(14, name, false, "Expected IllegalArgumentException on null queryAugmenter", hints);
             } catch (IllegalArgumentException expected) {}
 
             RetrievalAugmentationAdvisor advisor = underTest.buildAugmentedAdvisor(retriever, augmenter);
             if (advisor == null) {
-                return new ScenarioResult(14, name, false, "buildAugmentedAdvisor returned null");
+                return new ScenarioResult(14, name, false, "buildAugmentedAdvisor returned null", hints);
             }
-            return new ScenarioResult(14, name, true, "OK");
+            return new ScenarioResult(14, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(14, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(14, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
     private static ScenarioResult verifyScenario15(RagAdvisorUnderTest underTest) {
         String name = "RetrievalAugmentationAdvisor (Full Pipeline Assembly)";
+        List<String> hints = List.of(
+                "RetrievalAugmentationAdvisor can orchestrate pre-retrieval transformers, retrievers, post-processors, and augmenters.",
+                "Validate retriever is not null; optionally configure transformer, postProcessors, and augmenter if present.",
+                "RetrievalAugmentationAdvisor.builder().documentRetriever(retriever).queryTransformers(...).documentPostProcessors(...).queryAugmenter(...).build();"
+        );
         try {
             EmbeddingModel fakeModel = new FakeEmbeddingModel();
             SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
@@ -503,16 +582,16 @@ public class Verifier {
 
             try {
                 underTest.buildFullPipelineAdvisor(null, null, null, null);
-                return new ScenarioResult(15, name, false, "Expected IllegalArgumentException on null retriever");
+                return new ScenarioResult(15, name, false, "Expected IllegalArgumentException on null retriever", hints);
             } catch (IllegalArgumentException expected) {}
 
             RetrievalAugmentationAdvisor advisor = underTest.buildFullPipelineAdvisor(retriever, null, postProcessor, augmenter);
             if (advisor == null) {
-                return new ScenarioResult(15, name, false, "buildFullPipelineAdvisor returned null");
+                return new ScenarioResult(15, name, false, "buildFullPipelineAdvisor returned null", hints);
             }
-            return new ScenarioResult(15, name, true, "OK");
+            return new ScenarioResult(15, name, true, "OK", hints);
         } catch (Exception e) {
-            return new ScenarioResult(15, name, false, "Exception: " + e.getMessage());
+            return new ScenarioResult(15, name, false, "Exception: " + e.getMessage(), hints);
         }
     }
 
@@ -525,17 +604,30 @@ public class Verifier {
         System.out.println("  PHASE 07 EXERCISE 02: MODULAR RAG ADVISORS & PIPELINES");
         System.out.println("===============================================================================");
         int passed = 0;
+        String[] hintLabels = {"[HINT 1 (Concept)]", "[HINT 2 (Edge Case)]", "[HINT 3 (Code Pattern)]"};
+
         for (ScenarioResult r : results) {
             String tag = r.passed() ? "[PASS]" : "[FAIL]";
             System.out.printf("  %s Scenario %02d: %s%n", tag, r.scenarioNumber(), r.name());
             if (!r.passed()) {
                 System.out.printf("         --> DETAIL: %s%n", r.errorDetail());
+                if (r.hints() != null && !r.hints().isEmpty()) {
+                    for (int i = 0; i < r.hints().size(); i++) {
+                        String label = i < hintLabels.length ? hintLabels[i] : String.format("[HINT %d]", i + 1);
+                        System.out.printf("         --> %s %s%n", label, r.hints().get(i));
+                    }
+                }
             } else {
                 passed++;
             }
         }
         System.out.println("-------------------------------------------------------------------------------");
         System.out.printf("  TOTAL: %d / %d PASSED%n", passed, results.size());
+        if (passed == results.size()) {
+            System.out.println("  VERDICT: ALL 15 GATES PASSED (exit code 0)");
+        } else {
+            System.out.printf("  VERDICT: %d FINDINGS DETECTED (exit code 99)%n", results.size() - passed);
+        }
         System.out.println("===============================================================================");
     }
 }

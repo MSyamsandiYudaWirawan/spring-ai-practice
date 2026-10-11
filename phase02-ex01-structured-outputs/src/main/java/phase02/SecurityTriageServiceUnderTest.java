@@ -1,134 +1,137 @@
 package phase02;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.converter.BeanOutputConverter;
-import phase02.SecurityModelContracts.PatchPlan;
-import phase02.SecurityModelContracts.TriageEnvelope;
-import phase02.SecurityModelContracts.VulnerabilityAssessment;
+import phase02.SecurityModelContracts.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
+ * Service under test — Phase 02 Exercise 01:
+ * Structured Outputs & Resilient Schema Extraction (15 Scenarios).
  * <p>
- * Seeded with defects across 8 scenarios in Structured Outputs & Resilient Schema Extraction:
- * - Scenario 1: Direct JSON record deserialization via BeanOutputConverter.
- * - Scenario 2: Markdown fence stripping & conversational preamble sanitization.
- * - Scenario 3: Generic collections extraction via ParameterizedTypeReference.
- * - Scenario 4: Schema generation & type-safe ChatClient .entity(Class<T>) dispatch.
- * - Scenario 5: TigerStyle domain invariant validation in record constructors.
- * - Scenario 6: Exception wrapping into diagnostic result envelopes (TriageEnvelope).
- * - Scenario 7: One-shot feedback schema repair loop on malformed JSON.
- * - Scenario 8: Strict retry bound enforcement (prevent infinite repair loops -> IllegalStateException).
+ * PRACTICE MODE: All drills stubbed. Implement each scenario to pass Verifier.
+ * Golden reference solution is sealed in: docs/golden/phase02-ex01-golden.md
  */
 public class SecurityTriageServiceUnderTest {
 
-    private final BeanOutputConverter<VulnerabilityAssessment> assessmentConverter;
-
-    public SecurityTriageServiceUnderTest() {
-        this.assessmentConverter = new BeanOutputConverter<>(VulnerabilityAssessment.class);
-    }
-
     /**
-     * Scenario 1: Direct record extraction from raw JSON.
-     * Invariants: rawJson must not be null or blank.
-     * Must deserialize raw JSON cleanly into VulnerabilityAssessment.
+     * Drill 1: Direct JSON record deserialization via BeanOutputConverter.
      */
     public VulnerabilityAssessment parseVulnerabilityAssessment(String rawJson) {
-        // DEFECT (Scenario 1): Missing boundary checks and returns null.
+        // TODO: Drill 1 - Validate not null/blank, convert using BeanOutputConverter
         return null;
     }
 
     /**
-     * Scenario 2: Defensive markdown fence stripping & conversational preamble sanitization.
-     * Real LLMs wrap JSON inside conversational text and markdown fences:
-     * ```json
-     * { ... }
-     * ```
-     * Must sanitize input by extracting the pure JSON substring from first '{' to last '}'
-     * (or stripping fences) before delegating to assessmentConverter.
+     * Drill 2: Defensive markdown fence stripping & conversational preamble sanitization.
      */
     public VulnerabilityAssessment extractFromMarkdownFences(String markdownPayload) {
-        // DEFECT (Scenario 2): Passes raw markdown to parser without stripping fences, causing parse failure.
-        return assessmentConverter.convert(markdownPayload);
-    }
-
-    /**
-     * Scenario 3: Generic collections extraction via ParameterizedTypeReference.
-     * Invariants: jsonArrayPayload must not be null or blank.
-     * Must use new BeanOutputConverter<>(new ParameterizedTypeReference<List<PatchPlan>>() {})
-     * to deserialize JSON array into a strongly-typed List<PatchPlan>.
-     */
-    public List<PatchPlan> extractPatchPlanList(String jsonArrayPayload) {
-        // DEFECT (Scenario 3): Returns empty list instead of parsing with ParameterizedTypeReference.
-        return List.of();
-    }
-
-    /**
-     * Scenario 4: Type-safe ChatClient execution via .entity(VulnerabilityAssessment.class).
-     * Invariants: client and advisoryText must not be null or blank.
-     * Calls client.prompt().user(advisoryText).call().entity(VulnerabilityAssessment.class).
-     */
-    public VulnerabilityAssessment generateAssessmentWithSchema(ChatClient client, String advisoryText) {
-        // DEFECT (Scenario 4): Calls .content() as raw string and returns null.
+        // TODO: Drill 2 - Clean fences/preamble, convert using BeanOutputConverter
         return null;
     }
 
     /**
-     * Scenario 5: TigerStyle domain invariant validation.
-     * Enforces boundaries on VulnerabilityAssessment:
-     * - cveId must match ^CVE-\d{4}-\d{4,7}$
-     * - cvssScore must be between 0.0 and 10.0 inclusive
-     * - packageCoordinate must contain ':'
-     * - rootCauseAnalysis must not be blank
-     * - mitigationSteps must not be null or empty
-     * Throws IllegalArgumentException on any violation.
+     * Drill 3: Direct single record deserialization for PatchPlan.
+     */
+    public PatchPlan parsePatchPlan(String rawJson) {
+        // TODO: Drill 3 - Validate not null/blank, convert using BeanOutputConverter<PatchPlan>
+        return null;
+    }
+
+    /**
+     * Drill 4: Generic collections extraction via ParameterizedTypeReference.
+     */
+    public List<PatchPlan> extractPatchPlanList(String jsonArrayPayload) {
+        // TODO: Drill 4 - Convert using BeanOutputConverter<List<PatchPlan>>
+        return null;
+    }
+
+    /**
+     * Drill 5: Generic VulnerabilityAssessment list extraction.
+     */
+    public List<VulnerabilityAssessment> extractVulnerabilityList(String jsonArrayPayload) {
+        // TODO: Drill 5 - Convert using BeanOutputConverter<List<VulnerabilityAssessment>>
+        return null;
+    }
+
+    /**
+     * Drill 6: Generic Map extraction via ParameterizedTypeReference.
+     */
+    public Map<String, Severity> extractSeverityMap(String jsonMapPayload) {
+        // TODO: Drill 6 - Convert using BeanOutputConverter<Map<String, Severity>>
+        return null;
+    }
+
+    /**
+     * Drill 7: Type-safe ChatClient execution via .entity(Class<T>).
+     */
+    public VulnerabilityAssessment generateAssessmentWithEntity(ChatClient client, String advisoryText) {
+        // TODO: Drill 7 - Call client.prompt().user(advisoryText).call().entity(VulnerabilityAssessment.class)
+        return null;
+    }
+
+    /**
+     * Drill 8: Type-safe ChatClient execution via .entity(ParameterizedTypeReference).
+     */
+    public List<PatchPlan> generatePatchPlansWithEntity(ChatClient client, String advisoryText) {
+        // TODO: Drill 8 - Call client with entity(new ParameterizedTypeReference<List<PatchPlan>>() {})
+        return null;
+    }
+
+    /**
+     * Drill 9: Generic parameterized class entity extraction.
+     */
+    public <T> T generateCustomEntity(ChatClient client, String advisoryText, Class<T> clazz) {
+        // TODO: Drill 9 - Call client.prompt().user(advisoryText).call().entity(clazz)
+        return null;
+    }
+
+    /**
+     * Drill 10: TigerStyle domain invariant validation.
      */
     public void validateRecordInvariants(VulnerabilityAssessment assessment) {
-        // DEFECT (Scenario 5): No-op; fails to validate invariants.
+        // TODO: Drill 10 - Check null assessment and compact constructor invariants
+        throw new UnsupportedOperationException("TODO: validateRecordInvariants");
     }
 
     /**
-     * Scenario 6: Safe deserializer with diagnostic envelope (TriageEnvelope).
-     * Invariants: jsonPayload must not be null or blank.
-     * Attempts to parse JSON into VulnerabilityAssessment.
-     * If valid: returns TriageEnvelope.accepted(assessment).
-     * If parsing fails or fields are invalid: catches exception and returns
-     * TriageEnvelope.rejected(exception.getMessage()).
-     * MUST NOT let parsing or validation exceptions escape to the caller!
+     * Drill 11: Safe deserializer with diagnostic envelope (TriageEnvelope).
      */
     public TriageEnvelope<VulnerabilityAssessment> safeDeserializeWithFallback(String jsonPayload) {
-        // DEFECT (Scenario 6): Directly calls converter without try-catch, letting exceptions crash caller.
-        return TriageEnvelope.accepted(assessmentConverter.convert(jsonPayload));
+        // TODO: Drill 11 - Try deserialization; return accepted on success or rejected on exception
+        return null;
     }
 
     /**
-     * Scenario 7: One-shot feedback schema repair loop (Saga DECIDE pattern).
-     * Invariants: client and cveIdentifier must not be null or blank.
-     * <p>
-     * Protocol:
-     * 1. Attempt 1: Call client with "Analyze vulnerability for: " + cveIdentifier.
-     * Extract and clean/parse JSON response with assessmentConverter.
-     * 2. If attempt 1 fails due to parsing or schema exception:
-     * Call client a second time with feedback prompt:
-     * "Previous output failed schema validation: " + e.getMessage() + ". Please output strictly valid JSON conforming to schema:"
-     * Clean and parse second response with assessmentConverter.
-     * 3. Return the parsed VulnerabilityAssessment.
+     * Drill 12: Safe batch deserializer with diagnostic envelopes.
+     */
+    public List<TriageEnvelope<VulnerabilityAssessment>> safeBatchDeserializeWithFallback(List<String> jsonList) {
+        // TODO: Drill 12 - Batch convert each item into TriageEnvelope
+        return null;
+    }
+
+    /**
+     * Drill 13: One-shot feedback schema repair loop.
      */
     public VulnerabilityAssessment repairWithOneShotRetry(ChatClient client, String cveIdentifier) {
-        // DEFECT (Scenario 7): Calls client once and throws without attempting feedback repair.
-        client.prompt().user("Analyze vulnerability for: " + cveIdentifier).call().content();
-        throw new IllegalStateException("Simulated initial failure");
+        // TODO: Drill 13 - Call client; if initial output fails, retry with error message quoted
+        return null;
     }
 
     /**
-     * Scenario 8: Enforce strict retry limit (prevent runaway infinite repair loops).
-     * When both attempt 1 and attempt 2 fail:
-     * MUST NOT retry a 3rd time!
-     * Must throw IllegalStateException("Schema repair exceeded maximum attempts (1)").
+     * Drill 14: Enforce strict retry limit (prevent runaway infinite repair loops).
      */
     public VulnerabilityAssessment enforceRetryLimit(ChatClient client, String cveIdentifier) {
-        // DEFECT (Scenario 8): Returns null without enforcing retry limit.
+        // TODO: Drill 14 - Cap at 2 calls; throw IllegalStateException("Schema repair exceeded maximum attempts (1)") if retry also fails
+        return null;
+    }
+
+    /**
+     * Drill 15: Autonomous resilient triage pipeline.
+     */
+    public TriageEnvelope<VulnerabilityAssessment> autonomousResilientTriagePipeline(ChatClient client, String cveIdentifier) {
+        // TODO: Drill 15 - Execute triage pipeline and wrap in TriageEnvelope
         return null;
     }
 }

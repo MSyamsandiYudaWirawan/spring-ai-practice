@@ -99,6 +99,17 @@ public final class OpsToolContracts {
         }
     }
 
+    public record NodeDrainResult(
+            String nodeName,
+            int gracePeriodSeconds,
+            String status
+    ) {
+        public NodeDrainResult {
+            Objects.requireNonNull(nodeName, "nodeName must not be null");
+            Objects.requireNonNull(status, "status must not be null");
+        }
+    }
+
     public record ToolExecutionAudit(
             int callIndex,
             String toolName,

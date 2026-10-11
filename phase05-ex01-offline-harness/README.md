@@ -7,42 +7,73 @@ The architectural solution used in resilient architectures is a **boundary seam*
 - In production, `SpringAiChatPort` adapts `ChatPort` to Spring AI's `ChatClient`.
 - In tests, deterministic test doubles (`ScriptedChatPort`, `PredicateRoutingChatPort`, `FaultInjectingChatPort`, `PromptCapturingChatPort`, `BudgetEnforcingChatPort`) run 100% offline in < 500ms with zero live API calls.
 
-This drill builds instinctive muscle memory on writing, wiring, and verifying these test harness seams across 10 foundational scenarios.
+This drill builds instinctive muscle memory on writing, wiring, and verifying these test harness seams across **15 repetitive drills** structured into 5 core topics (Foundation $\to$ Variation $\to$ Real-world Composition).
 
 ---
 
-## The 10 Scenarios & Contracts
+## 15-Drill Clustered Syllabus
 
-| # | Component | Responsibility & Contract |
-|---|---|---|
-| **01** | `ScriptedChatPort` | FIFO queue of scripted responses (`ChatResult(text, tokensIn, tokensOut)`). Increments `callCount()`. If queue is exhausted, throws `IllegalStateException`. |
-| **02** | `PredicateRoutingChatPort` | Dynamic response routing based on matching predicates (`Predicate<String>`) on the user prompt. Falls back to `defaultResult`. |
-| **03** | `FaultInjectingChatPort` | Chaos injection double supporting both successful responses (`enqueueResult`) and exceptions (`enqueueFault`). Allows testing transient 503/timeout recovery loops. |
-| **04** | `PromptCapturingChatPort` | Spy delegating to another `ChatPort` while recording all outgoing `PromptCapture(system, user, toolBeans, timestamp)`. |
-| **05** | `BudgetEnforcingChatPort` | Test spend ceiling wrapper: accumulates tokens across calls; throws `HarnessBudgetExceededException` (must contain `"Offline token budget exceeded"`) if cumulative tokens exceed maximum budget. |
-| **06** | `ToolRegistrySpy` | Reflection inspection utility: extracts method names (or `@Tool(name = "...")`) of all `@Tool`-annotated methods on tool beans without executing them. |
-| **07** | `InMemoryStreamingChatPort` | Reactive streaming double (`StreamingChatPort`): emits token chunks as a deterministic `Flux<String>` from `Flux.fromIterable(chunks)`. |
-| **08** | `VirtualTimeSimulator` | Time advancement seam: executes an action and advances `TestClock` by simulated milliseconds without wall-clock sleep. |
-| **09** | `SpringAiChatPort` | Production adapter: implements `ChatPort` by delegating to Spring AI's `ChatClient`, extracting output text and safely mapping `Usage` metadata tokens. |
-| **10** | `DeterministicDiagnosticLoop` | Multi-turn triage loop runner: executes an autonomous 3-turn diagnostic investigation against `ChatPort`, returning `DiagnosticTriageReport` with exact turn counts and total tokens. |
+### Topic 1: Scripted FIFO & Inspection Doubles
+- **Scenario 01: `ScriptedChatPort` (FIFO Response Queue Test Double)**  
+  Foundation: Maintain an internal FIFO `Deque<ChatResult>`, track `callCount`, throw `IllegalStateException` on exhausted queue.
+- **Scenario 02: `IntrospectableScriptedChatPort` (Queue Introspection & Reset)**  
+  Variation: Add `peek()`, `remaining()`, `hasMore()`, and `clear()` state reset.
+- **Scenario 03: `SequentialDialogueReplayer` (Multi-Turn Scripted Replay Seam)**  
+  Real-world Composition: Multi-turn dialogue replayer validating prompt substrings per turn and verifying complete dialogue matching via `validateCompletion()`.
+
+### Topic 2: Dynamic Pattern & Predicate Routing Doubles
+- **Scenario 04: `PredicateRoutingChatPort` (Dynamic Pattern Matching Test Double)**  
+  Foundation: Match user prompts against ordered `Predicate<String>` rules, with fallback `defaultResult`.
+- **Scenario 05: `BiPredicateRoutingChatPort` (System & User Dual-Predicate Matcher)**  
+  Variation: Dual-predicate matching evaluating both system prompt and user query (`BiPredicate<String, String>`).
+- **Scenario 06: `RegexTemplateRoutingChatPort` (Parameterized Dynamic Response Generator)**  
+  Real-world Composition: Regex pattern matching with dynamic capture group interpolation (`${1}`, `${2}`) and dynamic token accounting based on string lengths.
+
+### Topic 3: Fault Injection & Resilience Testing
+- **Scenario 07: `FaultInjectingChatPort` (Simulated Transient Fault & Retry Double)**  
+  Foundation: Test double supporting both successful responses (`enqueueResult`) and exceptions (`enqueueFault`).
+- **Scenario 08: `ConsecutiveFaultChatPort` (K-Failure Fault Burst Generator)**  
+  Variation: Throw $K$ consecutive upstream faults before recovering and returning a recovery result; track `totalAttempts()`.
+- **Scenario 09: `ExponentialBackoffRetrySimulator` (Virtual Time Retry Loop)**  
+  Real-world Composition: Deterministic exponential backoff loop advancing a `TestClock` on simulated upstream failures without wall-clock sleep.
+
+### Topic 4: Observation, Auditing & Budget Ceilings
+- **Scenario 10: `PromptCapturingChatPort` (Outgoing Prompt Spy & Inspection Seam)**  
+  Foundation: Decorate a `ChatPort` while capturing immutable `PromptCapture(system, user, toolBeans, timestamp)` records.
+- **Scenario 11: `BudgetEnforcingChatPort` (Test Spend Ceiling Guardrail)**  
+  Variation: Track cumulative token consumption; throw `HarnessBudgetExceededException` (must contain `"Offline token budget exceeded"`) when ceiling is breached.
+- **Scenario 12: `AuditingCompositeChatPort` (Full Audit Trail Decorator)**  
+  Real-world Composition: Full audit log recording per-call deltas, cumulative totals, timestamps, and reporting the peak token call via `peakTokenCall()`.
+
+### Topic 5: Framework Adapters, Streaming & Autonomous Loops
+- **Scenario 13: `ToolRegistrySpy` (Tool Bean Reflection & Discovery Seam)**  
+  Foundation: Reflection discovery of `@Tool`-annotated methods on Spring beans.
+- **Scenario 14: `InMemoryStreamingChatPort` (Deterministic Reactive Flux Test Double)**  
+  Variation: Reactive streaming seam (`StreamingChatPort`) emitting token chunks deterministically via `Flux.fromIterable(chunks)`.
+- **Scenario 15: `SpringAiChatPort & DeterministicDiagnosticLoop` (Multi-Turn Triage Harness)**  
+  Real-world Composition: Connect the production `ChatClient` adapter and execute an autonomous 3-turn diagnostic investigation loop reporting findings and token costs.
 
 ---
 
-## Non-Flaky Exception Contract
-- **Scenario 5:** `HarnessBudgetExceededException` message MUST contain `"Offline token budget exceeded"` (checked case-insensitively with `.toLowerCase().contains(...)`).
+## Tiered Progressive Hints in Verifier
+
+Every scenario failure provides 3 progressive hint tiers directly in your terminal to guide you without frustration:
+- `[HINT 1 (Concept)]`: Architectural concept and data structure to use.
+- `[HINT 2 (Edge Case)]`: Specific edge case, null-safety check, or condition to handle.
+- `[HINT 3 (Code Pattern)]`: Precise code pattern or API call to implement.
 
 ---
 
 ## Verification Commands
 
-To run all 10 scenario gates:
+To run all 15 scenario gates:
 ```bash
 mvn test-compile exec:java -pl phase05-ex01-offline-harness
 ```
 
-To run a single scenario (e.g. Scenario 1):
+To run a single scenario drill (e.g. Scenario 3):
 ```bash
-mvn test-compile exec:java -pl phase05-ex01-offline-harness -Dexec.args="1"
+mvn test-compile exec:java -pl phase05-ex01-offline-harness -Dexec.args="3"
 ```
 
 To run JUnit / Surefire test:

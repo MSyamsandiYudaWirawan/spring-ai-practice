@@ -6,61 +6,36 @@ import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.ai.chat.model.ChatModel;
+import phase04.ResilientAdvisorContracts.*;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.LongSupplier;
 import java.util.function.ToIntFunction;
-import java.util.regex.Pattern;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
+ * Service under test — Phase 04 Exercise 02:
+ * Resilient Guardrails, Failover Routing, and Transactional Token Quotas (15 Scenarios).
  * <p>
- * Practice implementing resilient Spring AI CallAdvisor guardrails, failover routing,
- * schema healing, and transactional token quota circuit-breakers:
- * 1. RuntimeContextAdvisor (Order 10)
- * 2. SlidingWindowTruncationAdvisor (Order 20)
- * 3. SlidingWindowRateLimiterAdvisor (Order 30)
- * 4. ModelFailoverAdvisor (Order 80)
- * 5. SchemaSelfHealingAdvisor (Order 70)
- * 6. GroundingValidationAdvisor (Order 60)
- * 7. TraceContextPropagationAdvisor (Order 40)
- * 8. DynamicTokenQuotaAdvisor (Order 50)
- * 9. createShortCircuitingClient
- * 10. createResilientProductionStack
+ * PRACTICE MODE: All drills stubbed. Implement each scenario to pass Verifier.
+ * Golden reference solution is sealed in: docs/golden/phase04-ex02-golden.md
  */
 public class ResilientGuardrailAdvisorsUnderTest {
 
-    /**
-     * Scenario 1: Pre/Post-Call Dynamic Execution Mode Context Injection.
-     * <p>
-     * Instructions:
-     * - Inspect request context for key "executionMode" (defaults to "LIVE" if absent or null).
-     * - If "DRY_RUN" (case-insensitive):
-     *     - Prepend "[DRY_RUN] " to the UserMessage text in prompt instructions.
-     *     - Mutate request context: set "audit.dryRun" = true, "processedBy" = "RuntimeContextAdvisor".
-     *     - Execute chain.nextCall(mutatedRequest).
-     *     - Mutate response context: ensure "audit.dryRun" = true and "processedBy" = "RuntimeContextAdvisor".
-     * - If not "DRY_RUN" (e.g. "LIVE"):
-     *     - Mutate request context: set "audit.dryRun" = false, "processedBy" = "RuntimeContextAdvisor".
-     *     - Execute chain.nextCall(mutatedRequest).
-     *     - Mutate response context: ensure "audit.dryRun" = false and "processedBy" = "RuntimeContextAdvisor".
-     * - getOrder() returns 10.
-     * - getName() returns "RuntimeContextAdvisor".
-     */
+    // =========================================================================
+    // Topic 1: Context Augmentation & History Truncation (Scenarios 1 - 3)
+    // =========================================================================
+
     public static class RuntimeContextAdvisor implements CallAdvisor {
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 1): Bypasses executionMode inspection, prompt prefixing, and context enrichment
+            // TODO: Drill 1 - If executionMode == "DRY_RUN", prefix UserMessage with "[DRY_RUN] ",
+            // set audit.dryRun = true and processedBy = "RuntimeContextAdvisor"
             return chain.nextCall(request);
         }
 
         @Override
         public int getOrder() {
-            // DEFECT: Must return 10
-            return 0;
+            return 0; // TODO: return 10
         }
 
         @Override
@@ -69,24 +44,6 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 2: Conversation History Sliding Window Truncation with Pinned SystemMessage.
-     * <p>
-     * Instructions:
-     * - Inspect request.prompt().getInstructions().
-     * - Separate messages into SystemMessage (if any) and non-system messages (UserMessage, AssistantMessage, etc.).
-     * - If nonSystemMessages.size() > maxHistoryMessages:
-     *     - Keep only the last maxHistoryMessages of non-system messages.
-     *     - Calculate dropped non-system count: nonSystemMessages.size() - maxHistoryMessages.
-     * - Else:
-     *     - Keep all non-system messages, dropped count = 0.
-     * - Reassemble instructions: SystemMessage(s) pinned at the start (index 0), followed by retained non-system messages.
-     * - Mutate request with the reassembled Prompt.
-     * - Call chain.nextCall(mutatedRequest).
-     * - Mutate response context: set "truncatedMessageCount" = dropped count.
-     * - getOrder() returns 20.
-     * - getName() returns "SlidingWindowTruncationAdvisor".
-     */
     public static class SlidingWindowTruncationAdvisor implements CallAdvisor {
         private final int maxHistoryMessages;
 
@@ -96,14 +53,14 @@ public class ResilientGuardrailAdvisorsUnderTest {
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 2): Bypasses history truncation and SystemMessage pinning
+            // TODO: Drill 2 - Preserve SystemMessage, truncate older non-system messages to maxHistoryMessages,
+            // set truncatedMessageCount in response context
             return chain.nextCall(request);
         }
 
         @Override
         public int getOrder() {
-            // DEFECT: Must return 20
-            return 0;
+            return 0; // TODO: return 20
         }
 
         @Override
@@ -112,50 +69,49 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 3: Rolling Timestamp Deque Sliding Window Rate Limiter.
-     * <p>
-     * Instructions:
-     * - Maintain an internal Deque<Long> of call timestamps.
-     * - In adviseCall, get current time: long now = clock.getAsLong().
-     * - Synchronized on the timestamps deque:
-     *     - Evict all entries where timestamp <= (now - windowMs).
-     *     - If deque.size() >= maxRequestsPerWindow:
-     *         throw new RateLimitExceededException("Rate limit exceeded: maximum " + maxRequestsPerWindow + " requests allowed in " + windowMs + "ms window");
-     *         (Message MUST contain "Rate limit exceeded").
-     *     - Add 'now' to the deque.
-     *     - Calculate remaining = maxRequestsPerWindow - deque.size().
-     * - Call chain.nextCall(request).
-     * - Mutate response context: set "remainingRequests" = remaining.
-     * - getOrder() returns 30.
-     * - getName() returns "SlidingWindowRateLimiterAdvisor".
-     */
-    public static class SlidingWindowRateLimiterAdvisor implements CallAdvisor {
-        private final int maxRequestsPerWindow;
-        private final long windowMs;
-        private final LongSupplier clock;
-        private final Deque<Long> callTimestamps = new ArrayDeque<>();
-
-        public SlidingWindowRateLimiterAdvisor(int maxRequestsPerWindow, long windowMs, LongSupplier clock) {
-            this.maxRequestsPerWindow = maxRequestsPerWindow;
-            this.windowMs = windowMs;
-            this.clock = Objects.requireNonNull(clock);
-        }
-
-        public SlidingWindowRateLimiterAdvisor(int maxRequestsPerWindow, long windowMs) {
-            this(maxRequestsPerWindow, windowMs, System::currentTimeMillis);
-        }
-
+    public static class SystemPromptDynamicAugmentorAdvisor implements CallAdvisor {
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 3): Bypasses rate limiting check and deque eviction
+            // TODO: Drill 3 - Augment SystemMessage with tenant and env tags, set dynamicSystemTags in context
             return chain.nextCall(request);
         }
 
         @Override
         public int getOrder() {
-            // DEFECT: Must return 30
-            return 0;
+            return 0; // TODO: return 25
+        }
+
+        @Override
+        public String getName() {
+            return "SystemPromptDynamicAugmentorAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 2: Rate Limiting & Distributed Tracing (Scenarios 4 - 6)
+    // =========================================================================
+
+    public static class SlidingWindowRateLimiterAdvisor implements CallAdvisor {
+        private final int maxRequests;
+        private final long windowMs;
+        private final LongSupplier clock;
+
+        public SlidingWindowRateLimiterAdvisor(int maxRequests, long windowMs, LongSupplier clock) {
+            this.maxRequests = maxRequests;
+            this.windowMs = windowMs;
+            this.clock = clock;
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 4 - Maintain sliding window of timestamps; throw RateLimitExceededException if exceeded;
+            // enrich context with remainingRequests
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 30
         }
 
         @Override
@@ -164,169 +120,16 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 4: Downstream Model Resilient Failover Routing.
-     * <p>
-     * Instructions:
-     * - Try executing chain.nextCall(request).
-     * - If successful:
-     *     - Return response mutated with context "failoverTriggered" = false.
-     * - If an Exception is caught:
-     *     - Invoke fallbackModel.call(request.prompt()).
-     *     - Construct ChatClientResponse with:
-     *         .chatResponse(fallbackChatResponse)
-     *         .context(request.context())
-     *         .context("failoverTriggered", true)
-     *         .context("primaryError", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName())
-     *         .build()
-     * - getOrder() returns 80.
-     * - getName() returns "ModelFailoverAdvisor".
-     */
-    public static class ModelFailoverAdvisor implements CallAdvisor {
-        private final ChatModel fallbackModel;
-
-        public ModelFailoverAdvisor(ChatModel fallbackModel) {
-            this.fallbackModel = Objects.requireNonNull(fallbackModel, "fallbackModel must not be null");
-        }
-
-        @Override
-        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 4): Bypasses failover routing on downstream exception
-            return chain.nextCall(request);
-        }
-
-        @Override
-        public int getOrder() {
-            // DEFECT: Must return 80
-            return 0;
-        }
-
-        @Override
-        public String getName() {
-            return "ModelFailoverAdvisor";
-        }
-    }
-
-    /**
-     * Scenario 5: Automated One-Shot Schema Repair Retry Loop.
-     * <p>
-     * Instructions:
-     * - Call chain.nextCall(request).
-     * - Extract response text from output.
-     * - Check if output contains "\"status\": \"SUCCESS\"":
-     *     - If valid: mutate response context with "schemaHealed" = false, return response.
-     *     - If invalid:
-     *         - Attempt at most ONE repair retry using chain.copy(this).nextCall(retryReq).
-     *         - Build repair prompt instructions:
-     *             - original prompt instructions
-     *             - AssistantMessage with the invalid output text
-     *             - UserMessage: "SCHEMA_REPAIR_NOTICE: The output was invalid and missing '\"status\": \"SUCCESS\"'. Please return compliant JSON schema."
-     *         - Call chain.copy(this).nextCall(retryReq).
-     *         - Check retry response text:
-     *             - If retry output contains "\"status\": \"SUCCESS\"":
-     *                 mutate retry response context with "schemaHealed" = true, return response.
-     *             - Else:
-     *                 throw new SchemaValidationException("Schema validation failed: Assistant output does not meet required schema after retry");
-     *                 (Message MUST contain "Schema validation failed").
-     * - getOrder() returns 70.
-     * - getName() returns "SchemaSelfHealingAdvisor".
-     */
-    public static class SchemaSelfHealingAdvisor implements CallAdvisor {
-
-        @Override
-        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 5): Bypasses schema validation and one-shot repair retry
-            return chain.nextCall(request);
-        }
-
-        @Override
-        public int getOrder() {
-            // DEFECT: Must return 70
-            return 0;
-        }
-
-        @Override
-        public String getName() {
-            return "SchemaSelfHealingAdvisor";
-        }
-    }
-
-    /**
-     * Scenario 6: Entity Grounding & Hallucination Detector.
-     * <p>
-     * Instructions:
-     * - Call chain.nextCall(request).
-     * - Extract assistant output text.
-     * - Match entity tokens using entityPattern (default matches \b(host-[a-z0-9-]+|cluster-[a-z0-9-]+)\b).
-     * - Any entity found that is NOT in allowedEntities is ungrounded.
-     * - If ungrounded entities are detected:
-     *     - Prepend "[UNGROUNDED_ENTITY_DETECTED] " to the assistant output text.
-     *     - Recreate ChatResponse wrapping the updated Generation with the modified text.
-     *     - Mutate response with new ChatResponse and context:
-     *         "groundingViolation" = true
-     *         "ungroundedEntities" = Set of ungrounded entities
-     * - If all entities are grounded (or none matched):
-     *     - Mutate response context: "groundingViolation" = false.
-     * - getOrder() returns 60.
-     * - getName() returns "GroundingValidationAdvisor".
-     */
-    public static class GroundingValidationAdvisor implements CallAdvisor {
-        private final Set<String> allowedEntities;
-        private final Pattern entityPattern;
-
-        public GroundingValidationAdvisor(Set<String> allowedEntities, Pattern entityPattern) {
-            this.allowedEntities = Objects.requireNonNull(allowedEntities);
-            this.entityPattern = Objects.requireNonNull(entityPattern);
-        }
-
-        public GroundingValidationAdvisor(Set<String> allowedEntities) {
-            this(allowedEntities, Pattern.compile("\\b(host-[a-z0-9-]+|cluster-[a-z0-9-]+)\\b"));
-        }
-
-        @Override
-        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 6): Bypasses entity grounding detection and prefix mutation
-            return chain.nextCall(request);
-        }
-
-        @Override
-        public int getOrder() {
-            // DEFECT: Must return 60
-            return 0;
-        }
-
-        @Override
-        public String getName() {
-            return "GroundingValidationAdvisor";
-        }
-    }
-
-    /**
-     * Scenario 7: W3C Distributed Traceparent Propagation Advisor.
-     * <p>
-     * Instructions:
-     * - Check request context for key "traceparent".
-     * - If present and non-blank: use it.
-     * - If absent or blank: generate valid W3C traceparent ("00-" + 32hex + "-" + 16hex + "-01").
-     * - Inject traceparent notice by prepending "[traceparent=" + traceparent + "] " to UserMessage text.
-     * - Mutate request with updated Prompt and context "traceparent" = traceparent.
-     * - Call chain.nextCall(mutatedRequest).
-     * - Mutate response context: set "traceparent" = traceparent, "propagationSuccess" = true.
-     * - getOrder() returns 40.
-     * - getName() returns "TraceContextPropagationAdvisor".
-     */
     public static class TraceContextPropagationAdvisor implements CallAdvisor {
-
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 7): Bypasses traceparent generation and context propagation
+            // TODO: Drill 5 - Propagate or generate W3C traceparent, prepend to user message, set in context
             return chain.nextCall(request);
         }
 
         @Override
         public int getOrder() {
-            // DEFECT: Must return 40
-            return 0;
+            return 0; // TODO: return 40
         }
 
         @Override
@@ -335,54 +138,192 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 8: Dynamic Pre-Allocation Token Quota Advisor with Transactional Rollback.
-     * <p>
-     * Instructions:
-     * - Estimate required tokens: tokenEstimator.applyAsInt(userMessageText).
-     * - In synchronized block:
-     *     - If remainingQuota < estimatedTokens:
-     *         throw new BudgetExceededException("Insufficient token quota: required " + estimatedTokens + ", remaining " + remainingQuota);
-     *         (Message MUST contain "Insufficient token quota").
-     *     - Deduct estimatedTokens: remainingQuota -= estimatedTokens.
-     * - In try block:
-     *     - Execute chain.nextCall(request).
-     *     - Extract actual total tokens from response metadata usage (if available, else fallback to estimatedTokens).
-     *     - In synchronized block: reconcile remainingQuota = remainingQuota + estimatedTokens - actualTokens.
-     *     - Mutate response context: set "remainingQuota" = remainingQuota.
-     * - In catch (RuntimeException ex):
-     *     - In synchronized block: rollback pre-allocation: remainingQuota += estimatedTokens.
-     *     - Rethrow ex.
-     * - getOrder() returns 50.
-     * - getName() returns "DynamicTokenQuotaAdvisor".
-     */
-    public static class DynamicTokenQuotaAdvisor implements CallAdvisor {
-        private int remainingQuota;
-        private final ToIntFunction<String> tokenEstimator;
-
-        public DynamicTokenQuotaAdvisor(int initialQuota, ToIntFunction<String> tokenEstimator) {
-            this.remainingQuota = initialQuota;
-            this.tokenEstimator = Objects.requireNonNull(tokenEstimator);
-        }
-
-        public DynamicTokenQuotaAdvisor(int initialQuota) {
-            this(initialQuota, text -> Math.max(10, text != null ? text.length() / 4 : 10));
-        }
-
-        public synchronized int getRemainingQuota() {
-            return remainingQuota;
+    public static class CompositeRateAndTraceAdvisor implements CallAdvisor {
+        public CompositeRateAndTraceAdvisor(int maxRequests, long windowMs, LongSupplier clock) {
+            // TODO: Drill 6 - Initialize composed rate limiter and trace context propagation
         }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            // DEFECT (Scenario 8): Bypasses quota reservation and rollback
+            // TODO: Drill 6 - Rate limit check then trace propagation
             return chain.nextCall(request);
         }
 
         @Override
         public int getOrder() {
-            // DEFECT: Must return 50
+            return 0; // TODO: return 35
+        }
+
+        @Override
+        public String getName() {
+            return "CompositeRateAndTraceAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 3: Failover Routing & Circuit Breaking (Scenarios 7 - 9)
+    // =========================================================================
+
+    public static class ModelFailoverAdvisor implements CallAdvisor {
+        public ModelFailoverAdvisor(ChatModel fallbackModel) {
+            // TODO: Drill 7 - Store fallback model
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 7 - Wrap downstream call in try-catch; on exception route to fallbackModel
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 80
+        }
+
+        @Override
+        public String getName() {
+            return "ModelFailoverAdvisor";
+        }
+    }
+
+    public static class CircuitBreakerFailoverAdvisor implements CallAdvisor {
+        public CircuitBreakerFailoverAdvisor(ChatModel fallbackModel, int failureThreshold) {
+            // TODO: Drill 8 - Initialize circuit breaker threshold
+        }
+
+        public boolean isTripped() {
+            // TODO: Drill 8 - Return true if circuit is open/tripped
+            return false;
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 8 - Circuit breaker state tracking and direct fallback routing
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 85
+        }
+
+        @Override
+        public String getName() {
+            return "CircuitBreakerFailoverAdvisor";
+        }
+    }
+
+    public static class AdaptiveMultiModelRouterAdvisor implements CallAdvisor {
+        public AdaptiveMultiModelRouterAdvisor(ChatModel secondaryModel, ChatModel offlineStubModel) {
+            // TODO: Drill 9 - Store cascade models
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 9 - Cascade primary -> secondary -> offlineStub, record cascadeFailoverLevel
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 88
+        }
+
+        @Override
+        public String getName() {
+            return "AdaptiveMultiModelRouterAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 4: Schema Healing & Hallucination Grounding (Scenarios 10 - 12)
+    // =========================================================================
+
+    public static class SchemaSelfHealingAdvisor implements CallAdvisor {
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 10 - Validate output JSON; retry once via chain.copy(this) if broken
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 70
+        }
+
+        @Override
+        public String getName() {
+            return "SchemaSelfHealingAdvisor";
+        }
+    }
+
+    public static class GroundingValidationAdvisor implements CallAdvisor {
+        public GroundingValidationAdvisor(Set<String> allowedEntities) {
+            // TODO: Drill 11 - Store allowed entities
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 11 - Detect hallucinated entities not in allowedEntities; prepend alert
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 60
+        }
+
+        @Override
+        public String getName() {
+            return "GroundingValidationAdvisor";
+        }
+    }
+
+    public static class FactualityStrictGroundingAdvisor implements CallAdvisor {
+        public FactualityStrictGroundingAdvisor(Set<String> allowedEntities) {
+            // TODO: Drill 12 - Store allowed entities
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 12 - Redact response if ungrounded entities are present
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 65
+        }
+
+        @Override
+        public String getName() {
+            return "FactualityStrictGroundingAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 5: Transactional Quotas & Production Stacks (Scenarios 13 - 15)
+    // =========================================================================
+
+    public static class DynamicTokenQuotaAdvisor implements CallAdvisor {
+        public DynamicTokenQuotaAdvisor(int initialQuota, ToIntFunction<String> tokenEstimator) {
+            // TODO: Drill 13 - Initialize quota and estimator
+        }
+
+        public int getRemainingQuota() {
+            // TODO: Drill 13 - Return remaining quota
             return 0;
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            // TODO: Drill 13 - Pre-allocate tokens, execute call, reconcile actual usage or rollback on error
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public int getOrder() {
+            return 0; // TODO: return 50
         }
 
         @Override
@@ -391,29 +332,15 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 9: Composite Short-Circuiting Client Factory.
-     * <p>
-     * Instructions:
-     * - Assembles a ChatClient with rateLimiter and quotaAdvisor advisors.
-     */
-    public static ChatClient createShortCircuitingClient(ChatModel model, CallAdvisor rateLimiter, CallAdvisor quotaAdvisor) {
-        // DEFECT (Scenario 9): Returns unconfigured client
-        return null;
+    public static ChatClient createShortCircuitingClient(
+            ChatModel chatModel,
+            SlidingWindowRateLimiterAdvisor rateLimiter,
+            DynamicTokenQuotaAdvisor quotaAdvisor
+    ) {
+        // TODO: Drill 14 - Build ChatClient with rateLimiter and quotaAdvisor
+        return ChatClient.builder(chatModel).build();
     }
 
-    /**
-     * Scenario 10: Full Autonomous Resilient Production Stack Factory.
-     * <p>
-     * Instructions:
-     * - Combines all resilient advisors in proper onion order:
-     *     - Order 10: RuntimeContextAdvisor
-     *     - Order 30: SlidingWindowRateLimiterAdvisor(rateLimitMax, windowMs)
-     *     - Order 40: TraceContextPropagationAdvisor
-     *     - Order 50: DynamicTokenQuotaAdvisor(initialTokenQuota)
-     *     - Order 60: GroundingValidationAdvisor(allowedEntities)
-     *     - Order 80: ModelFailoverAdvisor(fallbackModel)
-     */
     public static ChatClient createResilientProductionStack(
             ChatModel primaryModel,
             ChatModel fallbackModel,
@@ -422,7 +349,7 @@ public class ResilientGuardrailAdvisorsUnderTest {
             int initialTokenQuota,
             Set<String> allowedEntities
     ) {
-        // DEFECT (Scenario 10): Returns empty client without resilient advisors
-        return null;
+        // TODO: Drill 15 - Build ChatClient with the full layered resilient advisor stack
+        return ChatClient.builder(primaryModel).build();
     }
 }

@@ -1,217 +1,225 @@
-# Phase 02 Exercise 01 — Golden Solution (SEALED)
+# Phase 02 Exercise 01 — Golden Reference Solution
+## Structured Outputs & Resilient Schema Extraction (15 Drills)
 
-**Status:** SEALED. Open only after attempt + write-up + self-score.
-
----
-
-## 1. Scenario 1: `parseVulnerabilityAssessment` (Direct Record Extraction)
-
-### Root Cause
-Direct deserialization requires `BeanOutputConverter<VulnerabilityAssessment>` to map JSON fields to the record constructor. Missing boundary validation allows `null` or blank strings to produce runtime errors.
-
-### TigerStyle Fix
 ```java
-public VulnerabilityAssessment parseVulnerabilityAssessment(String rawJson) {
-    Objects.requireNonNull(rawJson, "rawJson must not be null");
-    if (rawJson.isBlank()) throw new IllegalArgumentException("rawJson cannot be blank");
+package phase02;
 
-    return assessmentConverter.convert(rawJson);
-}
-```
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.core.ParameterizedTypeReference;
+import phase02.SecurityModelContracts.*;
 
----
+import java.util.*;
+import java.util.regex.Pattern;
 
-## 2. Scenario 2: `extractFromMarkdownFences` (Markdown Fence & Preamble Sanitization)
+/**
+ * Service under test — Phase 02 Exercise 01:
+ * Structured Outputs & Resilient Schema Extraction (15 Scenarios).
+ */
+public class SecurityTriageServiceUnderTest {
 
-### Root Cause
-Real LLMs frequently wrap JSON in markdown code fences (```` ```json ... ``` ````) accompanied by conversational preamble and closing remarks. Passing conversational prose directly to a JSON parser triggers syntax errors.
+    private final BeanOutputConverter<VulnerabilityAssessment> assessmentConverter = new BeanOutputConverter<>(VulnerabilityAssessment.class);
+    private final BeanOutputConverter<PatchPlan> patchPlanConverter = new BeanOutputConverter<>(PatchPlan.class);
+    private final BeanOutputConverter<List<PatchPlan>> patchPlanListConverter =
+            new BeanOutputConverter<>(new ParameterizedTypeReference<List<PatchPlan>>() {});
+    private final BeanOutputConverter<List<VulnerabilityAssessment>> vulnerabilityListConverter =
+            new BeanOutputConverter<>(new ParameterizedTypeReference<List<VulnerabilityAssessment>>() {});
+    private final BeanOutputConverter<Map<String, Severity>> severityMapConverter =
+            new BeanOutputConverter<>(new ParameterizedTypeReference<Map<String, Severity>>() {});
 
-### TigerStyle Fix
-```java
-public VulnerabilityAssessment extractFromMarkdownFences(String markdownPayload) {
-    Objects.requireNonNull(markdownPayload, "markdownPayload must not be null");
-    if (markdownPayload.isBlank()) throw new IllegalArgumentException("markdownPayload cannot be blank");
+    private String cleanPayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            throw new IllegalArgumentException("Payload must not be null or blank");
+        }
+        String trimmed = payload.trim();
+        int firstBrace = trimmed.indexOf('{');
+        int firstBracket = trimmed.indexOf('[');
+        int start = -1;
+        int end = -1;
 
-    String cleaned = sanitizeJsonPayload(markdownPayload);
-    return assessmentConverter.convert(cleaned);
-}
+        if (firstBrace >= 0 && (firstBracket < 0 || firstBrace < firstBracket)) {
+            start = firstBrace;
+            end = trimmed.lastIndexOf('}') + 1;
+        } else if (firstBracket >= 0) {
+            start = firstBracket;
+            end = trimmed.lastIndexOf(']') + 1;
+        }
 
-private String sanitizeJsonPayload(String text) {
-    if (text == null) return null;
-    int firstBrace = text.indexOf('{');
-    int lastBrace = text.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return text.substring(firstBrace, lastBrace + 1).trim();
+        if (start >= 0 && end > start) {
+            return trimmed.substring(start, end);
+        }
+        return trimmed;
     }
-    return text.trim();
-}
-```
 
----
-
-## 3. Scenario 3: `extractPatchPlanList` (Generic Collections via `ParameterizedTypeReference`)
-
-### Root Cause
-Type erasure in Java prevents `BeanOutputConverter<>(List.class)` from knowing the generic type argument `PatchPlan`, causing deserialization to produce generic maps or fail. `ParameterizedTypeReference<List<PatchPlan>>` preserves generic type tokens at runtime.
-
-### TigerStyle Fix
-```java
-public List<PatchPlan> extractPatchPlanList(String jsonArrayPayload) {
-    Objects.requireNonNull(jsonArrayPayload, "jsonArrayPayload must not be null");
-    if (jsonArrayPayload.isBlank()) throw new IllegalArgumentException("jsonArrayPayload cannot be blank");
-
-    BeanOutputConverter<List<PatchPlan>> listConverter = new BeanOutputConverter<>(
-            new ParameterizedTypeReference<List<PatchPlan>>() {}
-    );
-
-    int firstBracket = jsonArrayPayload.indexOf('[');
-    int lastBracket = jsonArrayPayload.lastIndexOf(']');
-    String cleaned = (firstBracket >= 0 && lastBracket > firstBracket)
-            ? jsonArrayPayload.substring(firstBracket, lastBracket + 1).trim()
-            : jsonArrayPayload.trim();
-
-    return listConverter.convert(cleaned);
-}
-```
-
----
-
-## 4. Scenario 4: `generateAssessmentWithSchema` (ChatClient `.entity(Class<T>)` Execution)
-
-### Root Cause
-Calling `.call().content()` discards schema guidance and produces raw unparsed text. Calling `.call().entity(VulnerabilityAssessment.class)` automatically injects the schema format and deserializes the response.
-
-### TigerStyle Fix
-```java
-public VulnerabilityAssessment generateAssessmentWithSchema(ChatClient client, String advisoryText) {
-    Objects.requireNonNull(client, "client must not be null");
-    Objects.requireNonNull(advisoryText, "advisoryText must not be null");
-    if (advisoryText.isBlank()) throw new IllegalArgumentException("advisoryText cannot be blank");
-
-    return client.prompt()
-            .user(advisoryText)
-            .call()
-            .entity(VulnerabilityAssessment.class);
-}
-```
-
----
-
-## 5. Scenario 5: `validateRecordInvariants` (TigerStyle Invariant Validation)
-
-### Root Cause
-Relying solely on syntactic JSON validity allows semantically corrupt data (e.g. malformed CVE identifiers, negative CVSS scores, missing package group separators) to enter production systems. Domain boundaries must fail fast.
-
-### TigerStyle Fix
-```java
-public void validateRecordInvariants(VulnerabilityAssessment assessment) {
-    Objects.requireNonNull(assessment, "assessment must not be null");
-
-    if (assessment.cvssScore() < 0.0 || assessment.cvssScore() > 10.0) {
-        throw new IllegalArgumentException("cvssScore must be between 0.0 and 10.0");
+    /**
+     * Drill 1: Direct JSON record deserialization via BeanOutputConverter.
+     */
+    public VulnerabilityAssessment parseVulnerabilityAssessment(String rawJson) {
+        if (rawJson == null || rawJson.isBlank()) {
+            throw new IllegalArgumentException("rawJson must not be null or blank");
+        }
+        return assessmentConverter.convert(rawJson);
     }
-    if (!assessment.packageCoordinate().contains(":")) {
-        throw new IllegalArgumentException("packageCoordinate must be formatted as group:artifact:version");
+
+    /**
+     * Drill 2: Defensive markdown fence stripping & conversational preamble sanitization.
+     */
+    public VulnerabilityAssessment extractFromMarkdownFences(String markdownPayload) {
+        String cleaned = cleanPayload(markdownPayload);
+        return assessmentConverter.convert(cleaned);
     }
-    if (assessment.mitigationSteps().isEmpty()) {
-        throw new IllegalArgumentException("mitigationSteps cannot be empty");
+
+    /**
+     * Drill 3: Direct single record deserialization for PatchPlan.
+     */
+    public PatchPlan parsePatchPlan(String rawJson) {
+        if (rawJson == null || rawJson.isBlank()) {
+            throw new IllegalArgumentException("rawJson must not be null or blank");
+        }
+        return patchPlanConverter.convert(rawJson);
     }
-}
-```
 
----
-
-## 6. Scenario 6: `safeDeserializeWithFallback` (Diagnostic Result Envelopes)
-
-### Root Cause
-Allowing parsing and validation exceptions to bubble up uncaught crashes upstream services. TigerStyle requires wrapping failures into typed diagnostic envelopes (`TriageEnvelope.rejected(...)`) without swallowing failure details.
-
-### TigerStyle Fix
-```java
-public TriageEnvelope<VulnerabilityAssessment> safeDeserializeWithFallback(String jsonPayload) {
-    Objects.requireNonNull(jsonPayload, "jsonPayload must not be null");
-    if (jsonPayload.isBlank()) throw new IllegalArgumentException("jsonPayload cannot be blank");
-
-    try {
-        String cleaned = sanitizeJsonPayload(jsonPayload);
-        VulnerabilityAssessment va = assessmentConverter.convert(cleaned);
-        return TriageEnvelope.accepted(va);
-    } catch (Exception e) {
-        return TriageEnvelope.rejected("Schema parsing/validation error: " + e.getMessage());
+    /**
+     * Drill 4: Generic collections extraction via ParameterizedTypeReference.
+     */
+    public List<PatchPlan> extractPatchPlanList(String jsonArrayPayload) {
+        if (jsonArrayPayload == null || jsonArrayPayload.isBlank()) {
+            throw new IllegalArgumentException("jsonArrayPayload must not be null or blank");
+        }
+        return patchPlanListConverter.convert(cleanPayload(jsonArrayPayload));
     }
-}
-```
 
----
-
-## 7. Scenario 7: `repairWithOneShotRetry` (Saga DECIDE One-Shot Feedback Loop)
-
-### Root Cause
-LLMs occasionally emit slightly malformed JSON on their first turn. Instead of aborting immediately or entering an infinite retry loop, production systems quote the validation error back to the model once to allow self-correction.
-
-### TigerStyle Fix
-```java
-public VulnerabilityAssessment repairWithOneShotRetry(ChatClient client, String cveIdentifier) {
-    Objects.requireNonNull(client, "client must not be null");
-    Objects.requireNonNull(cveIdentifier, "cveIdentifier must not be null");
-    if (cveIdentifier.isBlank()) throw new IllegalArgumentException("cveIdentifier cannot be blank");
-
-    String firstResponse = client.prompt()
-            .user("Analyze vulnerability for: " + cveIdentifier)
-            .call()
-            .content();
-
-    try {
-        return assessmentConverter.convert(sanitizeJsonPayload(firstResponse));
-    } catch (Exception e) {
-        String feedback = "Previous output failed schema validation: " + e.getMessage()
-                + ". Please output strictly valid JSON conforming to schema:";
-
-        String secondResponse = client.prompt()
-                .user(feedback)
-                .call()
-                .content();
-
-        return assessmentConverter.convert(sanitizeJsonPayload(secondResponse));
+    /**
+     * Drill 5: Generic VulnerabilityAssessment list extraction.
+     */
+    public List<VulnerabilityAssessment> extractVulnerabilityList(String jsonArrayPayload) {
+        if (jsonArrayPayload == null || jsonArrayPayload.isBlank()) {
+            throw new IllegalArgumentException("jsonArrayPayload must not be null or blank");
+        }
+        return vulnerabilityListConverter.convert(cleanPayload(jsonArrayPayload));
     }
-}
-```
 
----
+    /**
+     * Drill 6: Generic Map extraction via ParameterizedTypeReference.
+     */
+    public Map<String, Severity> extractSeverityMap(String jsonMapPayload) {
+        if (jsonMapPayload == null || jsonMapPayload.isBlank()) {
+            throw new IllegalArgumentException("jsonMapPayload must not be null or blank");
+        }
+        return severityMapConverter.convert(cleanPayload(jsonMapPayload));
+    }
 
-## 8. Scenario 8: `enforceRetryLimit` (Strict Retry Bound Enforcement)
+    /**
+     * Drill 7: Type-safe ChatClient execution via .entity(Class<T>).
+     */
+    public VulnerabilityAssessment generateAssessmentWithEntity(ChatClient client, String advisoryText) {
+        if (client == null) throw new IllegalArgumentException("client must not be null");
+        if (advisoryText == null || advisoryText.isBlank()) throw new IllegalArgumentException("advisoryText must not be null or blank");
+        return client.prompt().user(advisoryText).call().entity(VulnerabilityAssessment.class);
+    }
 
-### Root Cause
-Without a hard upper bound on retries, an uncooperative model causes an infinite loop consuming tokens and thread resources. The Saga DECIDE policy permits at most 1 retry, terminating as `IllegalStateException` / `WASTED`.
+    /**
+     * Drill 8: Type-safe ChatClient execution via .entity(ParameterizedTypeReference).
+     */
+    public List<PatchPlan> generatePatchPlansWithEntity(ChatClient client, String advisoryText) {
+        if (client == null) throw new IllegalArgumentException("client must not be null");
+        if (advisoryText == null || advisoryText.isBlank()) throw new IllegalArgumentException("advisoryText must not be null or blank");
+        return client.prompt().user(advisoryText).call().entity(new ParameterizedTypeReference<List<PatchPlan>>() {});
+    }
 
-### TigerStyle Fix
-```java
-public VulnerabilityAssessment enforceRetryLimit(ChatClient client, String cveIdentifier) {
-    Objects.requireNonNull(client, "client must not be null");
-    Objects.requireNonNull(cveIdentifier, "cveIdentifier must not be null");
-    if (cveIdentifier.isBlank()) throw new IllegalArgumentException("cveIdentifier cannot be blank");
+    /**
+     * Drill 9: Generic parameterized class entity extraction.
+     */
+    public <T> T generateCustomEntity(ChatClient client, String advisoryText, Class<T> clazz) {
+        if (client == null) throw new IllegalArgumentException("client must not be null");
+        if (advisoryText == null || advisoryText.isBlank()) throw new IllegalArgumentException("advisoryText must not be null or blank");
+        if (clazz == null) throw new IllegalArgumentException("clazz must not be null");
+        return client.prompt().user(advisoryText).call().entity(clazz);
+    }
 
-    int maxRetries = 1;
-    int attempts = 0;
-    Exception lastException = null;
-    String promptText = "Analyze vulnerability for: " + cveIdentifier;
+    /**
+     * Drill 10: TigerStyle domain invariant validation.
+     */
+    public void validateRecordInvariants(VulnerabilityAssessment assessment) {
+        if (assessment == null) throw new IllegalArgumentException("assessment must not be null");
+        // Compact constructor of VulnerabilityAssessment validates invariants
+    }
 
-    while (attempts <= maxRetries) {
-        attempts++;
-        String response = client.prompt()
-                .user(promptText)
-                .call()
-                .content();
-
+    /**
+     * Drill 11: Safe deserializer with diagnostic envelope (TriageEnvelope).
+     */
+    public TriageEnvelope<VulnerabilityAssessment> safeDeserializeWithFallback(String jsonPayload) {
         try {
-            return assessmentConverter.convert(sanitizeJsonPayload(response));
-        } catch (Exception e) {
-            lastException = e;
-            promptText = "Previous output failed schema validation: " + e.getMessage()
-                    + ". Please output strictly valid JSON conforming to schema:";
+            String cleaned = cleanPayload(jsonPayload);
+            VulnerabilityAssessment va = assessmentConverter.convert(cleaned);
+            validateRecordInvariants(va);
+            return TriageEnvelope.accepted(va);
+        } catch (Exception ex) {
+            return TriageEnvelope.rejected(ex.getMessage() != null ? ex.getMessage() : "Unknown deserialization failure");
         }
     }
 
-    throw new IllegalStateException("Schema repair exceeded maximum attempts (" + maxRetries + ")", lastException);
+    /**
+     * Drill 12: Safe batch deserializer with diagnostic envelopes.
+     */
+    public List<TriageEnvelope<VulnerabilityAssessment>> safeBatchDeserializeWithFallback(List<String> jsonList) {
+        if (jsonList == null) throw new IllegalArgumentException("jsonList must not be null");
+        List<TriageEnvelope<VulnerabilityAssessment>> result = new ArrayList<>();
+        for (String json : jsonList) {
+            result.add(safeDeserializeWithFallback(json));
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    /**
+     * Drill 13: One-shot feedback schema repair loop.
+     */
+    public VulnerabilityAssessment repairWithOneShotRetry(ChatClient client, String cveIdentifier) {
+        if (client == null) throw new IllegalArgumentException("client must not be null");
+        if (cveIdentifier == null || cveIdentifier.isBlank()) throw new IllegalArgumentException("cveIdentifier must not be null or blank");
+
+        String firstResponse = client.prompt().user("Analyze vulnerability for: " + cveIdentifier).call().content();
+        try {
+            return assessmentConverter.convert(cleanPayload(firstResponse));
+        } catch (Exception e1) {
+            String retryPrompt = "Previous output failed schema validation: " + e1.getMessage() + ". Please output strictly valid JSON conforming to schema:";
+            String secondResponse = client.prompt().user(retryPrompt).call().content();
+            return assessmentConverter.convert(cleanPayload(secondResponse));
+        }
+    }
+
+    /**
+     * Drill 14: Enforce strict retry limit (prevent runaway infinite repair loops).
+     */
+    public VulnerabilityAssessment enforceRetryLimit(ChatClient client, String cveIdentifier) {
+        if (client == null) throw new IllegalArgumentException("client must not be null");
+        if (cveIdentifier == null || cveIdentifier.isBlank()) throw new IllegalArgumentException("cveIdentifier must not be null or blank");
+
+        String firstResponse = client.prompt().user("Analyze vulnerability for: " + cveIdentifier).call().content();
+        try {
+            return assessmentConverter.convert(cleanPayload(firstResponse));
+        } catch (Exception e1) {
+            String retryPrompt = "Previous output failed schema validation: " + e1.getMessage() + ". Please output strictly valid JSON conforming to schema:";
+            String secondResponse = client.prompt().user(retryPrompt).call().content();
+            try {
+                return assessmentConverter.convert(cleanPayload(secondResponse));
+            } catch (Exception e2) {
+                throw new IllegalStateException("Schema repair exceeded maximum attempts (1)", e2);
+            }
+        }
+    }
+
+    /**
+     * Drill 15: Autonomous resilient triage pipeline.
+     */
+    public TriageEnvelope<VulnerabilityAssessment> autonomousResilientTriagePipeline(ChatClient client, String cveIdentifier) {
+        try {
+            VulnerabilityAssessment va = enforceRetryLimit(client, cveIdentifier);
+            validateRecordInvariants(va);
+            return TriageEnvelope.accepted(va);
+        } catch (Exception ex) {
+            return TriageEnvelope.rejected(ex.getMessage() != null ? ex.getMessage() : "Pipeline failed");
+        }
+    }
 }
 ```

@@ -5,7 +5,7 @@ import java.util.Set;
 
 /**
  * Immutable domain records, exceptions, and contracts for Phase 04 Exercise 02:
- * Resilient Guardrails, Failover Routing, and Transactional Token Quotas.
+ * Resilient Guardrails, Failover Routing, and Transactional Token Quotas (15 Drills).
  * <p>
  * DO NOT MODIFY THIS FILE.
  */
@@ -75,6 +75,9 @@ public final class ResilientAdvisorContracts {
         public static final String TRACEPARENT = "traceparent";
         public static final String PROPAGATION_SUCCESS = "propagationSuccess";
         public static final String REMAINING_QUOTA = "remainingQuota";
+        public static final String CIRCUIT_TRIPPED = "circuitTripped";
+        public static final String CASCADE_FAILOVER_LEVEL = "cascadeFailoverLevel";
+        public static final String DYNAMIC_SYSTEM_TAGS = "dynamicSystemTags";
 
         private ContextKeys() {}
     }

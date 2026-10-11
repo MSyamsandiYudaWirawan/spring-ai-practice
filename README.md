@@ -23,37 +23,95 @@ In real-world agentic architectures, **pure LLM inference accounts for only ~20%
 - **RAG & Vector Stores:** Text chunking, deterministic vector embeddings, cosine similarity, metadata filtering, contextual query augmentation, and query expansion.
 - **Model Context Protocol (MCP):** MCP Server tool/resource/prompt specification exposure, MCP Client adapter integration, multi-server tool federation, and agentic gateway routing.
 
-This repository provides **17 high-repetition deliberate practice drills (163 total scenarios)**, designed to build instinctive muscle memory across all core Spring AI primitives before assembling them into production agentic systems.
+This repository provides **17 high-repetition deliberate practice exercises (258 total muscle-memory drills)**, designed to build instinctive fluency across all core Spring AI primitives before assembling them into production agentic systems.
 
 ---
 
 ## 🏗️ The Curriculum & Roadmap
 
-Each foundational phase contains progressive drills:
+Each module follows a strict **repetitive muscle-memory format** (5 core framework topics × 3 back-to-back repetitions = 15 drills per exercise):
 1. **Exercise 01:** Core repetition drill (building instinctive fluency on foundational mechanics).
 2. **Exercise 02:** Advanced resilient drill (edge cases, failure injection, circuit-breakers, and high-stress scenarios).
+3. **Exercise 03 (where applicable):** Cloud SRE / FinTech specialization drills.
 
-| Phase | Module | Focus | Scenarios |
+| Phase | Module | Focus | Drills |
 |---|---|---|---|
-| **Phase 01** | [`phase01-ex01-chat-basics`](phase01-ex01-chat-basics/)<br>[`phase01-ex02-chat-advanced`](phase01-ex02-chat-advanced/)<br>[`phase01-ex03-cloud-sre`](phase01-ex03-cloud-sre/) | `ChatClient` fluent API, system/user role separation, template binding, runtime options override. | 21 Scenarios |
-| **Phase 02** | [`phase02-ex01-structured-outputs`](phase02-ex01-structured-outputs/)<br>[`phase02-ex02-resilient-decisions`](phase02-ex02-resilient-decisions/) | `BeanOutputConverter`, generic collections (`ParameterizedTypeReference`), markdown fence stripping, domain validation, 1-shot repair. | 16 Scenarios |
-| **Phase 03** | [`phase03-ex01-tool-sandboxing`](phase03-ex01-tool-sandboxing/)<br>[`phase03-ex02-multi-tool-drills`](phase03-ex02-multi-tool-drills/) | Spring AI `@Tool` & `@ToolParam`, reflection registration (`ToolCallbacks`), sandboxing, path traversal guards, turn limits, audit trails. | 18 Scenarios |
-| **Phase 04** | [`phase04-ex01-guardrail-advisors`](phase04-ex01-guardrail-advisors/)<br>[`phase04-ex02-resilient-guardrails`](phase04-ex02-resilient-guardrails/) | Spring AI `CallAdvisor` chain, security keyword circuit-breakers, dollar/token budget accumulators, sliding-window rate limiters, failover routing. | 20 Scenarios |
-| **Phase 05** | [`phase05-ex01-offline-harness`](phase05-ex01-offline-harness/)<br>[`phase05-ex02-advanced-harness`](phase05-ex02-advanced-harness/) | Deterministic test harnesses, scripted FIFO doubles, predicate routing, fault injection, outgoing prompt spies, chaos matrices, virtual clock seams. | 20 Scenarios |
-| **Phase 06** | [`phase06-ex01-evaluators`](phase06-ex01-evaluators/)<br>[`phase06-ex02-advanced-judges`](phase06-ex02-advanced-judges/) | Spring AI `Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, noise floor keep gates, rubric score parsers, pairwise A/B tournament judges. | 20 Scenarios |
-| **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking, embedding generation, cosine similarity, metadata filtering, MMR diversity re-ranking, deduplication, `DocumentRetriever`, contextual prompt augmentation, query expansion, HyDE, token budget packing. | 24 Scenarios |
-| **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, URI templates, log notifications, remote client discovery, multi-server federation, dynamic tool reloading, sampling, agentic gateway. | 24 Scenarios |
+| **Phase 01** | [`phase01-ex01-chat-basics`](phase01-ex01-chat-basics/)<br>[`phase01-ex02-chat-advanced`](phase01-ex02-chat-advanced/)<br>[`phase01-ex03-cloud-sre`](phase01-ex03-cloud-sre/) | `ChatClient` fluent API, system/user role separation, prompt templates, runtime options override, entity mapping, and multi-turn conversational loops. | 45 Drills (3 × 15) |
+| **Phase 02** | [`phase02-ex01-structured-outputs`](phase02-ex01-structured-outputs/)<br>[`phase02-ex02-resilient-decisions`](phase02-ex02-resilient-decisions/) | `BeanOutputConverter`, generic collections (`ParameterizedTypeReference`), markdown fence stripping, domain validation, and 1-shot resilient schema repair. | 30 Drills (2 × 15) |
+| **Phase 03** | [`phase03-ex01-tool-sandboxing`](phase03-ex01-tool-sandboxing/)<br>[`phase03-ex02-multi-tool-drills`](phase03-ex02-multi-tool-drills/) | Spring AI `@Tool` & `@ToolParam`, programmatic `ToolCallbacks`, execution sandboxing, path traversal guards, turn limits, and audit trails. | 30 Drills (2 × 15) |
+| **Phase 04** | [`phase04-ex01-guardrail-advisors`](phase04-ex01-guardrail-advisors/)<br>[`phase04-ex02-resilient-guardrails`](phase04-ex02-resilient-guardrails/) | Spring AI `CallAdvisor` chain, security keyword circuit-breakers, dollar/token budget accumulators, sliding-window rate limiters, and failover routing. | 30 Drills (2 × 15) |
+| **Phase 05** | [`phase05-ex01-offline-harness`](phase05-ex01-offline-harness/)<br>[`phase05-ex02-advanced-harness`](phase05-ex02-advanced-harness/) | Deterministic test harnesses, scripted FIFO doubles, predicate routing, fault injection, outgoing prompt spies, chaos matrices, and virtual clock seams. | 30 Drills (2 × 15) |
+| **Phase 06** | [`phase06-ex01-evaluators`](phase06-ex01-evaluators/)<br>[`phase06-ex02-advanced-judges`](phase06-ex02-advanced-judges/) | Spring AI `Evaluator`, `RelevancyEvaluator`, noise floor keep gates, rubric score parsers, pairwise A/B tournament judges, and calibration gates. | 30 Drills (2 × 15) |
+| **Phase 07** | [`phase07-ex01-vector-stores`](phase07-ex01-vector-stores/)<br>[`phase07-ex02-rag-advisors`](phase07-ex02-rag-advisors/) | In-memory `VectorStore`, text chunking (`TokenTextSplitter`), document enrichment, cosine similarity, metadata filtering (`FilterExpressionBuilder`), `DocumentRetriever`, contextual query augmentation, and query expansion. | 33 Drills (18 + 15) |
+| **Phase 08** | [`phase08-ex01-mcp-server`](phase08-ex01-mcp-server/)<br>[`phase08-ex02-mcp-client`](phase08-ex02-mcp-client/) | Model Context Protocol (MCP): `ServerCapabilities`, JSON tool schemas, `SyncToolSpecification`, `ToolCallback` adaptation, resource URIs, prompt templates, multi-server federation, catalog reload, and sampling delegation. | 30 Drills (2 × 15) |
+| **TOTAL** | **17 Modules Across 8 Phases** | **Production-grade Spring AI & Agentic Architecture** | **258 Drills** |
 
-### 🔮 Extensible Future Roadmap (In Planning)
+---
 
-Because the production agentic ecosystem is rapidly advancing, this repository is designed as an open, extensible practice ground. The following advanced phases are currently in research and design:
+## 💡 Tiered Progressive Hints System
 
-| Phase | Proposed Focus | Key Primitives & Scenarios | Status |
-|---|---|---|---|
-| **Phase 09** | **Multi-Agent Orchestration & Hierarchical Delegation** | Supervisor/coordinator routing, specialized sub-agent delegation, agent-to-agent message passing, consensus voting, worker handoffs. | 📋 *In Planning* |
-| **Phase 10** | **Long-Term Agent Memory & Context Compaction** | Semantic episodic memory recall, sliding-window conversation compaction, entity graph extraction, automated token-window budget truncation. | 📋 *In Planning* |
-| **Phase 11** | **Human-in-the-Loop (HITL) & Streaming Control Gates** | Interruptible reactive streaming (`Flux<ServerSentEvent>`), manual approval checkpoints for sensitive tool execution, pause-and-resume workflows. | 📋 *In Planning* |
-| **Phase 12** | **Durable State Machine Checkpointing & Crash Recovery** | Resilient agentic execution loops with Spring StateMachine / durable saga patterns, checkpointing cycle state to Postgres, graceful recovery from container restarts. | 📋 *In Planning* |
+Every failing test verifier prints **3-Tiered Progressive Hints** alongside failure details to prevent frustration while preserving learning:
+- **`[HINT 1 (Concept)]`**: Explains the underlying framework abstraction or architectural invariant.
+- **`[HINT 2 (Edge Case)]`**: Highlights the specific boundary check, exception condition, or fail-fast invariant.
+- **`[HINT 3 (Code Pattern)]`**: Provides the exact idiomatic Spring AI code pattern needed to pass the gate.
+
+Example terminal output when running a drill:
+```
+  [FAIL] Scenario 01: askDirectUserMessage (Direct User Prompt & Extraction)
+         --> DETAIL: Expected 'Database connection pool saturated', got: null
+         --> [HINT 1 (Concept)] Call ChatClient fluent API starting from client.prompt().
+         --> [HINT 2 (Edge Case)] Throw IllegalArgumentException if userQuery is null or blank.
+         --> [HINT 3 (Code Pattern)] return client.prompt().user(userQuery).call().content();
+```
+
+---
+
+## 📊 Interactive Terminal Progress Trackers
+
+Track your curriculum progress across all 17 modules and 258 drills with live progress bars and mastery tiers.
+
+### PowerShell CLI (`tracker.ps1`)
+```powershell
+# Display full curriculum dashboard
+.\tracker.ps1
+
+# Run tests across all 17 modules and update progress
+.\tracker.ps1 -RunAll
+
+# Run and inspect a specific phase (e.g. Phase 01)
+.\tracker.ps1 -Phase 1
+
+# Run and inspect a single exercise module
+.\tracker.ps1 -Module phase01-ex01-chat-basics
+
+# Launch interactive menu
+.\tracker.ps1 -Interactive
+```
+
+### Cross-Platform Java Tracker (`ProgressTracker.java`)
+Single-file source launcher requiring zero external dependencies:
+```bash
+java ProgressTracker.java
+```
+
+*Sample Dashboard Output:*
+```
+==========================================================================================
+           SPRING AI TIGERSTYLE MASTERY - INTERACTIVE PROGRESS TRACKER                    
+       17 Exercises | 258 Muscle-Memory Drills | Production-Grade AI Architecture        
+==========================================================================================
+
+--- PHASE 01 ----------------------------------------------------------------------------
+  [ PASS ] Phase 01 Ex01: ChatClient Fluent API & Foundations   15/15 [################] 100.0%
+  [ PASS ] Phase 01 Ex02: Advanced ChatClient & FinTech Ops     15/15 [################] 100.0%
+  [ PASS ] Phase 01 Ex03: Cloud SRE & K8s Operations            15/15 [################] 100.0%
+...
+==========================================================================================
+  OVERALL PROGRESS:  258 / 258 DRILLS PASSED  (100.0%)
+  PROGRESS BAR:      [##############################] 100.0%
+  MASTERY TIER:      GRANDMASTER (100% Production Ready)
+==========================================================================================
+```
 
 ---
 
@@ -72,11 +130,11 @@ phaseXX-exYY-<name>/
 ```
 
 1. **Touch Only `<Service>UnderTest.java`:** Contracts, models, test doubles, and verifiers are immutable. Weakening a verifier is specification gaming.
-2. **Reproduce the FAIL First:** Run the verifier before writing code. Observe the exit code `99` and understand the exact defect mechanism.
+2. **Reproduce the FAIL First:** Run the verifier before writing code. Observe the exit code `99` and review the tiered progressive hints.
 3. **Fail-Fast Domain Invariants:** Validate non-null boundaries, check regexes, and defend against corrupted LLM outputs immediately (`Objects.requireNonNull`, `isBlank()`).
 4. **Zero Flakiness:** All verifier requirements and mandatory error keywords are documented directly in the method Javadoc and exercise `README.md`.
 5. **Zero Token Cost:** All drills execute 100% offline in milliseconds using deterministic test seams.
-6. **Synthesize Endless Custom Drills with AI:** Because contracts, models, test doubles, and verifiers are strictly decoupled, this codebase acts as a pristine few-shot template. If you want more practice on a specific edge case, feed any drill and its verifier into Claude or ChatGPT and prompt it: *"Generate 5 new edge-case scenarios following this exact verifier pattern and contract."*
+6. **Reference Golden Solutions:** When stuck, refer to the verified reference solutions in [`docs/golden/`](docs/golden/).
 
 ---
 
@@ -103,33 +161,21 @@ phaseXX-exYY-<name>/
    ```bash
    mvn test -pl phase01-ex01-chat-basics
    ```
-   *Expected output:*
-   ```
-   ======================================================================
-                    PHASE 01 EXERCISE 01: VERIFICATION REPORT
-   ======================================================================
-   SCENARIO 1: askWithSystemInstructions (Role Separation)
-     [FAIL] Role separation violated: System instructions were not routed via .system(...)
-   ...
-   VERDICT: FINDINGS DETECTED (exit code 99)
-   ```
 
 4. **Implement the solution:**
    Edit `phase01-ex01-chat-basics/src/main/java/phase01/ChatServiceUnderTest.java`.
 
 5. **Clear the gate (Gate 0):**
-   Re-run `mvn test -pl phase01-ex01-chat-basics` until all scenarios pass:
+   Re-run `mvn test -pl phase01-ex01-chat-basics` until all 15 scenarios pass:
    ```
-   SUMMARY: 3 PASSED, 0 FAILED
-   VERDICT: ALL SCENARIOS PASSED (exit code 0)
+   TOTAL: 15 / 15 PASSED
+   VERDICT: ALL 15 GATES PASSED (exit code 0)
    ```
 
----
-
-## 🎯 Core Pedagogical Philosophy
-In complex agentic systems, pure LLM inference is small (~20%); the vast majority of engineering is deterministic plumbing, state machines, guardrails, schema repair, and isolated test harnesses.
-
-By completing these foundational phases, you will master writing these patterns cold — from prompt formatting and guardrails to RAG retrieval and federated Model Context Protocol (MCP) ecosystems — with an extensible architecture prepared for multi-agent swarms and durable state machines.
+6. **Track your progress:**
+   ```bash
+   java ProgressTracker.java
+   ```
 
 ---
 

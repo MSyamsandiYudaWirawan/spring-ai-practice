@@ -1,6 +1,6 @@
-# Phase 01 Exercise 02 â€” Advanced `ChatClient` Fluent API Suite
+# Phase 01 Exercise 02 — Advanced `ChatClient` Fluent API Suite
 
-**Theme:** FinTech Fraud & Risk Operations Platform (8 Comprehensive Scenarios).  
+**Theme:** FinTech Fraud & Risk Operations Platform (15 Muscle-Memory Drills).  
 **Core Competency:** Total muscle memory over Spring AI's `ChatClient` request building, parameter maps, parameterized system prompts, options overrides, history replay, few-shot priming, client mutation, and metadata extraction.
 
 ---
@@ -9,75 +9,61 @@
 
 | File | Role |
 |---|---|
-| [`src/main/java/phase01/FraudOpsServiceUnderTest.java`](src/main/java/phase01/FraudOpsServiceUnderTest.java) | The code under test â€” **FIX THIS FILE ONLY** |
+| [`src/main/java/phase01/FraudOpsServiceUnderTest.java`](src/main/java/phase01/FraudOpsServiceUnderTest.java) | The code under test — **FIX THIS FILE ONLY** |
 | [`src/main/java/phase01/FraudModelContracts.java`](src/main/java/phase01/FraudModelContracts.java) | Domain records, prompt templates, and constants (DO NOT MODIFY) |
 | [`src/test/java/phase01/FakeChatModel.java`](src/test/java/phase01/FakeChatModel.java) | Deterministic offline `ChatModel` mock (DO NOT MODIFY) |
-| [`src/test/java/phase01/Verifier.java`](src/test/java/phase01/Verifier.java) | The evaluation gate (exits 99 on FAIL, 0 on PASS) |
-| `docs/golden/phase01-ex02-golden.md` | Sealed golden solution (open only after completion) |
+| [`src/test/java/phase01/Verifier.java`](src/test/java/phase01/Verifier.java) | The evaluation gate (15 Drills, exits 99 on FAIL, 0 on PASS) |
+| [`docs/golden/phase01-ex02-golden.md`](../docs/golden/phase01-ex02-golden.md) | **SEALED** golden reference solution |
 
-**Time-box:** **50 minutes** for all 8 scenarios + write-up.
+**Time-box:** **50 minutes** for all 15 drills + write-up.
 
 ---
 
 ## 2. Reproduction Commands
 
-Run the verifier across all scenarios (or isolate an individual scenario):
+Run the verifier across all drills (or isolate an individual drill):
 
 ```powershell
-# Run all 8 scenarios:
+# Run all 15 drills:
 mvn test-compile exec:java -pl phase01-ex02-chat-advanced
 
 # Or via Maven test runner:
 mvn test -pl phase01-ex02-chat-advanced
 
-# Run a specific scenario (1 through 8):
+# Run a specific drill (1 through 15):
 mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="1"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="2"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="3"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="4"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="5"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="6"
 mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="7"
-mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="8"
+mvn test-compile exec:java -pl phase01-ex02-chat-advanced -Dexec.args="13"
 ```
 
-Exit `99` = measured FAIL (findings detected). Read the report.  
+Exit `99` = measured FAIL (findings detected with tiered progressive hints). Read the report.  
 Exit `0` = PASS.
 
 ---
 
-## 3. The 8 Scenarios & Gates
+## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
-### Scenario 1: `analyzeTransaction(complianceRole, tx)`
-- **Gate:** `SystemMessage` must equal `complianceRole`; `UserMessage` must contain transaction details without leaked `Role:` prefix.
+### Topic 1: Role Separation & Parameterized System Specs (Drills 1–3)
+- **Drill 1:** `analyzeTransaction` (Role Separation) — Explicit `.system(complianceRole).user(tx.toString())` semantic role separation.
+- **Drill 2:** `analyzeTransaction` (Boundaries) — Fail-fast boundary checks throwing exceptions on null/blank role or null transaction.
+- **Drill 3:** `configureRegionalAuditor` (SystemSpec) — Parameterized system prompt specification (`.system(s -> s.text(...).param(...))`).
 
-### Scenario 2: `draftDisputeNotice(dispute)`
-- **Gate:** Uses `FraudModelContracts.DISPUTE_TEMPLATE` with `.params(Map.of(...))`. Special characters (`$250.00`, `{sub_ref: 99}`) must NOT be corrupted or trigger string format errors.
+### Topic 2: Parameterized Templates & Dispute Notifications (Drills 4–6)
+- **Drill 4:** `draftDisputeNotice` (Map Binding) — Parameter map binding with `.user(u -> u.text(...).params(Map.of(...)))`.
+- **Drill 5:** `draftDisputeNotice` (Boundaries) — Fail-fast validation verifying null dispute throws `NullPointerException` or `IllegalArgumentException`.
+- **Drill 6:** `draftDisputeNotice` (Symbol Preservation) — Currency symbols (`$`), curly brackets, and special characters preserved without corruption.
 
-### Scenario 3: `configureRegionalAuditor(jurisdiction, standard, auditQuery)`
-- **Gate:** Parameterizes system prompt dynamically via `.system(s -> s.text(...).param(...).param(...))` without disturbing the user query.
+### Topic 3: Call-Level Options Overrides & High-Risk Transfers (Drills 7–9)
+- **Drill 7:** `auditHighRiskTransfer` (Options Override) — Call-level options override (`temperature = 0.0`, `maxTokens = 500`).
+- **Drill 8:** `auditHighRiskTransfer` (Base Immutability) — Verifies base client defaults (temperature 0.7) remain unmutated on subsequent standard turns.
+- **Drill 9:** `auditHighRiskTransfer` (Boundaries) — Fail-fast boundary checks on null or blank transfer details.
 
-### Scenario 4: `auditHighRiskTransfer(transferDetails)`
-- **Gate:** Applies call-level options override (`temperature = 0.0`, `maxTokens = 500`) to override the client's default `0.7` temperature.
+### Topic 4: Conversational History & Few-Shot In-Context Learning (Drills 10–12)
+- **Drill 10:** `continueDisputeDialogue` (History Replay) — Injects prior conversation history via `.messages(history).user(latestCustomerMessage)`.
+- **Drill 11:** `continueDisputeDialogue` (Boundaries) — Fail-fast boundary validation on null history or null/blank user message.
+- **Drill 12:** `classifyTransactionIntent` (Few-Shot Priming) — Prepends alternating `UserMessage` and `AssistantMessage` pairs from `CLASSIFICATION_FEW_SHOTS`.
 
-### Scenario 5: `continueDisputeDialogue(history, latestCustomerMessage)`
-- **Gate:** Replays multi-turn message history via `.messages(history)` while appending `latestCustomerMessage` as the final `USER` message, maintaining message types.
-
-### Scenario 6: `classifyTransactionIntent(customerInquiry)`
-- **Gate:** Primes the model using in-context few-shot learning by transforming `CLASSIFICATION_FEW_SHOTS` into alternating `UserMessage` and `AssistantMessage` pairs via `.messages(...)`.
-
-### Scenario 7: `deriveExpeditedClient()`
-- **Gate:** Mutates the existing `chatClient` via `.mutate()`, setting `EXPEDITED_SYSTEM_PROMPT` and `temperature = 0.1` on the derived client without altering the base client.
-
-### Scenario 8: `executeWithTokenAudit(operationalPrompt)`
-- **Gate:** Calls `.call().chatResponse()`, extracts reply text, and retrieves non-zero `promptTokens` and `completionTokens` from `response.getMetadata().getUsage()`.
-
----
-
-## 4. Your Task
-
-1. **Reproduce** the initial failure:
-   `mvn test-compile exec:java -pl phase01-ex02-chat-advanced` $\to$ `0 PASSED, 8 FAILED (exit code 99)`.
-2. **Fix** [`FraudOpsServiceUnderTest.java`](src/main/java/phase01/FraudOpsServiceUnderTest.java).
-3. **Verify** all 8 pass:
-   `mvn test-compile exec:java -pl phase01-ex02-chat-advanced` $\to$ `8 PASSED, 0 FAILED (exit code 0)`.
+### Topic 5: Client Mutation & Token Usage Audit Metadata (Drills 13–15)
+- **Drill 13:** `deriveExpeditedClient` (Client Mutation) — Uses `chatClient.mutate()` to create an expedited client with `EXPEDITED_SYSTEM_PROMPT` and temperature 0.1.
+- **Drill 14:** `executeWithTokenAudit` (Metadata Extraction) — Calls `.chatResponse()` and extracts `promptTokens` and `completionTokens` from `Usage` metadata.
+- **Drill 15:** `executeWithTokenAudit` (Boundaries) — Fail-fast validation verifying null/blank prompt throws `IllegalArgumentException`.

@@ -1,13 +1,5 @@
-# Golden Solution: Phase 04 Exercise 02 (Resilient Guardrails, Failover Routing, and Transactional Token Quotas)
-
-## Overview
-This golden solution implements all 10 scenarios of `phase04-ex02-resilient-guardrails`, testing production-grade resiliency, sliding window state management, onion model order propagation, automated schema repair via `chain.copy(this)`, ungrounded hallucination detection, W3C trace context, and transactional token quota reservation with rollback.
-
-Verified: `10 PASSED, 0 FAILED (exit code 0)`
-
----
-
-## File: `phase04-ex02-resilient-guardrails/src/main/java/phase04/ResilientGuardrailAdvisorsUnderTest.java`
+# Phase 04 Exercise 02 — Golden Reference Solution
+## Resilient Guardrail Advisors & Failover Routing (15 Drills)
 
 ```java
 package phase04;
@@ -19,9 +11,9 @@ import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -29,78 +21,46 @@ import org.springframework.ai.chat.prompt.Prompt;
 import phase04.ResilientAdvisorContracts.*;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
 import java.util.function.ToIntFunction;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
- * <p>
- * Practice implementing resilient Spring AI CallAdvisor guardrails, failover routing,
- * schema healing, and transactional token quota circuit-breakers:
- * 1. RuntimeContextAdvisor (Order 10)
- * 2. SlidingWindowTruncationAdvisor (Order 20)
- * 3. SlidingWindowRateLimiterAdvisor (Order 30)
- * 4. ModelFailoverAdvisor (Order 80)
- * 5. SchemaSelfHealingAdvisor (Order 70)
- * 6. GroundingValidationAdvisor (Order 60)
- * 7. TraceContextPropagationAdvisor (Order 40)
- * 8. DynamicTokenQuotaAdvisor (Order 50)
- * 9. createShortCircuitingClient
- * 10. createResilientProductionStack
+ * Service under test — Phase 04 Exercise 02:
+ * Resilient Guardrails, Failover Routing, and Transactional Token Quotas (15 Scenarios).
  */
 public class ResilientGuardrailAdvisorsUnderTest {
 
-    /**
-     * Scenario 1: Pre/Post-Call Dynamic Execution Mode Context Injection.
-     * <p>
-     * Instructions:
-     * - Inspect request context for key "executionMode" (defaults to "LIVE" if absent or null).
-     * - If "DRY_RUN" (case-insensitive):
-     *     - Prepend "[DRY_RUN] " to the UserMessage text in prompt instructions.
-     *     - Mutate request context: set "audit.dryRun" = true, "processedBy" = "RuntimeContextAdvisor".
-     *     - Execute chain.nextCall(mutatedRequest).
-     *     - Mutate response context: ensure "audit.dryRun" = true and "processedBy" = "RuntimeContextAdvisor".
-     * - If not "DRY_RUN" (e.g. "LIVE"):
-     *     - Mutate request context: set "audit.dryRun" = false, "processedBy" = "RuntimeContextAdvisor".
-     *     - Execute chain.nextCall(mutatedRequest).
-     *     - Mutate response context: ensure "audit.dryRun" = false and "processedBy" = "RuntimeContextAdvisor".
-     * - getOrder() returns 10.
-     * - getName() returns "RuntimeContextAdvisor".
-     */
+    // =========================================================================
+    // Topic 1: Context Augmentation & History Truncation (Scenarios 1 - 3)
+    // =========================================================================
+
     public static class RuntimeContextAdvisor implements CallAdvisor {
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
-
-            Object modeObj = request.context().get(ContextKeys.EXECUTION_MODE);
-            String mode = modeObj != null ? modeObj.toString() : "LIVE";
+            String mode = String.valueOf(request.context().getOrDefault(ContextKeys.EXECUTION_MODE, "LIVE"));
             boolean isDryRun = "DRY_RUN".equalsIgnoreCase(mode);
 
-            ChatClientRequest mutatedRequest;
-            if (isDryRun) {
-                List<Message> newMessages = new ArrayList<>();
-                for (Message m : request.prompt().getInstructions()) {
-                    if (m instanceof UserMessage u) {
-                        newMessages.add(new UserMessage("[DRY_RUN] " + u.getText()));
-                    } else {
-                        newMessages.add(m);
+            ChatClientRequest effectiveRequest = request;
+            if (isDryRun && request.prompt().getUserMessage() != null) {
+                String original = request.prompt().getUserMessage().getText();
+                String prefixed = "[DRY_RUN] " + (original != null ? original : "");
+                List<Message> updated = new ArrayList<>(request.prompt().getInstructions());
+                for (int i = 0; i < updated.size(); i++) {
+                    if (updated.get(i) instanceof UserMessage) {
+                        updated.set(i, new UserMessage(prefixed));
+                        break;
                     }
                 }
-                mutatedRequest = request.mutate()
-                        .prompt(new Prompt(newMessages))
-                        .context(ContextKeys.AUDIT_DRY_RUN, true)
-                        .context(ContextKeys.PROCESSED_BY, "RuntimeContextAdvisor")
-                        .build();
-            } else {
-                mutatedRequest = request.mutate()
-                        .context(ContextKeys.AUDIT_DRY_RUN, false)
-                        .context(ContextKeys.PROCESSED_BY, "RuntimeContextAdvisor")
+                effectiveRequest = request.mutate()
+                        .prompt(new Prompt(updated, request.prompt().getOptions()))
                         .build();
             }
 
-            ChatClientResponse response = chain.nextCall(mutatedRequest);
+            ChatClientResponse response = chain.nextCall(effectiveRequest);
             return response.mutate()
                     .context(ContextKeys.AUDIT_DRY_RUN, isDryRun)
                     .context(ContextKeys.PROCESSED_BY, "RuntimeContextAdvisor")
@@ -118,64 +78,49 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 2: Conversation History Sliding Window Truncation with Pinned SystemMessage.
-     * <p>
-     * Instructions:
-     * - Inspect request.prompt().getInstructions().
-     * - Separate messages into SystemMessage (if any) and non-system messages (UserMessage, AssistantMessage, etc.).
-     * - If nonSystemMessages.size() > maxHistoryMessages:
-     *     - Keep only the last maxHistoryMessages of non-system messages.
-     *     - Calculate dropped non-system count: nonSystemMessages.size() - maxHistoryMessages.
-     * - Else:
-     *     - Keep all non-system messages, dropped count = 0.
-     * - Reassemble instructions: SystemMessage(s) pinned at the start (index 0), followed by retained non-system messages.
-     * - Mutate request with the reassembled Prompt.
-     * - Call chain.nextCall(mutatedRequest).
-     * - Mutate response context: set "truncatedMessageCount" = dropped count.
-     * - getOrder() returns 20.
-     * - getName() returns "SlidingWindowTruncationAdvisor".
-     */
     public static class SlidingWindowTruncationAdvisor implements CallAdvisor {
         private final int maxHistoryMessages;
 
         public SlidingWindowTruncationAdvisor(int maxHistoryMessages) {
-            this.maxHistoryMessages = maxHistoryMessages;
+            this.maxHistoryMessages = Math.max(0, maxHistoryMessages);
         }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
-
-            List<Message> original = request.prompt().getInstructions();
-            List<Message> systemMessages = new ArrayList<>();
+            List<Message> instructions = request.prompt().getInstructions();
+            SystemMessage systemMessage = null;
             List<Message> nonSystemMessages = new ArrayList<>();
 
-            for (Message m : original) {
-                if (m.getMessageType() == MessageType.SYSTEM) {
-                    systemMessages.add(m);
+            for (Message msg : instructions) {
+                if (msg instanceof SystemMessage sm && systemMessage == null) {
+                    systemMessage = sm;
                 } else {
-                    nonSystemMessages.add(m);
+                    nonSystemMessages.add(msg);
                 }
             }
 
             int truncatedCount = 0;
-            List<Message> retained;
+            List<Message> retained = new ArrayList<>();
             if (nonSystemMessages.size() > maxHistoryMessages) {
                 truncatedCount = nonSystemMessages.size() - maxHistoryMessages;
-                retained = new ArrayList<>(nonSystemMessages.subList(truncatedCount, nonSystemMessages.size()));
+                retained.addAll(nonSystemMessages.subList(truncatedCount, nonSystemMessages.size()));
             } else {
-                retained = new ArrayList<>(nonSystemMessages);
+                retained.addAll(nonSystemMessages);
             }
 
-            List<Message> reassembled = new ArrayList<>(systemMessages);
-            reassembled.addAll(retained);
+            List<Message> finalInstructions = new ArrayList<>();
+            if (systemMessage != null) {
+                finalInstructions.add(systemMessage);
+            }
+            finalInstructions.addAll(retained);
 
-            ChatClientRequest mutated = request.mutate().prompt(new Prompt(reassembled)).build();
+            Prompt newPrompt = new Prompt(finalInstructions, request.prompt().getOptions());
+            ChatClientRequest mutated = request.mutate().prompt(newPrompt).build();
+
             ChatClientResponse response = chain.nextCall(mutated);
-
-            return response.mutate().context(ContextKeys.TRUNCATED_MESSAGE_COUNT, truncatedCount).build();
+            return response.mutate()
+                    .context(ContextKeys.TRUNCATED_MESSAGE_COUNT, truncatedCount)
+                    .build();
         }
 
         @Override
@@ -189,63 +134,75 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 3: Rolling Timestamp Deque Sliding Window Rate Limiter.
-     * <p>
-     * Instructions:
-     * - Maintain an internal Deque<Long> of call timestamps.
-     * - In adviseCall, get current time: long now = clock.getAsLong().
-     * - Synchronized on the timestamps deque:
-     *     - Evict all entries where timestamp <= (now - windowMs).
-     *     - If deque.size() >= maxRequestsPerWindow:
-     *         throw new RateLimitExceededException("Rate limit exceeded: maximum " + maxRequestsPerWindow + " requests allowed in " + windowMs + "ms window");
-     *         (Message MUST contain "Rate limit exceeded").
-     *     - Add 'now' to the deque.
-     *     - Calculate remaining = maxRequestsPerWindow - deque.size().
-     * - Call chain.nextCall(request).
-     * - Mutate response context: set "remainingRequests" = remaining.
-     * - getOrder() returns 30.
-     * - getName() returns "SlidingWindowRateLimiterAdvisor".
-     */
-    public static class SlidingWindowRateLimiterAdvisor implements CallAdvisor {
-        private final int maxRequestsPerWindow;
-        private final long windowMs;
-        private final LongSupplier clock;
-        private final Deque<Long> callTimestamps = new ArrayDeque<>();
+    public static class SystemPromptDynamicAugmentorAdvisor implements CallAdvisor {
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            Object tenant = request.context().get("tenantId");
+            Object env = request.context().get("env");
+            String tags = "";
+            if (tenant != null) tags += "[TENANT=" + tenant + "] ";
+            if (env != null) tags += "[ENV=" + env + "] ";
+            tags = tags.trim();
 
-        public SlidingWindowRateLimiterAdvisor(int maxRequestsPerWindow, long windowMs, LongSupplier clock) {
-            this.maxRequestsPerWindow = maxRequestsPerWindow;
-            this.windowMs = windowMs;
-            this.clock = Objects.requireNonNull(clock);
-        }
+            ChatClientRequest effective = request;
+            if (!tags.isEmpty()) {
+                List<Message> instructions = new ArrayList<>(request.prompt().getInstructions());
+                if (!instructions.isEmpty() && instructions.get(0) instanceof SystemMessage sm) {
+                    String updatedText = sm.getText() + " " + tags;
+                    instructions.set(0, new SystemMessage(updatedText));
+                    effective = request.mutate().prompt(new Prompt(instructions, request.prompt().getOptions())).build();
+                }
+            }
 
-        public SlidingWindowRateLimiterAdvisor(int maxRequestsPerWindow, long windowMs) {
-            this(maxRequestsPerWindow, windowMs, System::currentTimeMillis);
+            ChatClientResponse response = chain.nextCall(effective);
+            return response.mutate().context(ContextKeys.DYNAMIC_SYSTEM_TAGS, tags).build();
         }
 
         @Override
-        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
+        public int getOrder() {
+            return 25;
+        }
 
-            int remaining;
-            synchronized (callTimestamps) {
-                long now = clock.getAsLong();
-                long cutoff = now - windowMs;
-                while (!callTimestamps.isEmpty() && callTimestamps.peekFirst() <= cutoff) {
-                    callTimestamps.pollFirst();
-                }
-                if (callTimestamps.size() >= maxRequestsPerWindow) {
-                    throw new RateLimitExceededException(
-                            "Rate limit exceeded: maximum " + maxRequestsPerWindow + " requests allowed in " + windowMs + "ms window"
-                    );
-                }
-                callTimestamps.addLast(now);
-                remaining = maxRequestsPerWindow - callTimestamps.size();
+        @Override
+        public String getName() {
+            return "SystemPromptDynamicAugmentorAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 2: Rate Limiting & Distributed Tracing (Scenarios 4 - 6)
+    // =========================================================================
+
+    public static class SlidingWindowRateLimiterAdvisor implements CallAdvisor {
+        private final int maxRequests;
+        private final long windowMs;
+        private final LongSupplier clock;
+        private final Deque<Long> requestTimestamps = new ConcurrentLinkedDeque<>();
+
+        public SlidingWindowRateLimiterAdvisor(int maxRequests, long windowMs, LongSupplier clock) {
+            this.maxRequests = maxRequests;
+            this.windowMs = windowMs;
+            this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        }
+
+        @Override
+        public synchronized ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            long now = clock.getAsLong();
+            while (!requestTimestamps.isEmpty() && (now - requestTimestamps.peekFirst()) >= windowMs) {
+                requestTimestamps.pollFirst();
             }
 
+            if (requestTimestamps.size() >= maxRequests) {
+                throw new RateLimitExceededException("Rate limit exceeded: " + requestTimestamps.size() + " requests in rolling " + windowMs + "ms window");
+            }
+
+            requestTimestamps.addLast(now);
+            int remaining = Math.max(0, maxRequests - requestTimestamps.size());
+
             ChatClientResponse response = chain.nextCall(request);
-            return response.mutate().context(ContextKeys.REMAINING_REQUESTS, remaining).build();
+            return response.mutate()
+                    .context(ContextKeys.REMAINING_REQUESTS, remaining)
+                    .build();
         }
 
         @Override
@@ -259,24 +216,100 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 4: Downstream Model Resilient Failover Routing.
-     * <p>
-     * Instructions:
-     * - Try executing chain.nextCall(request).
-     * - If successful:
-     *     - Return response mutated with context "failoverTriggered" = false.
-     * - If an Exception is caught:
-     *     - Invoke fallbackModel.call(request.prompt()).
-     *     - Construct ChatClientResponse with:
-     *         .chatResponse(fallbackChatResponse)
-     *         .context(request.context())
-     *         .context("failoverTriggered", true)
-     *         .context("primaryError", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName())
-     *         .build()
-     * - getOrder() returns 80.
-     * - getName() returns "ModelFailoverAdvisor".
-     */
+    public static class TraceContextPropagationAdvisor implements CallAdvisor {
+        private final Random random = new Random();
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            String traceparent = (String) request.context().get(ContextKeys.TRACEPARENT);
+            if (traceparent == null || traceparent.isBlank()) {
+                byte[] traceId = new byte[16];
+                byte[] spanId = new byte[8];
+                random.nextBytes(traceId);
+                random.nextBytes(spanId);
+                traceparent = String.format("00-%032x-%016x-01", new java.math.BigInteger(1, traceId), new java.math.BigInteger(1, spanId));
+            }
+
+            String tracePrefix = "[traceparent=" + traceparent + "] ";
+            ChatClientRequest effectiveRequest = request;
+            if (request.prompt().getUserMessage() != null) {
+                String original = request.prompt().getUserMessage().getText();
+                String prefixed = tracePrefix + (original != null ? original : "");
+                List<Message> updated = new ArrayList<>(request.prompt().getInstructions());
+                for (int i = 0; i < updated.size(); i++) {
+                    if (updated.get(i) instanceof UserMessage) {
+                        updated.set(i, new UserMessage(prefixed));
+                        break;
+                    }
+                }
+                effectiveRequest = request.mutate()
+                        .prompt(new Prompt(updated, request.prompt().getOptions()))
+                        .context(ContextKeys.TRACEPARENT, traceparent)
+                        .build();
+            }
+
+            ChatClientResponse response = chain.nextCall(effectiveRequest);
+            return response.mutate()
+                    .context(ContextKeys.TRACEPARENT, traceparent)
+                    .context(ContextKeys.PROPAGATION_SUCCESS, true)
+                    .build();
+        }
+
+        @Override
+        public int getOrder() {
+            return 40;
+        }
+
+        @Override
+        public String getName() {
+            return "TraceContextPropagationAdvisor";
+        }
+    }
+
+    public static class CompositeRateAndTraceAdvisor implements CallAdvisor {
+        private final SlidingWindowRateLimiterAdvisor rateLimiter;
+        private final TraceContextPropagationAdvisor tracer;
+
+        public CompositeRateAndTraceAdvisor(int maxRequests, long windowMs, LongSupplier clock) {
+            this.rateLimiter = new SlidingWindowRateLimiterAdvisor(maxRequests, windowMs, clock);
+            this.tracer = new TraceContextPropagationAdvisor();
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            return rateLimiter.adviseCall(request, new CallAdvisorChain() {
+                @Override
+                public ChatClientResponse nextCall(ChatClientRequest req) {
+                    return tracer.adviseCall(req, chain);
+                }
+
+                @Override
+                public List<CallAdvisor> getCallAdvisors() {
+                    return chain.getCallAdvisors();
+                }
+
+                @Override
+                public CallAdvisorChain copy(CallAdvisor advisor) {
+                    return chain.copy(advisor);
+                }
+            });
+        }
+
+        @Override
+        public int getOrder() {
+            return 35;
+        }
+
+        @Override
+        public String getName() {
+            return "CompositeRateAndTraceAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 3: Failover Routing & Circuit Breaking (Scenarios 7 - 9)
+    // =========================================================================
+
     public static class ModelFailoverAdvisor implements CallAdvisor {
         private final ChatModel fallbackModel;
 
@@ -286,19 +319,16 @@ public class ResilientGuardrailAdvisorsUnderTest {
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
-
             try {
                 ChatClientResponse response = chain.nextCall(request);
                 return response.mutate().context(ContextKeys.FAILOVER_TRIGGERED, false).build();
             } catch (Exception ex) {
-                ChatResponse fallbackResponse = fallbackModel.call(request.prompt());
+                ChatResponse fallbackChatResponse = fallbackModel.call(request.prompt());
                 return ChatClientResponse.builder()
-                        .chatResponse(fallbackResponse)
+                        .chatResponse(fallbackChatResponse)
                         .context(request.context())
                         .context(ContextKeys.FAILOVER_TRIGGERED, true)
-                        .context(ContextKeys.PRIMARY_ERROR, ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName())
+                        .context(ContextKeys.PRIMARY_ERROR, ex.getMessage())
                         .build();
             }
         }
@@ -314,71 +344,145 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 5: Automated One-Shot Schema Repair Retry Loop.
-     * <p>
-     * Instructions:
-     * - Call chain.nextCall(request).
-     * - Extract response text from output.
-     * - Check if output contains "\"status\": \"SUCCESS\"":
-     *     - If valid: mutate response context with "schemaHealed" = false, return response.
-     * - If invalid:
-     *     - Attempt at most ONE repair retry using chain.copy(this).nextCall(retryReq).
-     *     - Build repair prompt instructions:
-     *         - original prompt instructions
-     *         - AssistantMessage with the invalid output text
-     *         - UserMessage: "SCHEMA_REPAIR_NOTICE: The output was invalid and missing '\"status\": \"SUCCESS\"'. Please return compliant JSON schema."
-     *     - Call chain.copy(this).nextCall(retryReq).
-     *     - Check retry response text:
-     *         - If retry output contains "\"status\": \"SUCCESS\"":
-     *             mutate retry response context with "schemaHealed" = true, return response.
-     *         - Else:
-     *             throw new SchemaValidationException("Schema validation failed: Assistant output does not meet required schema after retry");
-     *             (Message MUST contain "Schema validation failed").
-     * - getOrder() returns 70.
-     * - getName() returns "SchemaSelfHealingAdvisor".
-     */
-    public static class SchemaSelfHealingAdvisor implements CallAdvisor {
+    public static class CircuitBreakerFailoverAdvisor implements CallAdvisor {
+        private final ChatModel fallbackModel;
+        private final int failureThreshold;
+        private int failureCount = 0;
+        private boolean tripped = false;
+
+        public CircuitBreakerFailoverAdvisor(ChatModel fallbackModel, int failureThreshold) {
+            this.fallbackModel = Objects.requireNonNull(fallbackModel, "fallbackModel must not be null");
+            this.failureThreshold = failureThreshold;
+        }
+
+        public boolean isTripped() {
+            return tripped;
+        }
+
+        @Override
+        public synchronized ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            if (tripped) {
+                ChatResponse fb = fallbackModel.call(request.prompt());
+                return ChatClientResponse.builder()
+                        .chatResponse(fb)
+                        .context(request.context())
+                        .context(ContextKeys.CIRCUIT_TRIPPED, true)
+                        .context(ContextKeys.FAILOVER_TRIGGERED, true)
+                        .build();
+            }
+
+            try {
+                ChatClientResponse res = chain.nextCall(request);
+                failureCount = 0;
+                return res.mutate().context(ContextKeys.CIRCUIT_TRIPPED, false).build();
+            } catch (Exception ex) {
+                failureCount++;
+                if (failureCount >= failureThreshold) {
+                    tripped = true;
+                }
+                ChatResponse fb = fallbackModel.call(request.prompt());
+                return ChatClientResponse.builder()
+                        .chatResponse(fb)
+                        .context(request.context())
+                        .context(ContextKeys.CIRCUIT_TRIPPED, tripped)
+                        .context(ContextKeys.FAILOVER_TRIGGERED, true)
+                        .build();
+            }
+        }
+
+        @Override
+        public int getOrder() {
+            return 85;
+        }
+
+        @Override
+        public String getName() {
+            return "CircuitBreakerFailoverAdvisor";
+        }
+    }
+
+    public static class AdaptiveMultiModelRouterAdvisor implements CallAdvisor {
+        private final ChatModel secondaryModel;
+        private final ChatModel offlineStubModel;
+
+        public AdaptiveMultiModelRouterAdvisor(ChatModel secondaryModel, ChatModel offlineStubModel) {
+            this.secondaryModel = Objects.requireNonNull(secondaryModel, "secondaryModel must not be null");
+            this.offlineStubModel = Objects.requireNonNull(offlineStubModel, "offlineStubModel must not be null");
+        }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
+            try {
+                ChatClientResponse res = chain.nextCall(request);
+                return res.mutate().context(ContextKeys.CASCADE_FAILOVER_LEVEL, 0).build();
+            } catch (Exception e1) {
+                try {
+                    ChatResponse sec = secondaryModel.call(request.prompt());
+                    return ChatClientResponse.builder()
+                            .chatResponse(sec)
+                            .context(request.context())
+                            .context(ContextKeys.CASCADE_FAILOVER_LEVEL, 1)
+                            .build();
+                } catch (Exception e2) {
+                    ChatResponse off = offlineStubModel.call(request.prompt());
+                    return ChatClientResponse.builder()
+                            .chatResponse(off)
+                            .context(request.context())
+                            .context(ContextKeys.CASCADE_FAILOVER_LEVEL, 2)
+                            .build();
+                }
+            }
+        }
 
+        @Override
+        public int getOrder() {
+            return 88;
+        }
+
+        @Override
+        public String getName() {
+            return "AdaptiveMultiModelRouterAdvisor";
+        }
+    }
+
+    // =========================================================================
+    // Topic 4: Schema Healing & Hallucination Grounding (Scenarios 10 - 12)
+    // =========================================================================
+
+    public static class SchemaSelfHealingAdvisor implements CallAdvisor {
+        private boolean isSchemaValid(String text) {
+            if (text == null || text.isBlank()) return false;
+            String trimmed = text.trim();
+            return trimmed.startsWith("{") && trimmed.endsWith("}") && trimmed.contains("\"status\"");
+        }
+
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
             ChatClientResponse response = chain.nextCall(request);
-            String text = extractText(response);
+            String text = "";
+            if (response.chatResponse() != null && response.chatResponse().getResult() != null && response.chatResponse().getResult().getOutput() != null) {
+                text = response.chatResponse().getResult().getOutput().getText();
+            }
 
-            if (isValidSchema(text)) {
+            if (isSchemaValid(text)) {
                 return response.mutate().context(ContextKeys.SCHEMA_HEALED, false).build();
             }
 
-            // One-shot repair attempt
-            List<Message> repairMessages = new ArrayList<>(request.prompt().getInstructions());
-            repairMessages.add(new AssistantMessage(text != null ? text : ""));
-            repairMessages.add(new UserMessage("SCHEMA_REPAIR_NOTICE: The output was invalid and missing '\"status\": \"SUCCESS\"'. Please return compliant JSON schema."));
+            List<Message> repairInstructions = new ArrayList<>(request.prompt().getInstructions());
+            repairInstructions.add(new SystemMessage("SCHEMA_REPAIR_NOTICE: Previous output failed schema. Respond strictly with JSON containing a 'status' field."));
+            Prompt retryPrompt = new Prompt(repairInstructions, request.prompt().getOptions());
+            ChatClientRequest retryRequest = request.mutate().prompt(retryPrompt).build();
+            ChatClientResponse retryResponse = chain.copy(this).nextCall(retryRequest);
+            String retryText = "";
+            if (retryResponse.chatResponse() != null && retryResponse.chatResponse().getResult() != null && retryResponse.chatResponse().getResult().getOutput() != null) {
+                retryText = retryResponse.chatResponse().getResult().getOutput().getText();
+            }
 
-            ChatClientRequest retryReq = request.mutate().prompt(new Prompt(repairMessages)).build();
-            ChatClientResponse retryResponse = chain.copy(this).nextCall(retryReq);
-            String retryText = extractText(retryResponse);
-
-            if (isValidSchema(retryText)) {
+            if (isSchemaValid(retryText)) {
                 return retryResponse.mutate().context(ContextKeys.SCHEMA_HEALED, true).build();
             }
 
-            throw new SchemaValidationException("Schema validation failed: Assistant output does not meet required schema after retry");
-        }
-
-        private boolean isValidSchema(String text) {
-            return text != null && text.contains("\"status\": \"SUCCESS\"");
-        }
-
-        private String extractText(ChatClientResponse resp) {
-            if (resp == null || resp.chatResponse() == null ||
-                    resp.chatResponse().getResult() == null ||
-                    resp.chatResponse().getResult().getOutput() == null) {
-                return null;
-            }
-            return resp.chatResponse().getResult().getOutput().getText();
+            throw new SchemaValidationException("Schema validation failed after automated repair retry");
         }
 
         @Override
@@ -392,74 +496,46 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 6: Entity Grounding & Hallucination Detector.
-     * <p>
-     * Instructions:
-     * - Call chain.nextCall(request).
-     * - Extract assistant output text.
-     * - Match entity tokens using entityPattern (default matches \b(host-[a-z0-9-]+|cluster-[a-z0-9-]+)\b).
-     * - Any entity found that is NOT in allowedEntities is ungrounded.
-     * - If ungrounded entities are detected:
-     *     - Prepend "[UNGROUNDED_ENTITY_DETECTED] " to the assistant output text.
-     *     - Recreate ChatResponse wrapping the updated Generation with the modified text.
-     *     - Mutate response with new ChatResponse and context:
-     *         "groundingViolation" = true
-     *         "ungroundedEntities" = Set of ungrounded entities
-     * - If all entities are grounded (or none matched):
-     *     - Mutate response context: "groundingViolation" = false.
-     * - getOrder() returns 60.
-     * - getName() returns "GroundingValidationAdvisor".
-     */
     public static class GroundingValidationAdvisor implements CallAdvisor {
+        private static final Pattern ENTITY_PATTERN = Pattern.compile("\\b(cluster-[a-z0-9-]+|host-[a-z0-9-]+)\\b");
         private final Set<String> allowedEntities;
-        private final Pattern entityPattern;
-
-        public GroundingValidationAdvisor(Set<String> allowedEntities, Pattern entityPattern) {
-            this.allowedEntities = Objects.requireNonNull(allowedEntities);
-            this.entityPattern = Objects.requireNonNull(entityPattern);
-        }
 
         public GroundingValidationAdvisor(Set<String> allowedEntities) {
-            this(allowedEntities, Pattern.compile("\\b(host-[a-z0-9-]+|cluster-[a-z0-9-]+)\\b"));
+            this.allowedEntities = allowedEntities != null ? Set.copyOf(allowedEntities) : Collections.emptySet();
         }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
-
             ChatClientResponse response = chain.nextCall(request);
-            if (response == null || response.chatResponse() == null ||
-                    response.chatResponse().getResult() == null ||
-                    response.chatResponse().getResult().getOutput() == null) {
+            if (response.chatResponse() == null || response.chatResponse().getResult() == null || response.chatResponse().getResult().getOutput() == null) {
                 return response;
             }
 
-            String text = response.chatResponse().getResult().getOutput().getText();
-            var matcher = entityPattern.matcher(text != null ? text : "");
-            Set<String> ungrounded = new LinkedHashSet<>();
+            String originalText = response.chatResponse().getResult().getOutput().getText();
+            Matcher matcher = ENTITY_PATTERN.matcher(originalText != null ? originalText : "");
+            Set<String> ungrounded = new HashSet<>();
+
             while (matcher.find()) {
-                String token = matcher.group();
-                if (!allowedEntities.contains(token)) {
-                    ungrounded.add(token);
+                String entity = matcher.group(1);
+                if (!allowedEntities.contains(entity)) {
+                    ungrounded.add(entity);
                 }
             }
 
             if (!ungrounded.isEmpty()) {
-                String prefixed = "[UNGROUNDED_ENTITY_DETECTED] " + text;
-                ChatResponse newChatResponse = new ChatResponse(
-                        List.of(new Generation(new AssistantMessage(prefixed))),
-                        response.chatResponse().getMetadata()
-                );
+                String modifiedText = "[UNGROUNDED_ENTITY_DETECTED] " + originalText;
+                Generation newGen = new Generation(new AssistantMessage(modifiedText));
+                ChatResponse modifiedChatResponse = new ChatResponse(List.of(newGen), response.chatResponse().getMetadata());
                 return response.mutate()
-                        .chatResponse(newChatResponse)
+                        .chatResponse(modifiedChatResponse)
                         .context(ContextKeys.GROUNDING_VIOLATION, true)
-                        .context(ContextKeys.UNGROUNDED_ENTITIES, ungrounded)
+                        .context(ContextKeys.UNGROUNDED_ENTITIES, Collections.unmodifiableSet(ungrounded))
                         .build();
             }
 
-            return response.mutate().context(ContextKeys.GROUNDING_VIOLATION, false).build();
+            return response.mutate()
+                    .context(ContextKeys.GROUNDING_VIOLATION, false)
+                    .build();
         }
 
         @Override
@@ -473,148 +549,103 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 7: W3C Distributed Traceparent Propagation Advisor.
-     * <p>
-     * Instructions:
-     * - Check request context for key "traceparent".
-     * - If present and non-blank: use it.
-     * - If absent or blank: generate valid W3C traceparent ("00-" + 32hex + "-" + 16hex + "-01").
-     * - Inject traceparent notice by prepending "[traceparent=" + traceparent + "] " to UserMessage text.
-     * - Mutate request with updated Prompt and context "traceparent" = traceparent.
-     * - Call chain.nextCall(mutatedRequest).
-     * - Mutate response context: set "traceparent" = traceparent, "propagationSuccess" = true.
-     * - getOrder() returns 40.
-     * - getName() returns "TraceContextPropagationAdvisor".
-     */
-    public static class TraceContextPropagationAdvisor implements CallAdvisor {
+    public static class FactualityStrictGroundingAdvisor implements CallAdvisor {
+        private static final Pattern ENTITY_PATTERN = Pattern.compile("\\b([a-z0-9-]+-cluster|[a-z0-9-]+-host|rogue-[a-z0-9-]+)\\b");
+        private final Set<String> allowedEntities;
+
+        public FactualityStrictGroundingAdvisor(Set<String> allowedEntities) {
+            this.allowedEntities = allowedEntities != null ? Set.copyOf(allowedEntities) : Collections.emptySet();
+        }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
+            ChatClientResponse response = chain.nextCall(request);
+            String text = response.chatResponse() != null && response.chatResponse().getResult() != null && response.chatResponse().getResult().getOutput() != null ?
+                    response.chatResponse().getResult().getOutput().getText() : "";
 
-            Object existing = request.context().get(ContextKeys.TRACEPARENT);
-            String traceparent;
-            if (existing != null && !existing.toString().isBlank()) {
-                traceparent = existing.toString();
-            } else {
-                traceparent = generateTraceparent();
-            }
-
-            List<Message> updated = new ArrayList<>();
-            for (Message m : request.prompt().getInstructions()) {
-                if (m instanceof UserMessage u) {
-                    updated.add(new UserMessage("[traceparent=" + traceparent + "] " + u.getText()));
-                } else {
-                    updated.add(m);
+            Matcher m = ENTITY_PATTERN.matcher(text);
+            boolean ungrounded = false;
+            while (m.find()) {
+                if (!allowedEntities.contains(m.group(1))) {
+                    ungrounded = true;
+                    break;
                 }
             }
 
-            ChatClientRequest mutated = request.mutate()
-                    .prompt(new Prompt(updated))
-                    .context(ContextKeys.TRACEPARENT, traceparent)
-                    .build();
-
-            ChatClientResponse response = chain.nextCall(mutated);
-            return response.mutate()
-                    .context(ContextKeys.TRACEPARENT, traceparent)
-                    .context(ContextKeys.PROPAGATION_SUCCESS, true)
-                    .build();
-        }
-
-        private String generateTraceparent() {
-            String traceId = UUID.randomUUID().toString().replace("-", "");
-            String spanId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-            return "00-" + traceId.toLowerCase() + "-" + spanId.toLowerCase() + "-01";
+            if (ungrounded) {
+                Generation gen = new Generation(new AssistantMessage("[REDACTED_UNGROUNDED_FACTS]"));
+                ChatResponse modified = new ChatResponse(List.of(gen), response.chatResponse().getMetadata());
+                return response.mutate()
+                        .chatResponse(modified)
+                        .context(ContextKeys.GROUNDING_VIOLATION, true)
+                        .build();
+            }
+            return response;
         }
 
         @Override
         public int getOrder() {
-            return 40;
+            return 65;
         }
 
         @Override
         public String getName() {
-            return "TraceContextPropagationAdvisor";
+            return "FactualityStrictGroundingAdvisor";
         }
     }
 
-    /**
-     * Scenario 8: Dynamic Pre-Allocation Token Quota Advisor with Transactional Rollback.
-     * <p>
-     * Instructions:
-     * - Estimate required tokens: tokenEstimator.applyAsInt(userMessageText).
-     * - In synchronized block:
-     *     - If remainingQuota < estimatedTokens:
-     *         throw new BudgetExceededException("Insufficient token quota: required " + estimatedTokens + ", remaining " + remainingQuota);
-     *         (Message MUST contain "Insufficient token quota").
-     *     - Deduct estimatedTokens: remainingQuota -= estimatedTokens.
-     * - In try block:
-     *     - Execute chain.nextCall(request).
-     *     - Extract actual total tokens from response metadata usage (if available, else fallback to estimatedTokens).
-     *     - In synchronized block: reconcile remainingQuota = remainingQuota + estimatedTokens - actualTokens.
-     *     - Mutate response context: set "remainingQuota" = remainingQuota.
-     * - In catch (RuntimeException ex):
-     *     - In synchronized block: rollback pre-allocation: remainingQuota += estimatedTokens.
-     *     - Rethrow ex.
-     * - getOrder() returns 50.
-     * - getName() returns "DynamicTokenQuotaAdvisor".
-     */
+    // =========================================================================
+    // Topic 5: Transactional Quotas & Production Stacks (Scenarios 13 - 15)
+    // =========================================================================
+
     public static class DynamicTokenQuotaAdvisor implements CallAdvisor {
-        private int remainingQuota;
+        private final AtomicInteger remainingQuota;
         private final ToIntFunction<String> tokenEstimator;
 
         public DynamicTokenQuotaAdvisor(int initialQuota, ToIntFunction<String> tokenEstimator) {
-            this.remainingQuota = initialQuota;
-            this.tokenEstimator = Objects.requireNonNull(tokenEstimator);
+            this.remainingQuota = new AtomicInteger(initialQuota);
+            this.tokenEstimator = Objects.requireNonNull(tokenEstimator, "tokenEstimator must not be null");
         }
 
-        public DynamicTokenQuotaAdvisor(int initialQuota) {
-            this(initialQuota, text -> Math.max(10, text != null ? text.length() / 4 : 10));
-        }
-
-        public synchronized int getRemainingQuota() {
-            return remainingQuota;
+        public int getRemainingQuota() {
+            return remainingQuota.get();
         }
 
         @Override
         public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-            Objects.requireNonNull(request, "request must not be null");
-            Objects.requireNonNull(chain, "chain must not be null");
-
             String userText = request.prompt().getUserMessage() != null ? request.prompt().getUserMessage().getText() : "";
             int estimated = tokenEstimator.applyAsInt(userText);
 
-            synchronized (this) {
-                if (remainingQuota < estimated) {
-                    throw new BudgetExceededException(
-                            "Insufficient token quota: required " + estimated + ", remaining " + remainingQuota
-                    );
-                }
-                remainingQuota -= estimated;
+            if (remainingQuota.get() < estimated) {
+                throw new BudgetExceededException("Insufficient token quota: remaining " + remainingQuota.get() + " < estimated " + estimated);
             }
 
-            try {
-                ChatClientResponse response = chain.nextCall(request);
-                int actual = estimated;
-                if (response.chatResponse() != null &&
-                        response.chatResponse().getMetadata() != null &&
-                        response.chatResponse().getMetadata().getUsage() != null &&
-                        response.chatResponse().getMetadata().getUsage().getTotalTokens() != null) {
-                    actual = response.chatResponse().getMetadata().getUsage().getTotalTokens();
-                }
+            remainingQuota.addAndGet(-estimated);
 
-                synchronized (this) {
-                    remainingQuota = remainingQuota + estimated - actual;
-                }
-                return response.mutate().context(ContextKeys.REMAINING_QUOTA, getRemainingQuota()).build();
-            } catch (RuntimeException ex) {
-                synchronized (this) {
-                    remainingQuota += estimated;
-                }
+            ChatClientResponse response;
+            try {
+                response = chain.nextCall(request);
+            } catch (Exception ex) {
+                remainingQuota.addAndGet(estimated);
                 throw ex;
             }
+
+            int actualUsed = 0;
+            if (response.chatResponse() != null && response.chatResponse().getMetadata() != null) {
+                Usage usage = response.chatResponse().getMetadata().getUsage();
+                if (usage != null) {
+                    int pt = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
+                    int ct = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
+                    actualUsed = pt + ct;
+                }
+            }
+
+            int refund = estimated - actualUsed;
+            int newQuota = remainingQuota.addAndGet(refund);
+
+            return response.mutate()
+                    .context(ContextKeys.REMAINING_QUOTA, newQuota)
+                    .build();
         }
 
         @Override
@@ -628,28 +659,16 @@ public class ResilientGuardrailAdvisorsUnderTest {
         }
     }
 
-    /**
-     * Scenario 9: Composite Short-Circuiting Client Factory.
-     * <p>
-     * Assembles a ChatClient with rateLimiter and quotaAdvisor advisors.
-     */
-    public static ChatClient createShortCircuitingClient(ChatModel model, CallAdvisor rateLimiter, CallAdvisor quotaAdvisor) {
-        return ChatClient.builder(model)
+    public static ChatClient createShortCircuitingClient(
+            ChatModel chatModel,
+            SlidingWindowRateLimiterAdvisor rateLimiter,
+            DynamicTokenQuotaAdvisor quotaAdvisor
+    ) {
+        return ChatClient.builder(chatModel)
                 .defaultAdvisors(rateLimiter, quotaAdvisor)
                 .build();
     }
 
-    /**
-     * Scenario 10: Full Autonomous Resilient Production Stack Factory.
-     * <p>
-     * Combines all resilient advisors in proper onion order:
-     * - Order 10: RuntimeContextAdvisor
-     * - Order 30: SlidingWindowRateLimiterAdvisor(rateLimitMax, windowMs)
-     * - Order 40: TraceContextPropagationAdvisor
-     * - Order 50: DynamicTokenQuotaAdvisor(initialTokenQuota)
-     * - Order 60: GroundingValidationAdvisor(allowedEntities)
-     * - Order 80: ModelFailoverAdvisor(fallbackModel)
-     */
     public static ChatClient createResilientProductionStack(
             ChatModel primaryModel,
             ChatModel fallbackModel,
@@ -658,21 +677,15 @@ public class ResilientGuardrailAdvisorsUnderTest {
             int initialTokenQuota,
             Set<String> allowedEntities
     ) {
-        RuntimeContextAdvisor runtimeContext = new RuntimeContextAdvisor();
-        SlidingWindowRateLimiterAdvisor rateLimiter = new SlidingWindowRateLimiterAdvisor(rateLimitMax, windowMs);
-        TraceContextPropagationAdvisor traceContext = new TraceContextPropagationAdvisor();
-        DynamicTokenQuotaAdvisor quotaAdvisor = new DynamicTokenQuotaAdvisor(initialTokenQuota);
-        GroundingValidationAdvisor groundingAdvisor = new GroundingValidationAdvisor(allowedEntities);
-        ModelFailoverAdvisor failoverAdvisor = new ModelFailoverAdvisor(fallbackModel);
-
         return ChatClient.builder(primaryModel)
                 .defaultAdvisors(
-                        runtimeContext,
-                        rateLimiter,
-                        traceContext,
-                        quotaAdvisor,
-                        groundingAdvisor,
-                        failoverAdvisor
+                        new RuntimeContextAdvisor(),
+                        new SlidingWindowTruncationAdvisor(10),
+                        new SlidingWindowRateLimiterAdvisor(rateLimitMax, windowMs, System::currentTimeMillis),
+                        new TraceContextPropagationAdvisor(),
+                        new DynamicTokenQuotaAdvisor(initialTokenQuota, text -> 50),
+                        new GroundingValidationAdvisor(allowedEntities),
+                        new ModelFailoverAdvisor(fallbackModel)
                 )
                 .build();
     }

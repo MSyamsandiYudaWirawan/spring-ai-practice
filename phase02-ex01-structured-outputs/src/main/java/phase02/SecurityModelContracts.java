@@ -178,4 +178,43 @@ public final class SecurityModelContracts {
               "mitigationSteps": []
             }
             """;
+
+    public static final String SAMPLE_SINGLE_PATCH_PLAN_JSON = """
+            {
+              "patchId": "PATCH-2026-001",
+              "targetService": "auth-service",
+              "upgradeVersion": "6.2.2",
+              "actionType": "IMMEDIATE_ROLLOUT",
+              "requiresDowntime": false,
+              "validationCommands": ["curl -f http://localhost:8080/actuator/health", "mvn test-compile"]
+            }
+            """;
+
+    public static final String SAMPLE_VULNERABILITY_LIST_JSON = """
+            [
+              {
+                "cveId": "CVE-2026-38491",
+                "severity": "CRITICAL",
+                "cvssScore": 9.8,
+                "packageCoordinate": "org.springframework.security:spring-security-web:6.2.1",
+                "rootCauseAnalysis": "Path traversal in filter chain",
+                "mitigationSteps": ["Upgrade to 6.2.2"]
+              },
+              {
+                "cveId": "CVE-2026-11892",
+                "severity": "HIGH",
+                "cvssScore": 8.5,
+                "packageCoordinate": "com.fasterxml.jackson.core:jackson-databind:2.15.0",
+                "rootCauseAnalysis": "Polymorphic typing deserialization",
+                "mitigationSteps": ["Apply Jackson blocklist patch"]
+              }
+            ]
+            """;
+
+    public static final String SAMPLE_SEVERITY_MAP_JSON = """
+            {
+              "CVE-2026-38491": "CRITICAL",
+              "CVE-2026-11892": "HIGH"
+            }
+            """;
 }

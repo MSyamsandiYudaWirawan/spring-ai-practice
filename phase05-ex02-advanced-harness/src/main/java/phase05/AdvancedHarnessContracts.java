@@ -6,7 +6,7 @@ import java.util.*;
 
 /**
  * Domain contracts, exceptions, and records for Phase 05 Exercise 02:
- * Advanced Offline Test Harness, Chaos Matrix, Circuit Breakers, Multi-Tenancy, and HTTP Stubs.
+ * Advanced Offline Test Harness, Chaos Matrix, Circuit Breakers, Multi-Tenancy, and HTTP Stubs (15 Drills).
  * <p>
  * DO NOT MODIFY THIS FILE.
  */
@@ -71,6 +71,17 @@ public final class AdvancedHarnessContracts {
     }
 
     /**
+     * Audit log record for composite chaos pipelines.
+     */
+    public record ChaosAuditEntry(
+            int callIndex,
+            boolean failed,
+            boolean corrupted,
+            long latencyMs,
+            long timestamp
+    ) {}
+
+    /**
      * State of the circuit breaker test double.
      */
     public enum CircuitState {
@@ -106,6 +117,34 @@ public final class AdvancedHarnessContracts {
     public static class RateLimitExhaustedException extends RuntimeException {
         public RateLimitExhaustedException(String message) {
             super(message);
+        }
+    }
+
+    /**
+     * Subscription tiers for multi-tenant rate limiting and budgeting.
+     */
+    public enum TenantTier {
+        FREE(200L),
+        PRO(2000L),
+        ENTERPRISE(20000L);
+
+        private final long defaultQuotaTokens;
+
+        TenantTier(long defaultQuotaTokens) {
+            this.defaultQuotaTokens = defaultQuotaTokens;
+        }
+
+        public long defaultQuotaTokens() {
+            return defaultQuotaTokens;
+        }
+    }
+
+    /**
+     * Per-tenant token usage summary.
+     */
+    public record TenantUsage(long usedTokens, long maxQuotaTokens) {
+        public long remainingTokens() {
+            return Math.max(0, maxQuotaTokens - usedTokens);
         }
     }
 
@@ -175,7 +214,7 @@ public final class AdvancedHarnessContracts {
     }
 
     /**
-     * Final report emitted by the integrated autonomous chaos triage harness in Scenario 10.
+     * Final report emitted by the integrated autonomous chaos triage harness in Scenario 15.
      */
     public record AdvancedDiagnosticReport(
             String incidentId,

@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Immutable domain records, exceptions, and contracts for Phase 05:
- * Deterministic Offline Test Harness & LLM Boundary Seams.
+ * Immutable domain records, exceptions, and contracts for Phase 05 Exercise 01:
+ * Deterministic Offline Test Harness & LLM Boundary Seams (15 Scenarios).
  * <p>
  * DO NOT MODIFY THIS FILE.
  */
@@ -53,6 +53,26 @@ public final class HarnessContracts {
 
         default ChatResult chat(String system, String user) {
             return chat(system, user, List.of());
+        }
+    }
+
+    /**
+     * Single turn definition for scripted sequential dialogue replay.
+     */
+    public record DialogueTurn(String expectedRole, String expectedPromptSubstring, ChatResult reply) {
+        public DialogueTurn {
+            Objects.requireNonNull(expectedRole, "expectedRole must not be null");
+            Objects.requireNonNull(expectedPromptSubstring, "expectedPromptSubstring must not be null");
+            Objects.requireNonNull(reply, "reply must not be null");
+        }
+    }
+
+    /**
+     * Verification result of sequential dialogue replaying.
+     */
+    public record ReplayValidation(boolean allTurnsMatched, int turnsExecuted, String lastTurnSummary) {
+        public ReplayValidation {
+            Objects.requireNonNull(lastTurnSummary, "lastTurnSummary must not be null");
         }
     }
 
@@ -107,7 +127,34 @@ public final class HarnessContracts {
     }
 
     /**
-     * Final report emitted by the integrated diagnostic triage loop in Scenario 10.
+     * Summary report for simulated retry and backoff loops.
+     */
+    public record RetrySimulationReport(
+            int attempts,
+            long totalDelayMillis,
+            boolean succeeded,
+            ChatResult finalResult
+    ) {}
+
+    /**
+     * Audit log record capturing prompt details and token delta for each invocation.
+     */
+    public record AuditLogEntry(
+            int callIndex,
+            String system,
+            String user,
+            long tokensThisCall,
+            long cumulativeTokens,
+            long timestamp
+    ) {
+        public AuditLogEntry {
+            Objects.requireNonNull(system, "system must not be null");
+            Objects.requireNonNull(user, "user must not be null");
+        }
+    }
+
+    /**
+     * Final report emitted by the integrated diagnostic triage loop in Scenario 15.
      */
     public record DiagnosticTriageReport(
             String issue,

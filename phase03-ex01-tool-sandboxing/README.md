@@ -1,83 +1,54 @@
-# Phase 03 Exercise 01 â€” Autonomous Diagnostic Tool Sandboxing & Execution Bounding
+# Phase 03 Exercise 01 — Autonomous Diagnostic Tool Sandboxing & Execution Bounding
 
-**Theme:** Multi-Turn Tool Calling (`@Tool`), Path Traversal Sandboxing, Exception Isolation, and Turn-Scoped Tool Bounding (8 Scenarios).  
+**Theme:** Multi-Turn Tool Calling (`@Tool`), Path Traversal Sandboxing, Turn Quotas, Trajectory Auditing, and Spring AI Dynamic Dispatch (**15 Muscle-Memory Drills**).  
 **Architectural Principle:** Enforces: *"AI proposes, pipeline disposes. Model only reads; loop applies."*
 
 ---
 
-## 1. Setup & Files
+## The 15 Drills & Exact Contracts
 
-| File | Role |
-|---|---|
-| [`src/main/java/phase03/BoundedDiagnosticToolsUnderTest.java`](src/main/java/phase03/BoundedDiagnosticToolsUnderTest.java) | The service under test â€” **FIX THIS FILE ONLY** |
-| [`src/main/java/phase03/ToolModelContracts.java`](src/main/java/phase03/ToolModelContracts.java) | Immutable domain records, fixtures, and contracts (DO NOT MODIFY) |
-| [`src/test/java/phase03/FakeToolChatModel.java`](src/test/java/phase03/FakeToolChatModel.java) | Deterministic in-memory `ChatModel` mock (DO NOT MODIFY) |
-| [`src/test/java/phase03/Verifier.java`](src/test/java/phase03/Verifier.java) | The evaluation gate (exits 99 on FAIL, 0 on PASS) |
-| [`docs/golden/phase03-ex01-golden.md`](golden/phase03-ex01-golden.md) | **SEALED** golden reference solution |
-
-**Time-box:** **55 minutes** for all 8 scenarios + write-up.
+| # | Topic | Drill / Component | Core Contract & Boundary Invariants |
+|---|---|---|---|
+| 01 | T1 | `readSource(path)` Normal File Read | Reads configuration/code file inside `sandboxRoot`. Returns `ToolEnvelope.ok(content)`. Increments `callCount`. |
+| 02 | T1 | `readSource(path)` Path Traversal Isolation | Rejects `../../etc/passwd`, absolute paths, escaping traversal with `ToolEnvelope.fail("Access denied: path escapes sandbox root")`. No uncaught exceptions. |
+| 03 | T1 | `readSource(path)` Missing File & Blank Path | Returns `ToolEnvelope.fail("path must not be null or blank")` on null/blank; returns `ToolEnvelope.fail("File not found: " + path)` on missing file. |
+| 04 | T2 | `readSource(path)` Oversized File Guard | Files exceeding `maxFileSizeBytes` (100 KB) rejected with `ToolEnvelope.fail(...)` containing `"exceeds maximum allowable limit"`. |
+| 05 | T2 | `readSource(path)` Sensitive File Quarantine | Rejects paths containing `.git` or `.env` with `ToolEnvelope.fail("Access denied: access to sensitive configuration is prohibited")`. |
+| 06 | T2 | `listRepositoryStructure()` Safe Tree Listing | Recursively walks `sandboxRoot`. Returns sorted relative paths separated by `/`. Filters out `.git`, `.env`, `.bin`, `.class`, `.jar`. |
+| 07 | T3 | `BoundedToolExecution` Turn Bound Cut-Off | When `callCount > bound`, immediately cuts off model with `ToolEnvelope.fail("tool-call bound (" + bound + ") exceeded — decide now")`. |
+| 08 | T3 | `recallContext()` Turn-Enforced Context Recall | Recalls full diagnostic context string, incrementing `callCount` and respecting turn bound. |
+| 09 | T3 | `resetTurn()` Multi-Phase Turn Reset | Resets `callCount` to 0, enabling fresh bounded turns across diagnostic phases. |
+| 10 | T4 | `searchSource(query)` Sandboxed Text Search | Searches non-binary files inside sandbox matching query string. Returns `ToolEnvelope.ok(List<String>)`. Rejects blank queries. |
+| 11 | T4 | `recordDiagnosticFinding(finding)` | Validates non-blank hypothesis; persists to internal findings list; returns `ToolEnvelope.ok("Recorded: " + finding)`. |
+| 12 | T4 | `trajectoryAudit` Event Logging | Every tool call (successful, rejected, or cut-off) recorded in `ToolCallEvent` audit trail with sequence, action, parameters, and outcome. |
+| 13 | T5 | `springAi_ToolCallbackDiscovery` | Verifies `ToolCallbacks.from(tools)` discovers all 5 `@Tool` methods with descriptions and `@ToolParam` metadata. |
+| 14 | T5 | `springAi_ToolCallbackExecution` | Verifies dynamic JSON dispatch via `ToolCallback.call("{\"path\":\"pom.xml\"}")` producing valid serialized `ToolEnvelope` JSON. |
+| 15 | T5 | `springAi_ChatClientIntegration` | Configures `ChatClient.builder(chatModel).defaultTools(tools).build()` and executes call verifying seamless tool integration. |
 
 ---
 
-## 2. Reproduction Commands
+## Tiered Progressive Hints in Verifier
+Every failing scenario displays clear tiered hints:
+- `DETAIL`: Exact mismatch or exception message.
+- `[HINT 1 (Concept)]`: The core Spring AI concept or sandboxing principle.
+- `[HINT 2 (Edge Case)]`: Specific edge conditions, normalization, or envelope error keys.
+- `[HINT 3 (Code Pattern)]`: Structural code patterns (`Files.walk`, `startsWith(sandboxRoot)`, `@ToolParam`).
 
-Run the verifier across all scenarios (or isolate an individual scenario):
+---
 
+## Verification Commands
+
+To run all 15 scenario gates:
 ```powershell
-# Run all 8 scenarios:
 mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing
-
-# Or via Maven test runner:
-mvn test -pl phase03-ex01-tool-sandboxing
-
-# Run a specific scenario (1 through 8):
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=1"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=2"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=3"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=4"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=5"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=6"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=7"
-mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=8"
 ```
 
-Exit `99` = measured FAIL (findings detected). Read the report.  
-Exit `0` = PASS.
+To run a single scenario (e.g. Scenario 10):
+```powershell
+mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing "-Dexec.args=10"
+```
 
----
-
-## 3. The 8 Scenarios & Gates
-
-### Scenario 1: `readSource(path)` â€” Normal File Reading
-- **Gate:** Reads a valid configuration or source file relative to `sandboxRoot` (e.g. `src/main/resources/application.properties`). Returns `ToolEnvelope.ok(content)`. Increments `callCount`.
-
-### Scenario 2: `readSource(path)` â€” Path Traversal Sandboxing
-- **Gate:** Detects attempts to break out of the repository sandbox (`../../etc/passwd`, absolute paths, or escaping traversal). Rejects with `ToolEnvelope.fail("Access denied: path escapes sandbox root")`. Zero exceptions escape to the caller.
-
-### Scenario 3: `readSource(path)` â€” Missing File & Exception Isolation
-- **Gate:** When reading a non-existent file, catches `IOException`/`NoSuchFileException` and returns `ToolEnvelope.fail("File not found: " + path)`. Protects the LLM conversation loop from terminating.
-
-### Scenario 4: `readSource(path)` â€” Maximum File Size Guard (100 KB Cap)
-- **Gate:** Checks file size before reading. Rejects files $> 100\text{ KB}$ (such as `logs/large_heap_dump.bin`) with `ToolEnvelope.fail("File size ... exceeds maximum allowable limit (102400 bytes)")`.
-
-### Scenario 5: `listRepositoryStructure()` â€” Safe Repository Listing
-- **Gate:** Recursively walks the sandbox, returning relative file paths (`ToolEnvelope.ok(List<String>)`). Filters out internal `.git/` directories, `.env` credentials, and binary `.class`/`.bin` artifacts.
-
-### Scenario 6: `BoundedToolExecution` â€” Hard Turn Bound Cut-Off
-- **Gate:** Wraps a per-turn counter. When `callCount > bound` (e.g. bound = 3), subsequent tool calls are cut off immediately with `ToolEnvelope.fail("tool-call bound (3) exceeded â€” decide now")`. The model is cut off, not paid for.
-
-### Scenario 7: `trajectoryAudit` â€” Tool Call Event Logging
-- **Gate:** Logs every tool execution (both successful and failed/blocked calls) into `trajectoryAudit` as a `ToolCallEvent` (sequence number, tool name, parameters, status, and detail).
-
-### Scenario 8: `springAi_ToolCallbackIntegration` â€” Spring AI `@Tool` Discovery
-- **Gate:** Ensures method annotations (`@Tool`, `@ToolParam`) and signatures integrate seamlessly with Spring AI's `ToolCallbacks.from(service)` dynamic reflection dispatcher.
-
----
-
-## 4. Your Task
-
-1. **Reproduce** the initial failure:
-   `mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing` $\to$ `0 PASSED, 8 FAILED (exit code 99)`.
-2. **Fix** [`BoundedDiagnosticToolsUnderTest.java`](src/main/java/phase03/BoundedDiagnosticToolsUnderTest.java).
-3. **Verify** all 8 pass:
-   `mvn test-compile exec:java -pl phase03-ex01-tool-sandboxing` $\to$ `8 PASSED, 0 FAILED (exit code 0)`.
+To run via Maven test runner:
+```powershell
+mvn test -pl phase03-ex01-tool-sandboxing
+```

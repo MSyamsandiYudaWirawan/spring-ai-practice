@@ -1,381 +1,385 @@
 package phase05;
 
 import org.springframework.ai.converter.BeanOutputConverter;
-import phase05.AdvancedHarnessContracts.AdvancedDiagnosticReport;
-import phase05.AdvancedHarnessContracts.AdvancedTestClock;
-import phase05.AdvancedHarnessContracts.ChaosMatrix;
-import phase05.AdvancedHarnessContracts.ChatPort;
-import phase05.AdvancedHarnessContracts.ChatResult;
-import phase05.AdvancedHarnessContracts.CircuitState;
-import phase05.AdvancedHarnessContracts.ConversationTrajectory;
-import phase05.AdvancedHarnessContracts.MultiTenantChatPort;
-import phase05.AdvancedHarnessContracts.StreamingChatPort;
+import phase05.AdvancedHarnessContracts.*;
 import reactor.core.publisher.Flux;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * Service under test — THE ONLY FILE YOU MODIFY for Phase 05 Exercise 02.
  * <p>
- * Practice advanced deterministic offline test doubles:
+ * Practice advanced deterministic offline test doubles across 15 repetitive drills:
  * 1. ChaosInjectingChatPort (Deterministic chaos matrix)
- * 2. StreamingChunkLatencySimulator (Reactive chunk delay simulator)
- * 3. RateLimitBackoffChatPort (Simulated rate-limit & backoff)
- * 4. DeterministicConversationReplayer (Trajectory replay)
- * 5. CircuitBreakingChatPort (State machine double)
- * 6. MultiTenantBudgetPartitionPort (Tenant quota manager)
- * 7. ConcurrencyRaceDetectorChatPort (Thread-safe stress double)
- * 8. SchemaValidatingChatPort (Schema-validating structured output double)
- * 9. ResilientFailoverChatPort (HTTP endpoint failover)
- * 10. AutonomousChaosTriageHarness (Full chaos triage lifecycle)
+ * 2. CorruptingChaosChatPort (Payload truncation & field mangling)
+ * 3. CompositeChaosPipeline (Multi-stage chaos pipeline)
+ * 4. StreamingChunkLatencySimulator (Reactive chunk delay simulator)
+ * 5. IntermittentDropStreamingChatPort (Simulated token drops)
+ * 6. DeterministicConversationReplayer (Trajectory replay)
+ * 7. RateLimitBackoffChatPort (Rate limit & virtual backoff)
+ * 8. CircuitBreakingChatPort (State machine double)
+ * 9. AdaptiveThrottlingChatPort (Sliding window rate limiter)
+ * 10. MultiTenantBudgetPartitionPort (Tenant quota manager)
+ * 11. TenantTierThrottlingChatPort (Subscription tier quotas)
+ * 12. ConcurrencyRaceDetectorChatPort (Thread-safe stress double)
+ * 13. ResilientFailoverChatPort (Endpoint failover)
+ * 14. SchemaValidatingChatPort (Structured output conversion & fallback)
+ * 15. AutonomousChaosTriageHarness (Full chaos triage lifecycle)
  */
 public class AdvancedOfflineHarnessUnderTest {
 
+    // =========================================================================
+    // Topic 1: Chaos Injection & Payload Corruption (Scenarios 1 - 3)
+    // =========================================================================
+
     /**
      * Scenario 1: Deterministic Seeded Chaos Matrix.
-     * <p>
-     * Instructions:
-     * - Dispatches to delegate.chat().
-     * - Probabilistically drops calls: if matrix.random().nextDouble() < matrix.failureRate(),
-     *     increments failureCount and throws new RuntimeException("ChaosInjectingChatPort: simulated chaos drop").
-     * - If matrix.corruptPayload(), truncates the resulting text in half:
-     *     result.text().substring(0, Math.max(1, result.text().length() / 2)).
-     * - Tracks totalCalls and failureCount.
      */
     public static class ChaosInjectingChatPort implements ChatPort {
-        private final ChatPort delegate;
-        private final ChaosMatrix matrix;
-        private int totalCalls = 0;
-        private int failureCount = 0;
-
         public ChaosInjectingChatPort(ChatPort delegate, ChaosMatrix matrix) {
-            this.delegate = delegate;
-            this.matrix = matrix;
+            // DEFECT (Scenario 1): Ignores configuration
         }
 
-        public synchronized int getTotalCalls() {
-            // DEFECT (Scenario 1): Returns 0 without tracking calls
+        public int getTotalCalls() {
+            // DEFECT (Scenario 1): Returns 0
             return 0;
         }
 
-        public synchronized int getFailureCount() {
-            // DEFECT (Scenario 1): Returns 0 without tracking failures
+        public int getFailureCount() {
+            // DEFECT (Scenario 1): Returns 0
             return 0;
         }
 
         @Override
-        public synchronized ChatResult chat(String system, String user, List<Object> toolBeans) {
-            // DEFECT (Scenario 1): Bypasses chaos matrix evaluation and returns delegate result directly
-            return delegate.chat(system, user, toolBeans);
+        public ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 1): Bypasses chaos injection
+            return new ChatResult("", 0, 0);
         }
     }
 
     /**
-     * Scenario 2: Reactive Chunk Delay & Backpressure.
-     * <p>
-     * Instructions:
-     * - enqueueStream(chunks, stepLatencyMs): queues chunks and the step latency for next stream call.
-     * - stream(system, user):
-     *     - returns Flux.fromIterable(chunks)
-     *     - on each chunk emission (e.g. .doOnNext(...)), increments totalChunksEmitted
-     *       and accumulates stepLatency into cumulativeSimulatedLatencyMs.
+     * Scenario 2: Payload Truncation & Field Mangle Double.
      */
-    public static class StreamingChunkLatencySimulator implements StreamingChatPort {
-        public synchronized StreamingChunkLatencySimulator enqueueStream(List<String> chunks, long stepLatencyMs) {
-            // DEFECT (Scenario 2): Doesn't queue chunks or latency
+    public static class CorruptingChaosChatPort implements ChatPort {
+        public CorruptingChaosChatPort(ChatPort delegate) {
+            // DEFECT (Scenario 2): Ignores delegate
+        }
+
+        public CorruptingChaosChatPort truncateAfter(int length) {
+            // DEFECT (Scenario 2): No-op
             return this;
         }
 
-        public synchronized int getTotalChunksEmitted() {
-            // DEFECT (Scenario 2): Returns 0
-            return 0;
+        public CorruptingChaosChatPort mangleField(String fieldName, String badValue) {
+            // DEFECT (Scenario 2): No-op
+            return this;
         }
 
-        public synchronized long getCumulativeSimulatedLatencyMs() {
+        public int getCorruptedCallsCount() {
             // DEFECT (Scenario 2): Returns 0
             return 0;
         }
 
         @Override
-        public synchronized Flux<String> stream(String system, String user) {
-            // DEFECT (Scenario 2): Returns empty flux
+        public ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 2): Returns unmodified dummy result
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    /**
+     * Scenario 3: Multi-Stage Chaos Pipeline with Auditing.
+     */
+    public static class CompositeChaosPipeline implements ChatPort {
+        public CompositeChaosPipeline(ChatPort delegate, ChaosMatrix matrix) {
+            // DEFECT (Scenario 3): Ignores configuration
+        }
+
+        public List<ChaosAuditEntry> getAuditTrail() {
+            // DEFECT (Scenario 3): Returns empty list
+            return Collections.emptyList();
+        }
+
+        public int getSevereFaultCount() {
+            // DEFECT (Scenario 3): Returns 0
+            return 0;
+        }
+
+        @Override
+        public ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 3): Bypasses pipeline
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    // =========================================================================
+    // Topic 2: Reactive Streaming Delays & Backpressure (Scenarios 4 - 6)
+    // =========================================================================
+
+    /**
+     * Scenario 4: Reactive Chunk Delay & Backpressure.
+     */
+    public static class StreamingChunkLatencySimulator implements StreamingChatPort {
+        public StreamingChunkLatencySimulator enqueueStream(List<String> chunks, long simulatedLatencyMsPerChunk) {
+            // DEFECT (Scenario 4): Doesn't queue streams
+            return this;
+        }
+
+        public int getTotalChunksEmitted() {
+            // DEFECT (Scenario 4): Returns 0
+            return 0;
+        }
+
+        public long getCumulativeSimulatedLatencyMs() {
+            // DEFECT (Scenario 4): Returns 0
+            return 0;
+        }
+
+        @Override
+        public Flux<String> stream(String system, String user) {
+            // DEFECT (Scenario 4): Returns empty flux
             return Flux.empty();
         }
     }
 
     /**
-     * Scenario 3: Simulated Rate-Limit & Virtual Backoff Double.
-     * <p>
-     * Instructions:
-     * - Wraps a delegate ChatPort.
-     * - Configured with maxRetries, initialBackoffMs, and an AdvancedTestClock.
-     * - In chat(system, user, toolBeans):
-     *     - Loops from attempt = 1 to maxRetries.
-     *     - If delegate succeeds: increments successfulCalls and returns ChatResult.
-     *     - If delegate throws an exception:
-     *         - Checks if exception message contains "429" or "rate limit" (case-insensitive).
-     *         - If NOT rate-limit related: rethrow immediately without retrying (fail-fast).
-     *         - If rate-limit related:
-     *             - Increments retryAttempts.
-     *             - If attempt >= maxRetries: throw new RateLimitExhaustedException("Rate limit retries exhausted after " + maxRetries + " attempts").
-     *               (Message MUST contain "Rate limit retries exhausted").
-     *             - Otherwise advances clock by backoff:
-     *                 long backoff = initialBackoffMs * (1L << (attempt - 1));
-     *                 clock.advance(backoff);
-     * - getRetryAttempts(): returns total retries across calls.
-     * - getSuccessfulCalls(): returns total successful calls completed.
+     * Scenario 5: Simulated Token Drops & Resumption Double.
      */
-    public static class RateLimitBackoffChatPort implements ChatPort {
-        public RateLimitBackoffChatPort(ChatPort delegate, int maxRetries, long initialBackoffMs, AdvancedTestClock clock) {
-            // no-op
+    public static class IntermittentDropStreamingChatPort implements StreamingChatPort {
+        public IntermittentDropStreamingChatPort enqueueStreamWithDrops(List<String> chunks, Predicate<String> dropPredicate) {
+            // DEFECT (Scenario 5): Doesn't queue stream
+            return this;
         }
 
-        public synchronized int getRetryAttempts() {
-            // DEFECT (Scenario 3): Returns 0
-            return 0;
-        }
-
-        public synchronized int getSuccessfulCalls() {
-            // DEFECT (Scenario 3): Returns 0
+        public int getDroppedChunksCount() {
+            // DEFECT (Scenario 5): Returns 0
             return 0;
         }
 
         @Override
-        public synchronized ChatResult chat(String system, String user, List<Object> toolBeans) {
-            return new ChatResult("", 0, 0);
+        public Flux<String> stream(String system, String user) {
+            // DEFECT (Scenario 5): Returns empty flux
+            return Flux.empty();
         }
     }
 
     /**
-     * Scenario 4: Trajectory Replay & State Verification.
-     * <p>
-     * Instructions:
-     * - replay(trajectory, agentPort):
-     *     - Iterates through trajectory.turns().
-     *     - Calls agentPort.chat("SYSTEM: Conversation Replay", turn.userPrompt()).
-     *     - Asserts that agent response text contains turn.expectedResponse().
-     *       If not, throws IllegalStateException("Replay verification failed: expected [" +
-     *       turn.expectedResponse() + "], got [" + result.text() + "]").
-     *     - Accumulates total tokens across all turns.
-     *     - Returns total tokens.
+     * Scenario 6: Trajectory Replay & State Verification.
      */
     public static class DeterministicConversationReplayer {
-        public static long replay(ConversationTrajectory trajectory, ChatPort agentPort) {
-            // DEFECT (Scenario 4): Returns 0 without replaying turns
+        public static long replay(ConversationTrajectory trajectory, ChatPort agent) {
+            // DEFECT (Scenario 6): Returns 0 without replaying trajectory
             return 0L;
         }
     }
 
-    /**
-     * Scenario 5: Resilient State Machine Double.
-     * <p>
-     * Instructions:
-     * - Implements circuit breaker: CLOSED -> OPEN -> HALF_OPEN -> CLOSED.
-     * - During OPEN state:
-     *     - If clock.now() - lastTrippedTimestamp >= cooldownMillis, transitions to HALF_OPEN.
-     *     - Otherwise throws new CircuitBreakerOpenException("Circuit breaker is OPEN (failures: " + consecutiveFailures + ")").
-     *       (Message MUST contain "Circuit breaker is OPEN").
-     * - On call success:
-     *     - If HALF_OPEN, transitions to CLOSED.
-     *     - Resets consecutiveFailures = 0.
-     * - On call failure:
-     *     - Increments consecutiveFailures.
-     *     - If consecutiveFailures >= failureThreshold or state was HALF_OPEN,
-     *       transitions to OPEN and records lastTrippedTimestamp = clock.now().
-     *     - Rethrows the exception.
-     */
-    public static class CircuitBreakingChatPort implements ChatPort {
-        public CircuitBreakingChatPort(ChatPort delegate, int failureThreshold, long cooldownMillis, AdvancedTestClock clock) {
-            // no-op
-        }
-
-        public synchronized CircuitState getState() {
-            // DEFECT (Scenario 5): Always reports OPEN
-            return CircuitState.OPEN;
-        }
-
-        public synchronized int getConsecutiveFailures() {
-            return 0;
-        }
-
-        public synchronized void reset() {
-            // no-op
-        }
-
-        @Override
-        public synchronized ChatResult chat(String system, String user, List<Object> toolBeans) {
-            return new ChatResult("", 0, 0);
-        }
-    }
+    // =========================================================================
+    // Topic 3: Rate Limiting & Circuit Breakers (Scenarios 7 - 9)
+    // =========================================================================
 
     /**
-     * Scenario 6: Hierarchical Token Quota Manager.
-     * <p>
-     * Instructions:
-     * - allocateQuota(tenantId, maxTokens): sets token quota for tenant.
-     * - getRemainingQuota(tenantId): returns remaining tokens.
-     * - chat(tenantId, system, user, toolBeans):
-     *     - Checks remaining quota for tenantId. If missing or <= 0,
-     *       throws new TenantQuotaExceededException("Quota exceeded for tenant: " + tenantId).
-     *       (Message MUST contain "Quota exceeded for tenant").
-     *     - Dispatches call to delegate.
-     *     - Deducts result.totalTokens() from tenant quota.
-     *     - If resulting quota is negative, clamps remaining to 0 and throws TenantQuotaExceededException.
-     *     - Returns result.
+     * Scenario 7: Rate-Limit Backoff & Virtual Clock Simulator.
      */
-    public static class MultiTenantBudgetPartitionPort implements MultiTenantChatPort {
-        public MultiTenantBudgetPartitionPort(ChatPort delegate) {
-            // no-op
+    public static class RateLimitBackoffChatPort implements ChatPort {
+        public RateLimitBackoffChatPort(ChatPort delegate, int maxRetries, long initialDelayMs, AdvancedTestClock clock) {
+            // DEFECT (Scenario 7): Ignores parameters
         }
 
-        public void allocateQuota(String tenantId, long maxTokens) {
-            // DEFECT (Scenario 6): Ignores allocation
-        }
-
-        public long getRemainingQuota(String tenantId) {
-            // DEFECT (Scenario 6): Always returns 0
-            return 0L;
-        }
-
-        @Override
-        public synchronized ChatResult chat(String tenantId, String system, String user, List<Object> toolBeans) {
-            // DEFECT (Scenario 6): Bypasses multi-tenant quota checks
-            return new ChatResult("", 0, 0);
-        }
-    }
-
-    /**
-     * Scenario 7: Thread-Safe Stress Double.
-     * <p>
-     * Instructions:
-     * - Wraps a delegate ChatPort.
-     * - Uses thread-safe primitives (AtomicInteger for callCount, AtomicLong for totalTokens,
-     *   CopyOnWriteArrayList for auditHistory).
-     * - In chat():
-     *     - increments callCount.
-     *     - calls delegate.
-     *     - adds result.totalTokens() to totalTokens.
-     *     - appends result to auditHistory.
-     *     - returns result.
-     */
-    public static class ConcurrencyRaceDetectorChatPort implements ChatPort {
-        public ConcurrencyRaceDetectorChatPort(ChatPort delegate) {
-            // no-op
-        }
-
-        public int getCallCount() {
+        public int getRetryAttempts() {
             // DEFECT (Scenario 7): Returns 0
             return 0;
         }
 
-        public long getTotalTokens() {
+        public int getSuccessfulCalls() {
             // DEFECT (Scenario 7): Returns 0
-            return 0L;
-        }
-
-        public List<ChatResult> getAuditHistory() {
-            // DEFECT (Scenario 7): Returns empty list
-            return Collections.emptyList();
+            return 0;
         }
 
         @Override
         public ChatResult chat(String system, String user, List<Object> toolBeans) {
-            // DEFECT (Scenario 7): Doesn't track concurrent calls
+            // DEFECT (Scenario 7): Returns empty result without retrying
             return new ChatResult("", 0, 0);
         }
     }
 
     /**
-     * Scenario 8: Schema-Validating Structured Output Double.
-     * <p>
-     * Instructions:
-     * - Wraps a delegate ChatPort.
-     * - chatAndValidate(system, user, BeanOutputConverter<T> converter, T fallback):
-     *     - Calls delegate.chat(system, user).
-     *     - Converts response text using converter.convert(result.text()).
-     *     - If conversion succeeds: increments validationSuccessCount and returns parsed object.
-     *     - If conversion throws RuntimeException (e.g. malformed/truncated payload):
-     *       increments validationFailureCount and returns fallback.
-     * - getValidationSuccessCount(): returns total successful validations.
-     * - getValidationFailureCount(): returns total validation failures handled.
+     * Scenario 8: Resilient Circuit Breaker State Machine.
      */
-    public static class SchemaValidatingChatPort implements ChatPort {
-        public SchemaValidatingChatPort(ChatPort delegate) {
-            // no-op
+    public static class CircuitBreakingChatPort implements ChatPort {
+        public CircuitBreakingChatPort(ChatPort delegate, int failureThreshold, long cooldownMs, AdvancedTestClock clock) {
+            // DEFECT (Scenario 8): Ignores parameters
         }
 
-        public synchronized int getValidationSuccessCount() {
-            // DEFECT (Scenario 8): Returns 0
-            return 0;
-        }
-
-        public synchronized int getValidationFailureCount() {
-            // DEFECT (Scenario 8): Returns 0
-            return 0;
+        public synchronized CircuitState getState() {
+            // DEFECT (Scenario 8): Always returns CLOSED
+            return CircuitState.CLOSED;
         }
 
         @Override
         public synchronized ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 8): Bypasses circuit breaker logic
             return new ChatResult("", 0, 0);
-        }
-
-        public synchronized <T> T chatAndValidate(String system, String user, BeanOutputConverter<T> converter, T fallback) {
-            // DEFECT (Scenario 8): Returns null without validation
-            return null;
         }
     }
 
     /**
-     * Scenario 9: Primary HTTP Failure -> Fallback Stub.
-     * <p>
-     * Instructions:
-     * - Wraps primaryPort and secondaryPort.
-     * - In chat():
-     *     - attempts primaryPort.chat().
-     *     - if primaryPort throws any RuntimeException:
-     *         - sets failoverTriggered = true
-     *         - increments failoverCount
-     *         - returns secondaryPort.chat()
-     * - isFailoverTriggered(): returns failover status.
-     * - getFailoverCount(): returns count of failovers triggered.
+     * Scenario 9: Sliding Window Adaptive Rate Limiter.
      */
-    public static class ResilientFailoverChatPort implements ChatPort {
-        public ResilientFailoverChatPort(ChatPort primaryPort, ChatPort secondaryPort) {
-            // no-op
+    public static class AdaptiveThrottlingChatPort implements ChatPort {
+        public AdaptiveThrottlingChatPort(ChatPort delegate, int maxCallsPerWindow, long windowMs, AdvancedTestClock clock) {
+            // DEFECT (Scenario 9): Ignores parameters
         }
 
-        public synchronized boolean isFailoverTriggered() {
-            // DEFECT (Scenario 9): Returns false
-            return false;
-        }
-
-        public synchronized int getFailoverCount() {
+        public int getThrottledCallsCount() {
             // DEFECT (Scenario 9): Returns 0
             return 0;
         }
 
         @Override
         public synchronized ChatResult chat(String system, String user, List<Object> toolBeans) {
-            // DEFECT (Scenario 9): Dispatches to primary without failover catch
+            // DEFECT (Scenario 9): Bypasses throttling
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    // =========================================================================
+    // Topic 4: Multi-Tenant Quotas & Thread-Safe Concurrency (Scenarios 10 - 12)
+    // =========================================================================
+
+    /**
+     * Scenario 10: Multi-Tenant Token Budget Partitioning.
+     */
+    public static class MultiTenantBudgetPartitionPort implements MultiTenantChatPort {
+        public MultiTenantBudgetPartitionPort(ChatPort delegate) {
+            // DEFECT (Scenario 10): Ignores delegate
+        }
+
+        public void allocateQuota(String tenantId, long quotaTokens) {
+            // DEFECT (Scenario 10): No-op
+        }
+
+        public long getRemainingQuota(String tenantId) {
+            // DEFECT (Scenario 10): Returns 0
+            return 0;
+        }
+
+        @Override
+        public synchronized ChatResult chat(String tenantId, String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 10): Returns empty result without quota tracking
             return new ChatResult("", 0, 0);
         }
     }
 
     /**
-     * Scenario 10: Full Chaos Integration & Triage Lifecycle.
-     * <p>
-     * Instructions:
-     * - Assembles the resilient chaos harness:
-     *     - ResilientFailoverChatPort(primary, secondary)
-     *     - CircuitBreakingChatPort(recoveryStack, 3, 5000L, clock)
-     *     - MultiTenantBudgetPartitionPort(circuitBreaker) with quota 5000 allocated for tenantId.
-     * - Executes 3-turn triage loop:
-     *     - Turn 1: chat(tenantId, "SYSTEM: Chaos Triage", "TURN 1: Initial alert check for " + incidentId)
-     *     - Turn 2: chat(tenantId, "SYSTEM: Chaos Triage", "TURN 2: Querying error telemetry")
-     *     - Turn 3: chat(tenantId, "SYSTEM: Chaos Triage", "TURN 3: Final diagnosis completion")
-     * - Extracts root cause from Turn 3 output.
-     * - Returns AdvancedDiagnosticReport(incidentId, tenantId, rootCause, 3, totalTokens, circuitTripped, failoverUsed).
+     * Scenario 11: Subscription Tier Quotas & Policies.
+     */
+    public static class TenantTierThrottlingChatPort implements MultiTenantChatPort {
+        public TenantTierThrottlingChatPort(ChatPort delegate) {
+            // DEFECT (Scenario 11): Ignores delegate
+        }
+
+        public void assignTier(String tenantId, TenantTier tier) {
+            // DEFECT (Scenario 11): No-op
+        }
+
+        public TenantUsage getTenantUsage(String tenantId) {
+            // DEFECT (Scenario 11): Returns empty usage
+            return new TenantUsage(0, 0);
+        }
+
+        @Override
+        public synchronized ChatResult chat(String tenantId, String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 11): Returns dummy result without tier checking
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    /**
+     * Scenario 12: Concurrency Race Detector Stress Double.
+     */
+    public static class ConcurrencyRaceDetectorChatPort implements ChatPort {
+        public ConcurrencyRaceDetectorChatPort(ChatPort delegate) {
+            // DEFECT (Scenario 12): Ignores delegate
+        }
+
+        public int getCallCount() {
+            // DEFECT (Scenario 12): Returns 0
+            return 0;
+        }
+
+        public long getTotalTokens() {
+            // DEFECT (Scenario 12): Returns 0
+            return 0;
+        }
+
+        public List<ChatResult> getAuditHistory() {
+            // DEFECT (Scenario 12): Returns empty list
+            return Collections.emptyList();
+        }
+
+        @Override
+        public ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 12): Returns empty result
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    // =========================================================================
+    // Topic 5: Resilient Failover, Schema Conversion & Autonomous Loops (Scenarios 13 - 15)
+    // =========================================================================
+
+    /**
+     * Scenario 13: Primary Endpoint Failure to Secondary Fallback.
+     */
+    public static class ResilientFailoverChatPort implements ChatPort {
+        public ResilientFailoverChatPort(ChatPort primary, ChatPort secondary) {
+            // DEFECT (Scenario 13): Ignores delegates
+        }
+
+        public boolean isFailoverTriggered() {
+            // DEFECT (Scenario 13): Returns false
+            return false;
+        }
+
+        public int getFailoverCount() {
+            // DEFECT (Scenario 13): Returns 0
+            return 0;
+        }
+
+        @Override
+        public ChatResult chat(String system, String user, List<Object> toolBeans) {
+            // DEFECT (Scenario 13): Returns empty result without failover
+            return new ChatResult("", 0, 0);
+        }
+    }
+
+    /**
+     * Scenario 14: Structured Output Validation with Fallback.
+     */
+    public static class SchemaValidatingChatPort {
+        public SchemaValidatingChatPort(ChatPort delegate) {
+            // DEFECT (Scenario 14): Ignores delegate
+        }
+
+        public int getValidationSuccessCount() {
+            // DEFECT (Scenario 14): Returns 0
+            return 0;
+        }
+
+        public int getValidationFailureCount() {
+            // DEFECT (Scenario 14): Returns 0
+            return 0;
+        }
+
+        public <T> T chatAndValidate(String system, String user, BeanOutputConverter<T> converter, T fallback) {
+            // DEFECT (Scenario 14): Always returns null
+            return null;
+        }
+    }
+
+    /**
+     * Scenario 15: Autonomous Multi-Turn Chaos Triage Lifecycle.
      */
     public static class AutonomousChaosTriageHarness {
         public static AdvancedDiagnosticReport runChaosTriage(
@@ -385,7 +389,7 @@ public class AdvancedOfflineHarnessUnderTest {
                 String incidentId,
                 AdvancedTestClock clock
         ) {
-            // DEFECT (Scenario 10): Returns null without running triage lifecycle
+            // DEFECT (Scenario 15): Returns null without running triage loop
             return null;
         }
     }

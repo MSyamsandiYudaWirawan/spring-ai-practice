@@ -1,7 +1,5 @@
 package phase03;
 
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import phase03.ToolModelContracts.ToolCallEvent;
 import phase03.ToolModelContracts.ToolEnvelope;
 
@@ -12,17 +10,12 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY.
+ * Service under test — Phase 03 Exercise 01:
+ * Autonomous Diagnostic Tool Sandboxing & Execution Bounding (15 Scenarios).
  * <p>
- * Seeded with defects across 8 scenarios in Multi-Turn Tool Calling & Execution Sandboxing:
- * - Scenario 1: Normal in-sandbox file reading with path normalization.
- * - Scenario 2: Path traversal containment (preventing ../ escapes).
- * - Scenario 3: Missing file handling & exception isolation (ToolEnvelope.fail).
- * - Scenario 4: File size safety guard (rejecting files > 100 KB).
- * - Scenario 5: Sandboxed repository file tree listing (filtering .git, .env, binary files).
- * - Scenario 6: Hard turn bound enforcement (cutting off model when callCount > bound).
- * - Scenario 7: Intermediate tool call trajectory auditing (ToolCallEvent logging).
- * - Scenario 8: Spring AI @Tool metadata and parameter annotation integration.
+ * PRACTICE MODE: All drills stubbed. Implement each scenario to pass Verifier.
+ * Remember to annotate diagnostic methods with @Tool and @ToolParam!
+ * Golden reference solution is sealed in: docs/golden/phase03-ex01-golden.md
  */
 public class BoundedDiagnosticToolsUnderTest {
 
@@ -31,6 +24,7 @@ public class BoundedDiagnosticToolsUnderTest {
     private final long maxFileSizeBytes;
     private final String fullContext;
     private final List<ToolCallEvent> trajectoryAudit = new CopyOnWriteArrayList<>();
+    private final List<String> recordedFindings = new CopyOnWriteArrayList<>();
     private int callCount = 0;
 
     public BoundedDiagnosticToolsUnderTest(Path sandboxRoot, int bound, String fullContext) {
@@ -46,55 +40,60 @@ public class BoundedDiagnosticToolsUnderTest {
     }
 
     /**
-     * Scenario 1 - 4: Read a file from the target repository sandbox.
-     * <p>
-     * Requirements:
-     * - Must increment callCount on every invocation.
-     * - If callCount > bound: cut off immediately with ToolEnvelope.fail("tool-call bound (" + bound + ") exceeded — decide now").
-     * - If path is null or blank: return ToolEnvelope.fail("path must not be null or blank").
-     * - Path traversal guard: reject paths with ".." or leading slashes, or resolved paths escaping sandboxRoot with ToolEnvelope.fail("Access denied: path escapes sandbox root").
-     * - Sensitive files guard: reject paths containing ".git" or ".env" with ToolEnvelope.fail("Access denied: access to sensitive configuration is prohibited").
-     * - Missing file guard: if file does not exist or is a directory, return ToolEnvelope.fail("File not found: " + path).
-     * - Size guard: if file size > maxFileSizeBytes, return ToolEnvelope.fail("File size (" + size + " bytes) exceeds maximum allowable limit (" + maxFileSizeBytes + " bytes)").
-     * - Success: read file string, record audit event, and return ToolEnvelope.ok(content).
-     * - Never let IOException or other exceptions escape to caller!
+     * Drills 1 - 5: Read a file from the target repository sandbox.
+     * TODO: Add @Tool and @ToolParam annotations.
      */
-    @Tool(description = "Read a file from the target repository sandbox. Path must be relative to the sandbox root.")
-    public ToolEnvelope<String> readSource(@ToolParam(description = "Relative path to the file inside the target sandbox") String path) {
-        // DEFECT (Scenario 1-4): Returns null without reading, sandboxing, or recording audits.
+    public ToolEnvelope<String> readSource(String path) {
+        // TODO: Enforce turn bound, validate path, sandbox root containment, sensitive files, file size, and return content
         return null;
     }
 
     /**
-     * Scenario 5: List all source and configuration files in the target repository structure.
-     * <p>
-     * Requirements:
-     * - Increments callCount and enforces tool-call bound.
-     * - Walks sandboxRoot recursively, returning relative paths separated by '/'.
-     * - Filters out .git directories, .env files, and binary files (.bin, .class, .jar).
-     * - Sorts paths alphabetically and returns ToolEnvelope.ok(files).
+     * Drill 6: List all source and configuration files in the target repository structure.
+     * TODO: Add @Tool annotation.
      */
-    @Tool(description = "List all source and configuration files in the target repository structure.")
     public ToolEnvelope<List<String>> listRepositoryStructure() {
-        // DEFECT (Scenario 5): Returns empty list without walking filesystem.
-        return ToolEnvelope.ok(List.of());
+        // TODO: Enforce turn bound, walk sandboxRoot, filter out .git, .env, and binary files, sort alphabetically
+        return null;
     }
 
     /**
-     * Scenario 6: Recall diagnostic context.
-     * <p>
-     * Requirements:
-     * - Increments callCount and enforces tool-call bound.
-     * - Returns ToolEnvelope.ok(fullContext).
+     * Drill 8: Recall diagnostic context.
+     * TODO: Add @Tool annotation.
      */
-    @Tool(description = "Recall the diagnostic context (JFR signals, noise floor thresholds, metrics) for the current iteration.")
     public ToolEnvelope<String> recallContext() {
-        // DEFECT (Scenario 6): Missing bound check.
-        return ToolEnvelope.ok(fullContext);
+        // TODO: Enforce turn bound, return ToolEnvelope.ok(fullContext)
+        return null;
+    }
+
+    /**
+     * Drill 10: Search source files for occurrences of a given query string.
+     * TODO: Add @Tool and @ToolParam annotations.
+     */
+    public ToolEnvelope<List<String>> searchSource(String query) {
+        // TODO: Enforce turn bound, search non-binary files inside sandbox matching query
+        return null;
+    }
+
+    /**
+     * Drill 11: Record a diagnostic finding or hypothesis for the current investigation.
+     * TODO: Add @Tool and @ToolParam annotations.
+     */
+    public ToolEnvelope<String> recordDiagnosticFinding(String finding) {
+        // TODO: Enforce turn bound, validate non-blank finding, record in list, return confirmation
+        return null;
     }
 
     public int getCallCount() {
         return callCount;
+    }
+
+    public int getRemainingTurns() {
+        return Math.max(0, bound - callCount);
+    }
+
+    public List<String> getFindings() {
+        return Collections.unmodifiableList(recordedFindings);
     }
 
     public List<ToolCallEvent> getTrajectoryAudit() {
@@ -102,6 +101,6 @@ public class BoundedDiagnosticToolsUnderTest {
     }
 
     public void resetTurn() {
-        this.callCount = 0;
+        // TODO: Reset callCount to 0
     }
 }

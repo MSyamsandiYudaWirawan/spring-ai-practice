@@ -1,6 +1,6 @@
-# Phase 01 Exercise 03 â€” Cloud SRE & Kubernetes Remediation Gateway
+# Phase 01 Exercise 03 — Cloud SRE & Kubernetes Remediation Gateway
 
-**Theme:** Cloud SRE & Kubernetes Operations Incident Gateway (10 Production Scenarios).  
+**Theme:** Cloud SRE & Kubernetes Operations Incident Gateway (15 Muscle-Memory Drills).  
 **Core Competency:** Complete TigerStyle defensive programming and Spring AI `ChatClient` muscle memory: fail-fast boundary validation, role separation, template binding with complex types, conditional environment policy injection, defensive token usage unboxing, parameterized client mutation, fine-grained LLM runtime options, few-shot demonstration priming, multi-turn history preservation, system paging envelopes, and structural LLM output invariant enforcement.
 
 ---
@@ -9,97 +9,61 @@
 
 | File | Role |
 |---|---|
-| [`src/main/java/phase01/SreOpsServiceUnderTest.java`](src/main/java/phase01/SreOpsServiceUnderTest.java) | The service under test â€” **FIX THIS FILE ONLY** |
+| [`src/main/java/phase01/SreOpsServiceUnderTest.java`](src/main/java/phase01/SreOpsServiceUnderTest.java) | The service under test — **FIX THIS FILE ONLY** |
 | [`src/main/java/phase01/SreModelContracts.java`](src/main/java/phase01/SreModelContracts.java) | Immutable domain records, templates, policies, and contracts (DO NOT MODIFY) |
 | [`src/test/java/phase01/FakeChatModel.java`](src/test/java/phase01/FakeChatModel.java) | Deterministic in-memory `ChatModel` mock (DO NOT MODIFY) |
-| [`src/test/java/phase01/Verifier.java`](src/test/java/phase01/Verifier.java) | The evaluation gate (exits 99 on FAIL, 0 on PASS) |
-| [`docs/golden/phase01-ex03-golden.md`](golden/phase01-ex03-golden.md) | Sealed golden solution (open only after completion) |
+| [`src/test/java/phase01/Verifier.java`](src/test/java/phase01/Verifier.java) | The evaluation gate (15 Drills, exits 99 on FAIL, 0 on PASS) |
+| [`docs/golden/phase01-ex03-golden.md`](../docs/golden/phase01-ex03-golden.md) | **SEALED** golden reference solution |
 
-**Time-box:** **60 minutes** for all 10 scenarios + write-up.
+**Time-box:** **60 minutes** for all 15 drills + write-up.
 
 ---
 
 ## 2. Reproduction Commands
 
-Run the verifier across all scenarios (or isolate an individual scenario):
+Run the verifier across all drills (or isolate an individual drill):
 
 ```powershell
-# Run all 10 scenarios:
+# Run all 15 drills:
 mvn test-compile exec:java -pl phase01-ex03-cloud-sre
 
 # Or via Maven test runner:
 mvn test -pl phase01-ex03-cloud-sre
 
-# Run a specific scenario (1 through 10):
+# Run a specific drill (1 through 15):
 mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="1"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="2"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="3"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="4"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="5"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="6"
 mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="7"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="8"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="9"
-mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="10"
+mvn test-compile exec:java -pl phase01-ex03-cloud-sre -Dexec.args="13"
 ```
 
-Exit `99` = measured FAIL (findings detected). Read the report.  
+Exit `99` = measured FAIL (findings detected with tiered progressive hints). Read the report.  
 Exit `0` = PASS.
 
 ---
 
-## 3. The 10 Scenarios & TigerStyle Gates
+## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
-### Scenario 1: `analyzePodCrash(clusterId, namespace, podLogs)`
-- **Invariants:** `clusterId`, `namespace`, and `podLogs` must not be null or blank (throw `IllegalArgumentException` / `NullPointerException`).
-- **Gate:** `SystemMessage` must equal `"Cluster: " + clusterId + " | Namespace: " + namespace`; `UserMessage` must be pure `podLogs`.
+### Topic 1: Role Separation, Cluster Invariants & Paging Envelopes (Drills 1–3)
+- **Drill 1:** `analyzePodCrash` (Role Separation) — Semantic role separation with cluster/namespace in SystemMessage and logs in UserMessage.
+- **Drill 2:** `analyzePodCrash` (Boundaries) — Fail-fast boundary checks on null/blank clusterId, namespace, or podLogs.
+- **Drill 3:** `applyIncidentPagingEnvelope` (Paging Envelope) — System envelope augmentation with on-call dispatcher info and base SRE prompt.
 
-### Scenario 2: `renderResourceExhaustionAlert(alert)`
-- **Invariants:** `alert` must not be null.
-- **Gate:** Binds `SreModelContracts.RESOURCE_ALERT_TEMPLATE` via `.user(u -> u.text(...).params(Map.of(...)))` with parameters `serviceName`, `cpuPercent`, `memoryBytes`, `p99LatencySec`, `errorCodes`. Placeholders must not remain un-substituted.
+### Topic 2: Parameterized Templates & Conditional Environment Policies (Drills 4–6)
+- **Drill 4:** `renderResourceExhaustionAlert` (Map Binding) — Parameter map binding with 5 numeric and collection parameters.
+- **Drill 5:** `renderResourceExhaustionAlert` (Boundaries) — Fail-fast validation verifying null alert throws exception.
+- **Drill 6:** `triageWithEnvironmentPolicy` (Policy Injection) — Conditional policy branching (`PROD_POLICY` vs `NON_PROD_POLICY`).
 
-### Scenario 3: `triageWithEnvironmentPolicy(env, anomalyDescription)`
-- **Invariants:** `env` and `anomalyDescription` must not be null or blank.
-- **Gate:** If `env == PRODUCTION`, system prompt must be `SreModelContracts.PROD_POLICY`. Otherwise, system prompt must be `SreModelContracts.NON_PROD_POLICY`. User message must be `anomalyDescription`.
+### Topic 3: Fine-Grained Options & Deterministic Runbooks (Drills 7–9)
+- **Drill 7:** `generateDeterministicRunbook` (Options Attachment) — Call-level options override: temperature 0.0, maxTokens 300, stopSequences, and frequencyPenalty 0.5.
+- **Drill 8:** `generateDeterministicRunbook` (Base Immutability) — Verifies base client defaults (temperature 0.4) remain intact on subsequent turns.
+- **Drill 9:** `generateDeterministicRunbook` (Boundaries) — Fail-fast boundary validation on null/blank alertName.
 
-### Scenario 4: `executeIncidentDiagnosisWithAudit(incidentReport)`
-- **Invariants:** `incidentReport` must not be null or blank.
-- **Gate:** Extracts response text via `.call().chatResponse()`. Defensively extracts `promptTokens` and `completionTokens` without NPE when usage metadata is null (fallback to `0L`).
+### Topic 4: Conversational Troubleshooting & Few-Shot Remediations (Drills 10–12)
+- **Drill 10:** `continueTroubleshootingSession` (History Replay) — Injects conversational history via `.messages(history).user(userReply)`.
+- **Drill 11:** `continueTroubleshootingSession` (Boundaries) — Fail-fast boundary checks on null history or null/blank userReply.
+- **Drill 12:** `classifyRemediationAction` (Few-Shot Priming) — Prepends alternating few-shot pairs from `REMEDIATION_FEW_SHOTS`.
 
-### Scenario 5: `deriveCanaryAnalysisClient(canaryTrafficPercent)`
-- **Invariants:** `canaryTrafficPercent` must be between `0.0` and `100.0` inclusive (throw `IllegalArgumentException`).
-- **Gate:** Uses `chatClient.mutate()` to derive an isolated client with parameterized `CANARY_SYSTEM_TEMPLATE` (binding `trafficPercent`) and `temperature = 0.1`.
-
-### Scenario 6: `generateDeterministicRunbook(alertName)`
-- **Invariants:** `alertName` must not be null or blank.
-- **Gate:** Attaches call-level `ChatOptions`:
-  - `temperature = DETERMINISTIC_TEMPERATURE` (0.0)
-  - `maxTokens = RUNBOOK_MAX_TOKENS` (300)
-  - `stopSequences = RUNBOOK_STOP_SEQUENCES` (`["END_RUNBOOK", "---"]`)
-  - `frequencyPenalty = RUNBOOK_FREQUENCY_PENALTY` (0.5)
-
-### Scenario 7: `classifyRemediationAction(failureSymptom)`
-- **Invariants:** `failureSymptom` must not be null or blank.
-- **Gate:** Primes `REMEDIATION_FEW_SHOTS` as alternating `UserMessage` and `AssistantMessage` instances in `.messages(...)`, followed by `failureSymptom` as the final user query.
-
-### Scenario 8: `continueTroubleshootingSession(history, userReply)`
-- **Invariants:** `history` and `userReply` must not be null or blank.
-- **Gate:** Preserves full multi-turn conversational context by passing `.messages(history)` and appending `userReply` via `.user(userReply)`.
-
-### Scenario 9: `applyIncidentPagingEnvelope(onCallEngineer, incidentQuery)`
-- **Invariants:** `onCallEngineer` and `incidentQuery` must not be null or blank.
-- **Gate:** System prompt is augmented with paging header: `"ON-CALL DISPATCH TO: {engineer}\n" + BASE_SRE_SYSTEM_PROMPT` using parameter binding for `{engineer}`. User message is pure `incidentQuery`.
-
-### Scenario 10: `safeExecuteDiagnosis(query)`
-- **Invariants:** `query` must not be null or blank.
-- **Gate:** TigerStyle fail-fast on LLM output: if the response, result, output, or text is null/blank, throw `IllegalStateException("SRE diagnosis failed: empty or malformed LLM response")`. Otherwise return `text.trim()`.
-
----
-
-## 4. Your Task
-
-1. **Reproduce** the initial failure:
-   `mvn test-compile exec:java -pl phase01-ex03-cloud-sre` $\to$ `0 PASSED, 10 FAILED (exit code 99)`.
-2. **Fix** [`SreOpsServiceUnderTest.java`](src/main/java/phase01/SreOpsServiceUnderTest.java).
-3. **Verify** all 10 pass:
-   `mvn test-compile exec:java -pl phase01-ex03-cloud-sre` $\to$ `10 PASSED, 0 FAILED (exit code 0)`.
+### Topic 5: Client Mutation, Token Auditing & Structural Invariants (Drills 13–15)
+- **Drill 13:** `deriveCanaryAnalysisClient` (Canary Mutation) — Derives canary client via `chatClient.mutate()` with parameterized traffic percent and temperature 0.1.
+- **Drill 14:** `executeIncidentDiagnosisWithAudit` (Usage Metadata) — Extracts prompt and completion tokens defensively from `response.getMetadata().getUsage()`.
+- **Drill 15:** `safeExecuteDiagnosis` (Structural Response Validation) — Fail-fast structural invariant checking verifying non-empty, non-malformed response output.
