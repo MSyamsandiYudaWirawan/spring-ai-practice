@@ -7,34 +7,299 @@ import org.springframework.ai.tool.ToolCallback;
 import phase08.McpServerContracts.*;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * Phase 08 Exercise 01: Model Context Protocol (MCP) Server Architecture & Protocol Specifications.
+ * Exercise implementation under test for Phase 08 Exercise 01:
+ * Model Context Protocol (MCP) Server Architecture & Protocol Specifications.
  * <p>
- * Practice Drills:
- * 1. Server Capabilities Declaration & Protocol Negotiation
- * 2. Tool Definition with JSON Input Schema
- * 3. SyncToolSpecification Execution Handler & Output Wrapping
- * 4. Resilient Tool Execution & Error Signal Wrapping
- * 5. Spring AI ToolCallback to MCP Tool Adapter
- * 6. MCP Static & Dynamic Resource Specification
- * 7. MCP Parameterized Prompt Template Specification
- * 8. Security Allowlist & Tool Filter
- * 9. MCP Server Telemetry & Audit Recorder
- * 10. Composite Enterprise MCP Server Registry & Router
- * 11. Parameterized Resource Template URI Matcher
- * 12. MCP Protocol Log Notification Dispatcher & Level Filter
+ * 15 repetitive muscle-memory drills across 5 core topics (3 repetitions each).
+ * Implement all 15 scenarios in this file.
  */
 public class McpServerUnderTest {
 
+    // =========================================================================
+    // TOPIC 1: MCP Tool Definition & JSON Input Schema (Scenarios 1 - 3)
+    // =========================================================================
+
     /**
-     * Scenario 01: Server Capabilities Declaration.
+     * Scenario 01: Primitive-Typed Tool Definition.
+     * <p>
+     * Instructions:
+     * - Validate name and description are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build properties map where each property name maps to Map.of("type", type).
+     * - Build JSON schema:
+     *   "type" -> "object"
+     *   "properties" -> propertiesMap
+     *   "required" -> requiredFields != null ? requiredFields : List.of()
+     * - Return new Tool(name, null, description, schema, null, null, null, null).
+     */
+    public Tool buildPrimitiveToolDefinition(
+            String name,
+            String description,
+            Map<String, String> propertyTypes,
+            List<String> requiredFields
+    ) {
+        // DEFECT (Scenario 1): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 02: Structured Tool Definition with Pre-built Schema Maps.
+     * <p>
+     * Instructions:
+     * - Validate name and description are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Construct JSON schema:
+     *   "type" -> "object"
+     *   "properties" -> properties != null ? properties : Map.of()
+     *   "required" -> requiredFields != null ? requiredFields : List.of()
+     * - Return new Tool(name, null, description, schema, null, null, null, null).
+     */
+    public Tool buildStructuredToolDefinition(
+            String name,
+            String description,
+            Map<String, Object> properties,
+            List<String> requiredFields
+    ) {
+        // DEFECT (Scenario 2): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 03: Title-Enriched Tool Definition.
+     * <p>
+     * Instructions:
+     * - Validate name, description, and title are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Construct JSON schema:
+     *   "title" -> title.trim()
+     *   "type" -> "object"
+     *   "properties" -> properties != null ? properties : Map.of()
+     *   "required" -> requiredFields != null ? requiredFields : List.of()
+     * - Return new Tool(name, null, description, schema, null, null, null, null).
+     */
+    public Tool buildAuditValidatedToolDefinition(
+            String name,
+            String description,
+            Map<String, Object> properties,
+            List<String> requiredFields,
+            String title
+    ) {
+        // DEFECT (Scenario 3): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 2: SyncToolSpecification Handlers (Scenarios 4 - 6)
+    // =========================================================================
+
+    /**
+     * Scenario 04: Standard SyncToolSpecification Handler.
+     * <p>
+     * Instructions:
+     * - Validate tool != null and logicHandler != null; throw {@link IllegalArgumentException} otherwise.
+     * - Return new SyncToolSpecification(tool, (exchange, request) -> {
+     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
+     *     ServerContext ctx = new ServerContext(
+     *         exchange != null ? exchange.sessionId() : "default",
+     *         "standard",
+     *         "trace-0"
+     *     );
+     *     String output = logicHandler.apply(args, ctx);
+     *     return new CallToolResult(List.of(new TextContent(output)), false, null, null);
+     *   }).
+     */
+    public SyncToolSpecification createSyncToolSpecification(
+            Tool tool,
+            BiFunction<Map<String, Object>, ServerContext, String> logicHandler
+    ) {
+        // DEFECT (Scenario 4): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 05: Resilient SyncToolSpecification with Error Trapping.
+     * <p>
+     * Instructions:
+     * - Validate tool != null and logicHandler != null; throw {@link IllegalArgumentException} otherwise.
+     * - Return new SyncToolSpecification(tool, (exchange, request) -> {
+     *     try {
+     *         Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
+     *         ServerContext ctx = new ServerContext(
+     *             exchange != null ? exchange.sessionId() : "default",
+     *             "standard",
+     *             "trace-0"
+     *         );
+     *         String output = logicHandler.apply(args, ctx);
+     *         return new CallToolResult(List.of(new TextContent(output)), false, null, null);
+     *     } catch (Throwable t) {
+     *         return new CallToolResult(List.of(new TextContent("Error: " + t.getMessage())), true, null, null);
+     *     }
+     *   }).
+     */
+    public SyncToolSpecification createResilientToolSpecification(
+            Tool tool,
+            BiFunction<Map<String, Object>, ServerContext, String> logicHandler
+    ) {
+        // DEFECT (Scenario 5): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 06: Spring AI ToolCallback to MCP SyncToolSpecification Adapter.
+     * <p>
+     * Instructions:
+     * - Validate springAiTool != null; throw {@link IllegalArgumentException} otherwise.
+     * - Use McpToolUtils.toSyncToolSpecification(springAiTool).
+     * - Return the adapted SyncToolSpecification.
+     */
+    public SyncToolSpecification adaptSpringAiToolCallback(ToolCallback springAiTool) {
+        // DEFECT (Scenario 6): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 3: MCP Resource Specifications (Scenarios 7 - 9)
+    // =========================================================================
+
+    /**
+     * Scenario 07: Static Text Resource Specification.
+     * <p>
+     * Instructions:
+     * - Validate uri, name, and mimeType are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Resource: Resource.builder(uri, name).mimeType(mimeType).build().
+     * - Return new SyncResourceSpecification(resource, (exchange, request) -> {
+     *     return new ReadResourceResult(List.of(new TextResourceContents(request.uri(), mimeType, staticContent != null ? staticContent : "")));
+     *   }).
+     */
+    public SyncResourceSpecification createStaticResourceSpecification(
+            String uri,
+            String name,
+            String mimeType,
+            String staticContent
+    ) {
+        // DEFECT (Scenario 7): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 08: Dynamic Text Resource Specification.
+     * <p>
+     * Instructions:
+     * - Validate uri, name, mimeType, and contentProvider are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Resource: Resource.builder(uri, name).mimeType(mimeType).build().
+     * - Return new SyncResourceSpecification(resource, (exchange, request) -> {
+     *     String content = contentProvider.apply(request.uri());
+     *     return new ReadResourceResult(List.of(new TextResourceContents(request.uri(), mimeType, content != null ? content : "")));
+     *   }).
+     */
+    public SyncResourceSpecification createDynamicResourceSpecification(
+            String uri,
+            String name,
+            String mimeType,
+            Function<String, String> contentProvider
+    ) {
+        // DEFECT (Scenario 8): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 09: Binary / Blob Resource Specification.
+     * <p>
+     * Instructions:
+     * - Validate uri, name, mimeType, and base64Provider are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Resource: Resource.builder(uri, name).mimeType(mimeType).build().
+     * - Return new SyncResourceSpecification(resource, (exchange, request) -> {
+     *     String b64 = base64Provider.apply(request.uri());
+     *     return new ReadResourceResult(List.of(new BlobResourceContents(request.uri(), mimeType, b64 != null ? b64 : "")));
+     *   }).
+     */
+    public SyncResourceSpecification createBinaryResourceSpecification(
+            String uri,
+            String name,
+            String mimeType,
+            Function<String, String> base64Provider
+    ) {
+        // DEFECT (Scenario 9): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 4: MCP Prompt Template Specifications (Scenarios 10 - 12)
+    // =========================================================================
+
+    /**
+     * Scenario 10: Simple Zero-Argument Prompt Specification.
+     * <p>
+     * Instructions:
+     * - Validate promptName and promptFormatter are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Prompt: new Prompt(promptName, null, description, List.of()).
+     * - Return new SyncPromptSpecification(prompt, (exchange, request) -> {
+     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
+     *     String text = promptFormatter.apply(args);
+     *     return new GetPromptResult(description, List.of(new PromptMessage(Role.USER, new TextContent(text))));
+     *   }).
+     */
+    public SyncPromptSpecification createSimplePromptSpecification(
+            String promptName,
+            String description,
+            Function<Map<String, Object>, String> promptFormatter
+    ) {
+        // DEFECT (Scenario 10): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 11: Parameterized Multi-Argument Prompt Specification.
+     * <p>
+     * Instructions:
+     * - Validate promptName and promptFormatter are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Prompt: new Prompt(promptName, null, description, arguments != null ? arguments : List.of()).
+     * - Return new SyncPromptSpecification(prompt, (exchange, request) -> {
+     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
+     *     String text = promptFormatter.apply(request.name(), args);
+     *     return new GetPromptResult(description, List.of(new PromptMessage(Role.USER, new TextContent(text))));
+     *   }).
+     */
+    public SyncPromptSpecification createParameterizedPromptSpecification(
+            String promptName,
+            String description,
+            List<PromptArgument> arguments,
+            BiFunction<String, Map<String, Object>, String> promptFormatter
+    ) {
+        // DEFECT (Scenario 11): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 12: Role-Enforced Prompt Specification.
+     * <p>
+     * Instructions:
+     * - Validate promptName, messageRole, and promptFormatter are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Build Prompt: new Prompt(promptName, null, description, arguments != null ? arguments : List.of()).
+     * - Return new SyncPromptSpecification(prompt, (exchange, request) -> {
+     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
+     *     String text = promptFormatter.apply(request.name(), args);
+     *     return new GetPromptResult(description, List.of(new PromptMessage(messageRole, new TextContent(text))));
+     *   }).
+     */
+    public SyncPromptSpecification createRoleEnforcedPromptSpecification(
+            String promptName,
+            String description,
+            List<PromptArgument> arguments,
+            Role messageRole,
+            BiFunction<String, Map<String, Object>, String> promptFormatter
+    ) {
+        // DEFECT (Scenario 12): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 5: Server Capabilities & Protocol Filtering (Scenarios 13 - 15)
+    // =========================================================================
+
+    /**
+     * Scenario 13: Server Capabilities Declaration.
      * <p>
      * Instructions:
      * - Use ServerCapabilities.builder().
@@ -50,279 +315,31 @@ public class McpServerUnderTest {
             boolean enablePrompts,
             boolean enableLogging
     ) {
-        // DEFECT: Returns null
+        // DEFECT (Scenario 13): Returns null
         return null;
     }
 
     /**
-     * Scenario 02: Tool Definition with JSON Input Schema.
+     * Scenario 14: Tool Filtering by Allowlist.
      * <p>
      * Instructions:
-     * - Construct a JSON schema map for inputs:
-     *   "type" -> "object"
-     *   "properties" -> properties (or empty map if null)
-     *   "required" -> requiredFields (or empty list if null)
-     * - Construct Tool.builder(name) (or new Tool(name, null, description, schema, null, null, null, null))
-     * - Set name, description, and inputSchema.
-     * - Build and return Tool.
+     * - Validate allTools != null and allowedNames != null; throw {@link IllegalArgumentException} otherwise.
+     * - Return list of tools where allowedNames.contains(tool.name()).
      */
-    public Tool createToolDefinition(
-            String name,
-            String description,
-            Map<String, Object> properties,
-            List<String> requiredFields
-    ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 03: SyncToolSpecification Execution Handler.
-     * <p>
-     * Instructions:
-     * - Return a new SyncToolSpecification(tool, (exchange, request) -> {
-     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
-     *     ServerContext ctx = new ServerContext(
-     *         exchange != null ? exchange.sessionId() : "session-0",
-     *         "role-standard",
-     *         "trace-0"
-     *     );
-     *     String output = logicHandler.apply(args, ctx);
-     *     return new CallToolResult(List.of(new TextContent(output)), false, null, null);
-     *   });
-     */
-    public SyncToolSpecification createToolSpecification(
-            Tool tool,
-            BiFunction<Map<String, Object>, ServerContext, String> logicHandler
-    ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 04: Resilient Tool Execution & Error Signal Wrapping.
-     * <p>
-     * Instructions:
-     * - Return a new SyncToolSpecification(tool, (exchange, request) -> {
-     *     try {
-     *         Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
-     *         ServerContext ctx = new ServerContext(
-     *             exchange != null ? exchange.sessionId() : "session-0",
-     *             "role-standard",
-     *             "trace-0"
-     *         );
-     *         String output = logicHandler.apply(args, ctx);
-     *         return new CallToolResult(List.of(new TextContent(output)), false, null, null);
-     *     } catch (Throwable t) {
-     *         return new CallToolResult(List.of(new TextContent("Error: " + t.getMessage())), true, null, null);
-     *     }
-     *   });
-     */
-    public SyncToolSpecification createResilientToolSpecification(
-            Tool tool,
-            BiFunction<Map<String, Object>, ServerContext, String> logicHandler
-    ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 05: Spring AI ToolCallback to MCP Tool Adapter.
-     * <p>
-     * Instructions:
-     * - Use McpToolUtils.toSyncToolSpecification(springAiTool).
-     * - Return the resulting SyncToolSpecification with null-safe exchange fallback:
-     *   if exchange is null, call springAiTool.call(jsonInput).
-     */
-    public SyncToolSpecification adaptSpringAiTool(ToolCallback springAiTool) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 06: MCP Static & Dynamic Resource Specification.
-     * <p>
-     * Instructions:
-     * - Construct Resource.builder(uri, name).description("resource").mimeType(mimeType).build().
-     * - Return new SyncResourceSpecification(resource, (exchange, request) -> {
-     *     String content = contentProvider.apply(request.uri());
-     *     return new ReadResourceResult(List.of(new TextResourceContents(request.uri(), mimeType, content)));
-     *   });
-     */
-    public SyncResourceSpecification createResourceSpecification(
-            String uri,
-            String name,
-            String mimeType,
-            Function<String, String> contentProvider
-    ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 07: MCP Parameterized Prompt Template Specification.
-     * <p>
-     * Instructions:
-     * - Construct Prompt(promptName, description, arguments).
-     * - Return new SyncPromptSpecification(prompt, (exchange, request) -> {
-     *     Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
-     *     String formatted = promptFormatter.apply(request.name(), args);
-     *     return new GetPromptResult(description, List.of(new PromptMessage(Role.USER, new TextContent(formatted))));
-     *   });
-     */
-    public SyncPromptSpecification createPromptSpecification(
-            String promptName,
-            String description,
-            List<PromptArgument> arguments,
-            BiFunction<String, Map<String, Object>, String> promptFormatter
-    ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 08: Security Allowlist & Tool Filter.
-     * <p>
-     * Instructions:
-     * - Filter availableTools so only tools whose tool().name() is contained in allowlistedNames are kept.
-     * - Return the filtered List<SyncToolSpecification>.
-     */
-    public List<SyncToolSpecification> filterToolsByAllowlist(
-            List<SyncToolSpecification> availableTools,
-            Set<String> allowlistedNames
-    ) {
-        // DEFECT: Returns empty list
+    public List<Tool> filterToolsByAllowlist(List<Tool> allTools, Set<String> allowedNames) {
+        // DEFECT (Scenario 14): Returns empty list
         return List.of();
     }
 
     /**
-     * Scenario 09: MCP Server Telemetry & Audit Recorder.
-     */
-    public static class McpServerAuditRecorder {
-        private final AtomicInteger totalCalls = new AtomicInteger(0);
-        private final AtomicInteger successCount = new AtomicInteger(0);
-        private final AtomicInteger errorCount = new AtomicInteger(0);
-        private final Map<String, AtomicInteger> toolCounts = new ConcurrentHashMap<>();
-
-        public void recordSuccess(String toolName) {
-            // DEFECT: No-op
-        }
-
-        public void recordError(String toolName) {
-            // DEFECT: No-op
-        }
-
-        public McpAuditReport getReport() {
-            // DEFECT: Returns empty report
-            return new McpAuditReport(0, 0, 0, Map.of());
-        }
-    }
-
-    /**
-     * Scenario 10: Composite Enterprise MCP Server Registry & Router.
-     */
-    public static class EnterpriseMcpRegistry {
-        private final Map<String, SyncToolSpecification> tools = new ConcurrentHashMap<>();
-        private final Map<String, SyncResourceSpecification> resources = new ConcurrentHashMap<>();
-        private final Map<String, SyncPromptSpecification> prompts = new ConcurrentHashMap<>();
-        private final Set<String> allowlistedTools = ConcurrentHashMap.newKeySet();
-        private final McpServerAuditRecorder auditRecorder = new McpServerAuditRecorder();
-
-        public void registerTool(SyncToolSpecification spec) {
-            // DEFECT: No-op
-        }
-
-        public void registerResource(SyncResourceSpecification spec) {
-            // DEFECT: No-op
-        }
-
-        public void registerPrompt(SyncPromptSpecification spec) {
-            // DEFECT: No-op
-        }
-
-        public void setAllowlist(Set<String> allowedTools) {
-            // DEFECT: No-op
-        }
-
-        public CallToolResult handleCallTool(String toolName, Map<String, Object> arguments, ServerContext context) {
-            // DEFECT: Returns null
-            return null;
-        }
-
-        public ReadResourceResult handleReadResource(String uri) {
-            // DEFECT: Returns null
-            return null;
-        }
-
-        public GetPromptResult handleGetPrompt(String promptName, Map<String, Object> arguments) {
-            // DEFECT: Returns null
-            return null;
-        }
-
-        public McpAuditReport getAuditReport() {
-            return auditRecorder.getReport();
-        }
-    }
-
-    /**
-     * Scenario 11: Parameterized Resource Template URI Matcher.
+     * Scenario 15: Tool Filtering by Name Prefix.
      * <p>
      * Instructions:
-     * - Validate registeredTemplates != null and requestedUri != null && !requestedUri.isBlank();
-     *   throw {@link IllegalArgumentException} otherwise.
-     * - For each template in registeredTemplates:
-     *   - Extract named parameter tokens enclosed in braces {paramName} (e.g. "metrics://{cluster}/{service}/{metric}").
-     *   - Convert the template into a regex pattern where each {param} matches non-slash segments ([^/]+).
-     *   - If requestedUri matches the pattern:
-     *     - Extract path variable name-value pairs into Map<String, String>.
-     *     - Return new MatchedResourceRoute(template, requestedUri, pathVariables).
-     * - If no registered template matches requestedUri:
-     *   throw new McpRegistryBreachException("Unmatched resource URI template: " + requestedUri).
+     * - Validate allTools != null and requiredPrefix != null && !requiredPrefix.isBlank(); throw {@link IllegalArgumentException} otherwise.
+     * - Return list of tools where tool.name().startsWith(requiredPrefix).
      */
-    public static class ParameterizedResourceTemplateMatcher {
-        public static MatchedResourceRoute matchTemplate(List<String> registeredTemplates, String requestedUri) {
-            // DEFECT: Returns null
-            if (registeredTemplates == null || requestedUri == null || requestedUri.isBlank()) {
-                throw new IllegalArgumentException("Invalid template matcher arguments");
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter.
-     * <p>
-     * Instructions:
-     * - Initialize with default minLevel = McpLogLevel.INFO.
-     * - setMinimumLevel(level): validate non-null and update minLevel.
-     * - dispatchLog(message):
-     *   - Validate message != null.
-     *   - If message.level().isEnabledFor(minLevel):
-     *     - Add to thread-safe emittedLogs list.
-     *     - Return true (dispatched).
-     *   - Else:
-     *     - Return false (filtered out due to severity).
-     * - getEmittedLogs(): return unmodifiable list of emitted log messages.
-     */
-    public static class McpProtocolLogNotificationDispatcher {
-        private McpLogLevel minLevel = McpLogLevel.INFO;
-        private final List<McpLogMessage> emittedLogs = new java.util.concurrent.CopyOnWriteArrayList<>();
-
-        public void setMinimumLevel(McpLogLevel level) {
-            // DEFECT: No-op
-        }
-
-        public boolean dispatchLog(McpLogMessage message) {
-            // DEFECT: Always returns false
-            return false;
-        }
-
-        public List<McpLogMessage> getEmittedLogs() {
-            return Collections.unmodifiableList(emittedLogs);
-        }
-
-        public McpLogLevel getMinLevel() {
-            return minLevel;
-        }
+    public List<Tool> filterToolsByPrefix(List<Tool> allTools, String requiredPrefix) {
+        // DEFECT (Scenario 15): Returns empty list
+        return List.of();
     }
 }

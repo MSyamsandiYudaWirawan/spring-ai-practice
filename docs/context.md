@@ -35,9 +35,9 @@
 | **Phase 03** | Multi-Turn Tool Calling (`@Tool`) & Sandboxing | `BoundedReadSource`, tool-call bounding (Step 8/9) | ✅ **COMPLETED** | 2 exercises (18 scenarios total) |
 | **Phase 04** | Guardrails, Advisors & Token Budgets | `LoopConfig`, guardrail circuit-breakers (Step 9/12) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
 | **Phase 05** | Deterministic Testing & Offline Harness | `AgentLoopFactory`, mock loop seams (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 06** | LLM-as-a-Judge & Evaluators | `KeepRule`, `EvalScorer`, ground-truth scoring (Step 9/11) | ✅ **COMPLETED** | 2 exercises (20 scenarios total) |
-| **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
-| **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (24 scenarios total) |
+| **Phase 06** | LLM-as-a-Judge & Evaluators | Evaluators, bias mitigation, trajectory audits, release gates | ✅ **COMPLETED** | 2 exercises (30 scenarios total) |
+| **Phase 07** | RAG & Vector Stores | `VectorStore`, `DocumentRetriever`, contextual augmentation, query expansion | ✅ **COMPLETED** | 2 exercises (33 scenarios total) |
+| **Phase 08** | Model Context Protocol (MCP) | MCP Server tools/resources/prompts, MCP Client adapters, multi-server routing | ✅ **COMPLETED** | 2 exercises (30 scenarios total) |
 | **Phase 09** | Multi-Agent Orchestration & Hierarchical Delegation | Supervisor routing, specialized sub-agent handoffs, consensus voting | 📋 **IN PLANNING** | Future Roadmap Phase |
 | **Phase 10** | Long-Term Agent Memory & Context Compaction | Semantic episodic memory recall, sliding-window compaction, entity graphs | 📋 **IN PLANNING** | Future Roadmap Phase |
 | **Phase 11** | Human-in-the-Loop (HITL) & Streaming Control Gates | Reactive streaming approval gates, manual authorization checkpoints | 📋 **IN PLANNING** | Future Roadmap Phase |
@@ -61,12 +61,12 @@
 2. `phase04-ex02-resilient-guardrails`: Resilient Guardrails, Failover Routing, and Transactional Token Quotas (10 scenarios: `RuntimeContextAdvisor`, `SlidingWindowTruncationAdvisor`, `SlidingWindowRateLimiterAdvisor`, `ModelFailoverAdvisor`, `SchemaSelfHealingAdvisor`, `GroundingValidationAdvisor`, `TraceContextPropagationAdvisor`, `DynamicTokenQuotaAdvisor`, short-circuiting client, and production resilient guardrail stack). **10/10 PASSED (exit 0)**.
 
 ### Phase 07 Completed History:
-1. `phase07-ex01-vector-stores`: In-Memory Vector Store, Token Text Splitting, Embedding Generation, Metadata Filtering, MMR Diversity & Deduplication (12 scenarios: `FixedTokenChunker`, `DeterministicEmbeddingGenerator`, `CosineSimilarityEngine`, `InMemoryVectorStoreEngine`, `MetadataFilteringEngine`, `BatchDocumentIngestionPipeline`, `ThresholdSimilaritySearchEngine`, `HybridKeywordVectorSearchEngine`, `DocumentLifecycleManager`, `AutonomousKnowledgeBaseIngestor`, `MaximalMarginalRelevanceSearchEngine`, `ContentHashDeduplicationPipeline`). **PASSED (exit 0)**.
-2. `phase07-ex02-rag-advisors`: Advanced RAG Advisors, Context Augmentation, Query Expansion, HyDE & Token Budget Packing (12 scenarios: `VectorStoreDocumentRetriever`, `FilterExpressionDocumentRetriever`, `ContextualQueryAugmenter`, `EmptyContextFallbackAugmenter`, `PriorityRerankingPostProcessor`, `MultiQueryExpander`, `RewriteQueryTransformer`, `ConcatenationDocumentJoiner`, `RetrievalAugmentationAdvisor`, `EnterpriseRagGateway`, `HydeQueryTransformer`, `TokenBudgetPacker`). **PASSED (exit 0)**.
+1. `phase07-ex01-vector-stores`: Vector Stores, In-Memory Embeddings, Document Chunking & Semantic Filtering (18 repetitive muscle-memory scenarios across 6 core framework topics: Document creation/mutation drills, TokenTextSplitter chunking/enrichment drills, SimpleVectorStore lifecycle drills, SearchRequest top-K/threshold/sorting drills, FilterExpressionBuilder comparison drills, and FilterExpressionBuilder collection/nested search drills). **18/18 PASSED (exit 0)**.
+2. `phase07-ex02-rag-advisors`: Modular RAG Advisors, Context Augmenters, Document PostProcessors & Query Transformers (15 repetitive muscle-memory scenarios across 5 core framework topics: VectorStoreDocumentRetriever drills, ContextualQueryAugmenter formatting/fallback drills, DocumentPostProcessor deduplication/priority/score drills, Pre-retrieval QueryExpander/Transformer drills, and RetrievalAugmentationAdvisor assembly drills). **15/15 PASSED (exit 0)**.
 
 ### Phase 08 Completed History:
-1. `phase08-ex01-mcp-server`: MCP Server Tool & Resource Specification, Schemas, URI Templates & Log Notifications (12 scenarios: `ServerCapabilitiesBuilder`, `ToolSpecificationGenerator`, `SyncToolExecutionHandler`, `ToolExecutionErrorWrapper`, `SpringAiToolCallbackAdapter`, `ResourceRegistrationHandler`, `PromptRegistrationHandler`, `ToolAllowlistSecurityFilter`, `McpServerAuditRecorder`, `EnterpriseMcpServerRegistry`, `ParameterizedResourceTemplateMatcher`, `McpProtocolLogNotificationDispatcher`). **PASSED (exit 0)**.
-2. `phase08-ex02-mcp-client`: MCP Client Integration, Multi-Server Tool Routing, Dynamic Tool Reloading & Sampling (12 scenarios: `McpClientAdapterBuilder`, `RemoteToolDefinitionAdapter`, `McpSyncToolCallbackAdapter`, `RemoteToolDiscoveryEngine`, `PrefixedToolNameResolver`, `RemoteResourceContentReader`, `RemotePromptTemplateRenderer`, `McpToolExecutionFaultHandler`, `MultiServerClientRegistry`, `EnterpriseAgenticGateway`, `DynamicToolListReloader`, `McpSamplingHandler`). **PASSED (exit 0)**.
+1. `phase08-ex01-mcp-server`: Model Context Protocol (MCP) Server Architecture & Protocol Specifications (15 repetitive muscle-memory scenarios across 5 core framework topics: Tool Definition drills, SyncToolSpecification execution & resilience drills, Resource specification drills, Prompt template drills, and Server capabilities/filtering drills). **15/15 PASSED (exit 0)**.
+2. `phase08-ex02-mcp-client`: Model Context Protocol (MCP) Client Integration & Agentic Orchestration (15 repetitive muscle-memory scenarios across 5 core framework topics: Client capabilities/roots/specs drills, Adapting MCP tools to ToolCallbacks drills, Tool discovery/prefixing/collision drills, MCP Resource and Prompt retrieval drills, and Federated registry/reloading/sampling drills). **15/15 PASSED (exit 0)**.
 
 ### Upcoming Roadmap Phases (In Planning):
 1. **Phase 09: Multi-Agent Orchestration & Hierarchical Delegation**
@@ -124,35 +124,25 @@
 ## 4. Active Workspace State (Phase 06: Exercises 01 & 02)
 
 ### Exercise 01: Foundational Repetitive Evaluators (`phase06-ex01-evaluators`)
-- **Theme:** Deterministic Evaluators, Spring AI Evaluator Interface & Foundational LLM-as-a-Judge (10 Repetitive Scenarios)
+- **Theme:** Deterministic Evaluators, Spring AI Evaluator Interface & Foundational LLM-as-a-Judge (15 Repetitive Scenarios across 5 Topics)
 - **Pedagogical Mandate:** Cement Spring AI `Evaluator`, `EvaluationRequest`, `EvaluationResponse` primitives:
-  1. `RelevancyEvaluatorAdapter`: Spring AI built-in `RelevancyEvaluator` for on-topic relevance.
-  2. `FactCheckingEvaluatorAdapter`: Spring AI built-in `FactCheckingEvaluator` for factual context support.
-  3. `NoiseFloorThresholdEvaluator`: Deterministic telemetry keep gate comparing deltas vs noise floors with failRate guard.
-  4. `GroundTruthAccuracyEvaluator`: Root cause category convergence matching against ground-truth labels.
-  5. `SingleMetricThresholdEvaluator`: Configurable numeric score gate with strict [0.0, 1.0] bounds.
-  6. `RubricScoreParser`: Regex/structured extraction of normalized score and reasoning from formatted LLM output.
-  7. `BinaryJudgeEvaluator`: Prompt-driven LLM-as-a-judge with binary `PASS`/`FAIL` verdict.
-  8. `WeightedMultiCriteriaEvaluator`: Multi-dimension score aggregator with weight sum validation.
-  9. `ShortCircuitCompositeEvaluator`: Chained evaluator composite with instant fail-fast short-circuiting.
-  10. `BatchEvaluationRunner`: Benchmark suite runner computing pass rates and gating on minimum thresholds (`"Evaluation threshold breach"`).
-- **Verification:** `mvn test-compile exec:java -pl phase06-ex01-evaluators` (0/10 baseline).
+  - **Topic 1: Direct Spring AI Evaluator Adapters:** Direct `EvaluationRequest` & response extraction, RAG context-enriched evaluation, and official Spring AI `RelevancyEvaluator` adapter.
+  - **Topic 2: Ground Truth & Threshold Scoring:** Exact match accuracy, categorical convergence with case-insensitive matching, and bounded single-metric score thresholding.
+  - **Topic 3: Parsers & Rubric Extraction:** Numeric score extraction from prose, verdict & reasoning extraction, and structured JSON rubric parsing with fallback resilience.
+  - **Topic 4: Multi-Criteria & Composite Evaluators:** Weighted multi-criteria evaluation, fail-fast short-circuit composite evaluator, and all-must-pass composite evaluator.
+  - **Topic 5: Benchmark Execution & Quality Gates:** Batch evaluation suite runner, multi-metric pass rate aggregator, and production quality gate enforcer (`EvaluationThresholdBreachException`).
+- **Verification:** `mvn test -pl phase06-ex01-evaluators` (0/15 baseline in practice mode, 15/15 in golden).
 - **Target File:** [`phase06-ex01-evaluators/src/main/java/phase06/EvaluatorUnderTest.java`](./phase06-ex01-evaluators/src/main/java/phase06/EvaluatorUnderTest.java)
 
 ### Exercise 02: Advanced Repetitive + Difficult Judges (`phase06-ex02-advanced-judges`)
-- **Theme:** Advanced LLM Judges, Bias Mitigation, Calibration & Trajectory Evaluation (10 Repetitive + Difficult Scenarios)
+- **Theme:** Advanced LLM Judges, Bias Mitigation, Calibration & Trajectory Evaluation (15 Repetitive Scenarios across 5 Topics)
 - **Pedagogical Mandate:** Solve production AI evaluation challenges strictly within the scope of AI engineering:
-  1. `PositionBiasSwapperJudge`: Pairwise A/B tournament judge with position swap mitigation (`CANDIDATE_A`, `CANDIDATE_B`, `INCONCLUSIVE_OR_TIE`).
-  2. `SelfConsistencyMajorityJudge`: Stochastic voting judge sampling $N$ inferences and enforcing majority consensus.
-  3. `FaithfulnessClaimAttributionEvaluator`: RAG Triad sentence-level claim decomposition and grounding verification.
-  4. `AnswerRelevanceQueryDriftEvaluator`: Query intent evaluation with topic drift detection.
-  5. `FewShotCalibratedRubricJudge`: Anchor-based calibrated rubric (Levels 1, 3, 5) mitigating LLM grade inflation.
-  6. `AdversarialRefusalSafetyJudge`: Evaluates clean refusal of jailbreak prompts without system prompt leakage.
-  7. `SaddleSafeMechanismKeepEvaluator`: Full `KeepRule` v2 from Diagnostician (RPS/P95 keeps, fail rate guards, >50% mechanism signal reduction, tail bounds).
-  8. `MultiTurnAgentTrajectoryEvaluator`: Agent loop audit detecting duplicate tool calls, ping-pong cycles, and step overruns.
-  9. `InterJudgeAgreementEvaluator`: Statistical Cohen's Kappa ($\kappa$) calibrating judge decisions against ground truth.
-  10. `AutonomousBenchmarkSuiteOrchestrator`: Multi-metric release gate evaluating datasets and enforcing production release criteria (`"Release benchmark gate breach"`).
-- **Verification:** `mvn test-compile exec:java -pl phase06-ex02-advanced-judges` (0/10 baseline).
+  - **Topic 1: Tournament & Voting Judges (Bias Mitigation):** Pairwise A/B tournament judge with position swap mitigation, 3-way tournament round-robin ranking leaderboard, and self-consistency majority voting with confidence calibration.
+  - **Topic 2: RAG Triad Grounding & Attribution:** Atomic claim extraction & faithfulness scoring, claim-to-document citation mapping & attribution verification, and answer relevance & query drift / topic evasion detection.
+  - **Topic 3: Calibrated Rubrics & Safety Gates:** Anchor-based calibrated rubric judge (few-shot Level 1/3/5 descriptors), adversarial refusal & jailbreak defense judge, and system prompt leakage & sensitive data exfiltration audit.
+  - **Topic 4: Agent Trajectory & Reasoning Audits:** Multi-turn trajectory step efficiency & duplicate tool call detection, ping-pong cyclical loop & tool call recursion detection, and goal completion & trajectory convergence gate.
+  - **Topic 5: Inter-Judge Calibration & Production Release Gates:** Statistical inter-judge agreement (Cohen's Kappa $\kappa$), multi-dimensional benchmark suite aggregator (`ReleaseBenchmarkReport`), and production release benchmark gate enforcer (`BenchmarkGateBreachException`).
+- **Verification:** `mvn test -pl phase06-ex02-advanced-judges` (0/15 baseline in practice mode, 15/15 in golden).
 - **Target File:** [`phase06-ex02-advanced-judges/src/main/java/phase06/AdvancedJudgeUnderTest.java`](./phase06-ex02-advanced-judges/src/main/java/phase06/AdvancedJudgeUnderTest.java)
 
 ---
@@ -200,39 +190,45 @@
 ## 6. Active Workspace State (Phase 08: Model Context Protocol)
 
 ### Exercise 01: Foundational MCP Server (`phase08-ex01-mcp-server`)
-- **Theme:** MCP Server Tool & Resource Specification, Schemas & Transport Handlers (12 Repetitive Foundational Scenarios)
-- **Pedagogical Mandate:** Master Model Context Protocol (MCP) server specifications, JSON schema generation, and tool adapters:
-  1. `ServerCapabilitiesBuilder`: Building compliant MCP `ServerCapabilities` (tools, resources, prompts, logging).
-  2. `ToolSpecificationGenerator`: Converting tool specifications to compliant `McpSchema.Tool` JSON schema definitions.
-  3. `SyncToolExecutionHandler`: Registering and executing `SyncToolSpecification` with JSON argument parsing.
-  4. `ToolExecutionErrorWrapper`: Formatting exceptions into MCP error results (`isError: true`, content text error message).
-  5. `SpringAiToolCallbackAdapter`: Adapting Spring AI `ToolCallback` to MCP `SyncToolSpecification` via `McpToolUtils`.
-  6. `ResourceRegistrationHandler`: Exposing static/dynamic `Resource` endpoints and handling resource read requests.
-  7. `PromptRegistrationHandler`: Registering parameterized MCP `Prompt` templates with variable arguments.
-  8. `ToolAllowlistSecurityFilter`: Intercepting and enforcing authorized tool names.
-  9. `McpServerAuditRecorder`: Recording inbound tool call telemetry, latencies, and execution outcomes.
-  10. `EnterpriseMcpServerRegistry`: Central orchestrator registering tools, resources, prompts, and routing execution requests.
-  11. `ParameterizedResourceTemplateMatcher`: RFC 6570 URI template variable matching and extraction.
-  12. `McpProtocolLogNotificationDispatcher`: Protocol log notification dispatching with severity threshold filtering.
-- **Verification:** `mvn test-compile exec:java -pl phase08-ex01-mcp-server` (0/12 baseline fail gate).
+- **Theme:** MCP Server Architecture, Tool/Resource/Prompt Specifications & Capabilities (15 Repetitive Foundational Scenarios across 5 topics)
+- **Pedagogical Mandate:** Master Model Context Protocol (MCP) server specifications, JSON schema generation, handlers, and filters:
+  1. `PrimitiveToolDefinition`: Primitive property types mapped to JSON schema object specifications.
+  2. `StructuredToolDefinition`: Arbitrary structured property maps wrapped in tool schemas.
+  3. `AuditValidatedToolDefinition`: Title- and audit-metadata-enriched tool schemas.
+  4. `SyncToolSpecification`: Standard execution handler returning `CallToolResult` with `TextContent`.
+  5. `ResilientToolSpecification`: Defensive execution handler trapping exceptions into `isError: true` results.
+  6. `SpringAiToolCallbackAdapter`: Adapting native Spring AI `ToolCallback` to MCP `SyncToolSpecification` via `McpToolUtils`.
+  7. `StaticTextResourceSpecification`: Static text resources served with MIME types.
+  8. `DynamicTextResourceSpecification`: Dynamic text resources evaluated via functional content providers.
+  9. `BinaryBlobResourceSpecification`: Base64 binary content served via `BlobResourceContents`.
+  10. `SimplePromptSpecification`: Zero-argument static prompt templates.
+  11. `ParameterizedPromptSpecification`: Multi-argument prompt templates with variable substitution.
+  12. `RoleEnforcedPromptSpecification`: Explicit role assignment (`Role.ASSISTANT` or `Role.USER`) in prompt messages.
+  13. `ServerCapabilitiesDeclaration`: Protocol feature negotiation flags (`tools`, `resources`, `prompts`, `logging`).
+  14. `ToolAllowlistFilter`: Filtering tools against security allowlists.
+  15. `ToolPrefixRouter`: Routing and filtering tools by namespace prefix.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex01-mcp-server` or `mvn test -pl phase08-ex01-mcp-server` (0/15 baseline fail gate).
 - **Target File:** [`phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java`](./phase08-ex01-mcp-server/src/main/java/phase08/McpServerUnderTest.java)
 
 ### Exercise 02: Advanced MCP Client & Multi-Server Federation (`phase08-ex02-mcp-client`)
-- **Theme:** MCP Client Integration, Multi-Server Tool Routing & Agentic Execution (12 Repetitive + Difficult Scenarios)
+- **Theme:** MCP Client Integration, Tool Providers & Agentic Orchestration (15 Repetitive Scenarios across 5 topics)
 - **Pedagogical Mandate:** Master remote MCP client discovery, tool namespacing, and federated agent execution:
   1. `ClientCapabilities`: Declaring client protocol features (`roots`, `sampling`).
-  2. `ToolDefinitionAdapter`: Converting MCP `Tool` schemas to Spring AI `ToolDefinition`.
-  3. `ToolCallbackAdapter`: Bridging MCP synchronous tool invocations to Spring AI `ToolCallback`.
-  4. `MultiToolDiscovery`: Batch adapting client tool catalogs to callback providers.
-  5. `PrefixedToolNameResolver`: Generating namespaced tool identifiers to avoid collisions.
-  6. `ResourceContextFormatter`: Fetching MCP resources and formatting them into prompt contexts.
-  7. `PromptMessageTextFetcher`: Retrieving parameterized prompt templates hosted on MCP servers.
-  8. `ToolExecutionResilience`: Defensive error boundaries catching failures and formatting error signals.
-  9. `MultiServerClientRegistry`: Multi-server client registry maintaining connections and tool routing maps.
-  10. `EnterpriseAgenticGateway`: End-to-end agentic gateway orchestrating multi-server discovery, tool calls, and LLM responses.
-  11. `DynamicToolListReloader`: Invalidating cached tool definitions upon server catalog updates and re-indexing active tools.
-  12. `McpSamplingHandler`: Server-to-client LLM delegation (sampling protocol) under token ceilings.
-- **Verification:** `mvn test-compile exec:java -pl phase08-ex02-mcp-client` (0/12 baseline fail gate).
+  2. `ClientRoots`: Validating and building `file://` `Root` descriptors.
+  3. `ClientImplementation`: Declaring client implementation metadata (name, version, description).
+  4. `ToolDefinitionAdapter`: Converting MCP `Tool` schemas to Spring AI `ToolDefinition` via `McpToolUtils`.
+  5. `ToolCallbackAdapter`: Bridging synchronous MCP tool invocations to Spring AI `ToolCallback`.
+  6. `ResilientToolCallback`: Defensive error boundaries catching failures and formatting `ERROR: ` text.
+  7. `BatchToolDiscovery`: Querying remote tools and bulk-generating Spring AI `ToolCallback` lists.
+  8. `PrefixedToolNaming`: Generating namespaced tool identifiers via `McpToolUtils.prefixedToolName`.
+  9. `FederatedDiscovery`: Discovering tools across federated servers with collision-prevention naming.
+  10. `SingleResourceReader`: Reading remote resources into formatted prompt context blocks.
+  11. `MultiResourceAssembly`: Reading multiple remote resources and assembling them into delimited prompt contexts.
+  12. `ParameterizedPromptFetcher`: Fetching prompt templates hosted on MCP servers with argument substitution.
+  13. `MultiServerClientRegistry`: Federated client registry maintaining server mappings, prefixed tool index, and routing.
+  14. `CatalogReloader`: Dynamically invalidating cached tools upon server updates and re-indexing active tools.
+  15. `SamplingProtocolHandler`: Server-to-client LLM delegation (sampling protocol) under token ceilings.
+- **Verification:** `mvn test-compile exec:java -pl phase08-ex02-mcp-client` or `mvn test -pl phase08-ex02-mcp-client` (0/15 baseline fail gate).
 - **Target File:** [`phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java`](./phase08-ex02-mcp-client/src/main/java/phase08/McpClientUnderTest.java)
 
 ---

@@ -9,13 +9,17 @@ import java.util.*;
 
 /**
  * Immutable domain records, exceptions, and contracts for Phase 06 Exercise 02:
- * Advanced LLM-as-a-Judge, Bias Mitigation, Calibration & Trajectory Evaluation.
+ * Advanced LLM-as-a-Judge, Bias Mitigation, Calibration & Trajectory Evaluation (15 Scenarios).
  * <p>
  * DO NOT MODIFY THIS FILE.
  */
 public final class AdvancedJudgeContracts {
 
     private AdvancedJudgeContracts() {}
+
+    // -------------------------------------------------------------------------
+    // Topic 1: Tournament & Voting Judges (Bias Mitigation)
+    // -------------------------------------------------------------------------
 
     /**
      * Pairwise tournament winner outcome.
@@ -45,6 +49,34 @@ public final class AdvancedJudgeContracts {
     }
 
     /**
+     * Individual candidate ranking in a tournament round-robin.
+     */
+    public record TournamentRanking(
+            String candidateId,
+            int wins,
+            int ties,
+            int losses,
+            float winRate
+    ) {
+        public TournamentRanking {
+            Objects.requireNonNull(candidateId, "candidateId must not be null");
+        }
+    }
+
+    /**
+     * Complete tournament leaderboard aggregating round-robin matches.
+     */
+    public record TournamentLeaderboard(
+            List<TournamentRanking> rankings,
+            String topWinner
+    ) {
+        public TournamentLeaderboard {
+            rankings = rankings != null ? List.copyOf(rankings) : List.of();
+            Objects.requireNonNull(topWinner, "topWinner must not be null");
+        }
+    }
+
+    /**
      * Consensus result of self-consistency majority voting.
      */
     public record ConsensusResult(
@@ -55,6 +87,10 @@ public final class AdvancedJudgeContracts {
             int passVotes,
             int failVotes
     ) {}
+
+    // -------------------------------------------------------------------------
+    // Topic 2: RAG Triad Grounding & Attribution
+    // -------------------------------------------------------------------------
 
     /**
      * RAG Triad claim-level attribution and hallucination evaluation result.
@@ -73,6 +109,34 @@ public final class AdvancedJudgeContracts {
     }
 
     /**
+     * Single atomic claim mapped to supporting document index.
+     */
+    public record ClaimAttribution(
+            String claim,
+            int docIndex,
+            boolean supported
+    ) {
+        public ClaimAttribution {
+            Objects.requireNonNull(claim, "claim must not be null");
+        }
+    }
+
+    /**
+     * Result of claim-to-document citation mapping and attribution verification.
+     */
+    public record CitationAttributionResult(
+            boolean passed,
+            float attributionScore,
+            List<ClaimAttribution> attributions,
+            String feedback
+    ) {
+        public CitationAttributionResult {
+            attributions = attributions != null ? List.copyOf(attributions) : List.of();
+            Objects.requireNonNull(feedback, "feedback must not be null");
+        }
+    }
+
+    /**
      * Answer relevance and query drift evaluation result.
      */
     public record RelevanceResult(
@@ -86,6 +150,10 @@ public final class AdvancedJudgeContracts {
             Objects.requireNonNull(feedback, "feedback must not be null");
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Topic 3: Calibrated Rubrics & Safety Gates
+    // -------------------------------------------------------------------------
 
     /**
      * Calibrated dimension score matched against explicit anchor examples.
@@ -133,42 +201,23 @@ public final class AdvancedJudgeContracts {
     }
 
     /**
-     * Latency distribution measurements (P95, P50 in ms).
+     * System prompt leakage and sensitive token exfiltration audit result.
      */
-    public record LatencyDto(double p95, double p50) {}
-
-    /**
-     * Load test metrics report (from Diagnostician step 9/11).
-     */
-    public record LoadReportDto(double rps, LatencyDto latency, double failRate, double checkPassRate) {}
-
-    /**
-     * Profiler signal summary count (from Diagnostician JFR harvests).
-     */
-    public record SignalSummaryDto(long count) {}
-
-    /**
-     * Java Flight Recorder profile summary containing identified signals.
-     */
-    public record JfrReportDto(Map<String, SignalSummaryDto> signals) {
-        public JfrReportDto {
-            signals = signals != null ? Map.copyOf(signals) : Map.of();
+    public record LeakAuditResult(
+            boolean passed,
+            boolean leakDetected,
+            List<String> leakedTokens,
+            String explanation
+    ) {
+        public LeakAuditResult {
+            leakedTokens = leakedTokens != null ? List.copyOf(leakedTokens) : List.of();
+            Objects.requireNonNull(explanation, "explanation must not be null");
         }
     }
 
-    /**
-     * Telemetry noise floors.
-     */
-    public record NoiseFloors(double p95FloorMs, double p50FloorMs, double rpsFloor) {}
-
-    /**
-     * Saddle-Safe Keep decision result (from Diagnostician KeepRule v2).
-     */
-    public record KeepDecision(boolean keep, String keepType, String reason) {
-        public KeepDecision {
-            Objects.requireNonNull(reason, "reason must not be null");
-        }
-    }
+    // -------------------------------------------------------------------------
+    // Topic 4: Agent Trajectory & Reasoning Audits
+    // -------------------------------------------------------------------------
 
     /**
      * Agent trajectory step type.
@@ -217,6 +266,42 @@ public final class AdvancedJudgeContracts {
     }
 
     /**
+     * Trajectory loop audit result detecting cyclical tool call recursion.
+     */
+    public record LoopAuditResult(
+            boolean passed,
+            boolean loopDetected,
+            int cycleCount,
+            List<String> repeatedSequence,
+            String feedback
+    ) {
+        public LoopAuditResult {
+            repeatedSequence = repeatedSequence != null ? List.copyOf(repeatedSequence) : List.of();
+            Objects.requireNonNull(feedback, "feedback must not be null");
+        }
+    }
+
+    /**
+     * Trajectory goal convergence gate result.
+     */
+    public record TrajectoryGateResult(
+            boolean passed,
+            boolean goalCompleted,
+            int totalSteps,
+            boolean convergedWithinBudget,
+            float overallScore,
+            String reason
+    ) {
+        public TrajectoryGateResult {
+            Objects.requireNonNull(reason, "reason must not be null");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Topic 5: Inter-Judge Calibration & Production Release Gates
+    // -------------------------------------------------------------------------
+
+    /**
      * Statistical inter-judge agreement result (Cohen's Kappa).
      */
     public record AgreementResult(
@@ -248,6 +333,22 @@ public final class AdvancedJudgeContracts {
             Objects.requireNonNull(query, "query must not be null");
             contextDocs = contextDocs != null ? List.copyOf(contextDocs) : List.of();
             Objects.requireNonNull(candidateResponse, "candidateResponse must not be null");
+        }
+    }
+
+    /**
+     * Individual evaluation metric scores for a benchmark item.
+     */
+    public record EvaluationMetricItem(
+            String id,
+            float faithfulness,
+            float relevance,
+            float accuracy,
+            float efficiency,
+            boolean safetyViolation
+    ) {
+        public EvaluationMetricItem {
+            Objects.requireNonNull(id, "id must not be null");
         }
     }
 

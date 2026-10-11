@@ -1,8 +1,10 @@
 package phase07;
 
+import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.QueryAugmenter;
@@ -10,588 +12,530 @@ import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
 import org.springframework.ai.rag.preretrieval.query.expansion.QueryExpander;
 import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
+import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
-import org.springframework.ai.vectorstore.VectorStore;
-import phase07.RagAdvisorContracts.*;
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Verification harness for Phase 07 Exercise 02 (RAG Advisors).
- * Executes 10 deterministic offline tests against {@link RagAdvisorUnderTest}.
+ * Gate Verifier for Phase 07 Exercise 02:
+ * Modular RAG Advisors, Pre/Post Retrieval Pipelines and ChatClient Integration.
+ * <p>
+ * 15 repetitive muscle-memory drills across 5 core topics (3 repetitions each).
  * <p>
  * DO NOT MODIFY THIS FILE.
+ * <p>
+ * Exits with status 99 on FAIL.
+ * Exits with status 0 on PASS.
  */
 public class Verifier {
 
-    private static final AtomicInteger passed = new AtomicInteger(0);
-    private static final AtomicInteger failed = new AtomicInteger(0);
+    public record ScenarioResult(int scenarioNumber, String name, boolean passed, String errorDetail) {}
 
     public static void main(String[] args) {
-        System.out.println("=================================================================");
-        System.out.println("  PHASE 07 EXERCISE 02: MODULAR RAG ADVISORS & GATEWAY VERIFIER  ");
-        System.out.println("=================================================================\n");
+        int selected = 0;
+        if (args.length > 0 && !args[0].isBlank()) {
+            try {
+                selected = Integer.parseInt(args[0].trim());
+            } catch (NumberFormatException ignored) {}
+        }
 
-        RagAdvisorUnderTest underTest = new RagAdvisorUnderTest();
+        List<ScenarioResult> results = runScenarios(selected);
+        printReport(results);
 
-        testScenario01(underTest);
-        testScenario02(underTest);
-        testScenario03(underTest);
-        testScenario04(underTest);
-        testScenario05(underTest);
-        testScenario06(underTest);
-        testScenario07(underTest);
-        testScenario08(underTest);
-        testScenario09(underTest);
-        testScenario10(underTest);
-        testScenario11(underTest);
-        testScenario12(underTest);
-
-        System.out.println("\n-----------------------------------------------------------------");
-        System.out.printf("VERIFICATION SUMMARY: %d / 12 PASSED, %d FAILED%n", passed.get(), failed.get());
-        System.out.println("-----------------------------------------------------------------");
-
-        if (failed.get() > 0) {
+        boolean allPassed = results.stream().allMatch(ScenarioResult::passed);
+        if (!allPassed) {
             System.exit(99);
         } else {
             System.exit(0);
         }
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     public void verifyAll() {
+        List<ScenarioResult> results = runScenarios(0);
+        printReport(results);
+        boolean allPassed = results.stream().allMatch(ScenarioResult::passed);
+        if (!allPassed) {
+            fail("Verifier detected scenario failures. See printed report above.");
+        }
+    }
+
+    public static List<ScenarioResult> runScenarios(int selected) {
         RagAdvisorUnderTest underTest = new RagAdvisorUnderTest();
-        passed.set(0);
-        failed.set(0);
-
-        testScenario01(underTest);
-        testScenario02(underTest);
-        testScenario03(underTest);
-        testScenario04(underTest);
-        testScenario05(underTest);
-        testScenario06(underTest);
-        testScenario07(underTest);
-        testScenario08(underTest);
-        testScenario09(underTest);
-        testScenario10(underTest);
-        testScenario11(underTest);
-        testScenario12(underTest);
-
-        org.junit.jupiter.api.Assertions.assertEquals(0, failed.get(), "Verifier detected scenario failures.");
+        List<ScenarioResult> list = new ArrayList<>();
+        if (selected == 0 || selected == 1) list.add(verifyScenario1(underTest));
+        if (selected == 0 || selected == 2) list.add(verifyScenario2(underTest));
+        if (selected == 0 || selected == 3) list.add(verifyScenario3(underTest));
+        if (selected == 0 || selected == 4) list.add(verifyScenario4(underTest));
+        if (selected == 0 || selected == 5) list.add(verifyScenario5(underTest));
+        if (selected == 0 || selected == 6) list.add(verifyScenario6(underTest));
+        if (selected == 0 || selected == 7) list.add(verifyScenario7(underTest));
+        if (selected == 0 || selected == 8) list.add(verifyScenario8(underTest));
+        if (selected == 0 || selected == 9) list.add(verifyScenario9(underTest));
+        if (selected == 0 || selected == 10) list.add(verifyScenario10(underTest));
+        if (selected == 0 || selected == 11) list.add(verifyScenario11(underTest));
+        if (selected == 0 || selected == 12) list.add(verifyScenario12(underTest));
+        if (selected == 0 || selected == 13) list.add(verifyScenario13(underTest));
+        if (selected == 0 || selected == 14) list.add(verifyScenario14(underTest));
+        if (selected == 0 || selected == 15) list.add(verifyScenario15(underTest));
+        return list;
     }
 
-    private static void pass(String name) {
-        passed.incrementAndGet();
-        System.out.println("  [PASS] " + name);
-    }
+    // =========================================================================
+    // TOPIC 1: VectorStoreDocumentRetriever (Scenarios 1 - 3)
+    // =========================================================================
 
-    private static void fail(String name, String detail) {
-        failed.incrementAndGet();
-        System.out.println("  [FAIL] " + name);
-        if (detail != null && !detail.isBlank()) {
-            System.out.println("         --> DETAIL: " + detail);
-        }
-    }
-
-    private static VectorStore createPopulatedStore() {
-        FakeEmbeddingModel embeddingModel = new FakeEmbeddingModel(128);
-        SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
-
-        Document doc1 = Document.builder()
-                .id("doc-kafka-01")
-                .text("Kafka cluster broker timeout tuning and consumer rebalance latency")
-                .metadata(Map.of("tenant", "fintech", "source", "kafka-guide.md", "clearance", 2, "priority", 10))
-                .build();
-
-        Document doc2 = Document.builder()
-                .id("doc-redis-02")
-                .text("Redis distributed memory cache cluster replication and latency")
-                .metadata(Map.of("tenant", "fintech", "source", "redis-guide.md", "clearance", 1, "priority", 5))
-                .build();
-
-        Document doc3 = Document.builder()
-                .id("doc-health-03")
-                .text("Healthcare patient record retention policy HIPAA compliance latency")
-                .metadata(Map.of("tenant", "healthcare", "source", "hipaa-guide.md", "clearance", 3, "priority", 20))
-                .build();
-
-        store.add(List.of(doc1, doc2, doc3));
-        return store;
-    }
-
-    private static void testScenario01(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 01: VectorStoreDocumentRetriever Builder & Similarity Threshold";
+    private static ScenarioResult verifyScenario1(RagAdvisorUnderTest underTest) {
+        String name = "VectorStoreDocumentRetriever (Basic Top-K Retrieval)";
         try {
-            VectorStore store = createPopulatedStore();
-            DocumentRetriever retriever = underTest.buildVectorRetriever(store, 2, 0.5);
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("d1").text("Kubernetes crash loop backoff").build(),
+                    Document.builder().id("d2").text("Kubernetes pod eviction").build()
+            ));
 
+            try {
+                underTest.buildBasicRetriever(null, 2);
+                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on null store");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                underTest.buildBasicRetriever(store, 0);
+                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on topK < 1");
+            } catch (IllegalArgumentException expected) {}
+
+            DocumentRetriever retriever = underTest.buildBasicRetriever(store, 2);
             if (retriever == null) {
-                fail(name, "buildVectorRetriever returned null");
-                return;
+                return new ScenarioResult(1, name, false, "buildBasicRetriever returned null");
             }
 
-            List<Document> docs = retriever.retrieve(new Query("Kafka cluster timeout"));
-            if (docs == null || docs.isEmpty()) {
-                fail(name, "Expected matching documents for 'Kafka cluster timeout', got empty");
-                return;
+            List<Document> retrieved = retriever.retrieve(new Query("Kubernetes"));
+            if (retrieved.isEmpty()) {
+                return new ScenarioResult(1, name, false, "Retriever returned empty documents");
             }
-
-            if (!docs.get(0).getId().equals("doc-kafka-01")) {
-                fail(name, "Expected top document 'doc-kafka-01', got: " + docs.get(0).getId());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(1, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(1, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario02(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 02: Tenant-Isolated FilterExpression Retrieval";
+    private static ScenarioResult verifyScenario2(RagAdvisorUnderTest underTest) {
+        String name = "VectorStoreDocumentRetriever (Threshold-Gated Cutoff)";
         try {
-            VectorStore store = createPopulatedStore();
-            DocumentRetriever retriever = underTest.buildTenantFilteredRetriever(store, "healthcare", 5);
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("match").text("PostgreSQL high replication lag").build(),
+                    Document.builder().id("other").text("Unrelated CSS styling colors").build()
+            ));
 
+            try {
+                underTest.buildThresholdRetriever(store, 5, -0.1);
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold < 0.0");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                underTest.buildThresholdRetriever(store, 5, 1.5);
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on threshold > 1.0");
+            } catch (IllegalArgumentException expected) {}
+
+            DocumentRetriever retriever = underTest.buildThresholdRetriever(store, 5, 0.9);
             if (retriever == null) {
-                fail(name, "buildTenantFilteredRetriever returned null");
-                return;
+                return new ScenarioResult(2, name, false, "buildThresholdRetriever returned null");
             }
 
-            List<Document> docs = retriever.retrieve(new Query("latency"));
-            if (docs == null || docs.isEmpty()) {
-                fail(name, "Expected healthcare documents matching 'latency', got empty");
-                return;
+            List<Document> docs = retriever.retrieve(new Query("PostgreSQL high replication lag"));
+            if (docs.isEmpty()) {
+                return new ScenarioResult(2, name, false, "Expected high-similarity document to be retrieved");
             }
-
-            for (Document d : docs) {
-                if (!"healthcare".equals(d.getMetadata().get("tenant"))) {
-                    fail(name, "Leaked non-healthcare tenant document: " + d.getId() + " (" + d.getMetadata().get("tenant") + ")");
-                    return;
-                }
+            if (docs.stream().anyMatch(d -> "other".equals(d.getId()))) {
+                return new ScenarioResult(2, name, false, "Unrelated document should have been filtered by threshold");
             }
-
-            if (!docs.get(0).getId().equals("doc-health-03")) {
-                fail(name, "Expected 'doc-health-03', got: " + docs.get(0).getId());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(2, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(2, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario03(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 03: Custom ContextualQueryAugmenter & Document Formatting";
+    private static ScenarioResult verifyScenario3(RagAdvisorUnderTest underTest) {
+        String name = "VectorStoreDocumentRetriever (FilterExpression Constrained)";
         try {
-            QueryAugmenter augmenter = underTest.buildCustomAugmenter("[SRC: ", true);
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("d-prod").text("Database deadlock detected").metadata(Map.of("env", "PROD")).build(),
+                    Document.builder().id("d-dev").text("Database deadlock detected").metadata(Map.of("env", "DEV")).build()
+            ));
+
+            Filter.Expression filter = new FilterExpressionBuilder().eq("env", "PROD").build();
+
+            try {
+                underTest.buildFilterExpressionRetriever(store, 5, null);
+                return new ScenarioResult(3, name, false, "Expected IllegalArgumentException on null filter");
+            } catch (IllegalArgumentException expected) {}
+
+            DocumentRetriever retriever = underTest.buildFilterExpressionRetriever(store, 5, filter);
+            if (retriever == null) {
+                return new ScenarioResult(3, name, false, "buildFilterExpressionRetriever returned null");
+            }
+
+            List<Document> docs = retriever.retrieve(new Query("Database deadlock"));
+            if (docs.size() != 1 || !"d-prod".equals(docs.get(0).getId())) {
+                return new ScenarioResult(3, name, false, "Expected only d-prod to match filter expression, got: " + docs.stream().map(Document::getId).toList());
+            }
+            return new ScenarioResult(3, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(3, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 2: ContextualQueryAugmenter & Prompt Augmentation (Scenarios 4 - 6)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario4(RagAdvisorUnderTest underTest) {
+        String name = "ContextualQueryAugmenter (Custom Document Formatter)";
+        try {
+            try {
+                underTest.buildCustomFormattedAugmenter(null, true);
+                return new ScenarioResult(4, name, false, "Expected IllegalArgumentException on null headerPrefix");
+            } catch (IllegalArgumentException expected) {}
+
+            QueryAugmenter augmenter = underTest.buildCustomFormattedAugmenter("SOURCE_", true);
             if (augmenter == null) {
-                fail(name, "buildCustomAugmenter returned null");
-                return;
+                return new ScenarioResult(4, name, false, "buildCustomFormattedAugmenter returned null");
             }
 
-            Document d1 = Document.builder()
-                    .id("d1")
-                    .text("Replication factor must be 3.")
-                    .metadata(Map.of("source", "ops.md"))
-                    .build();
+            List<Document> docs = List.of(
+                    Document.builder().id("1").text("CPU spike").metadata(Map.of("source", "datadog")).build(),
+                    Document.builder().id("2").text("Disk full").metadata(Map.of()).build()
+            );
 
-            Query query = new Query("What is the replication factor?");
-            Query augmented = augmenter.augment(query, List.of(d1));
-
+            Query augmented = augmenter.augment(new Query("diagnose issue"), docs);
             if (augmented == null || augmented.text() == null) {
-                fail(name, "Augmented query is null");
-                return;
+                return new ScenarioResult(4, name, false, "Augmenter returned null augmented query");
             }
-
-            if (!augmented.text().contains("[SRC: ops.md: Replication factor must be 3.")) {
-                fail(name, "Augmented query missing formatted source header: " + augmented.text());
-                return;
+            if (!augmented.text().contains("SOURCE_datadog: CPU spike")) {
+                return new ScenarioResult(4, name, false, "Formatted document missing expected prefix and source");
             }
-
-            if (!augmented.text().contains("What is the replication factor?")) {
-                fail(name, "Augmented query missing original query text: " + augmented.text());
-                return;
+            if (!augmented.text().contains("SOURCE_unknown: Disk full")) {
+                return new ScenarioResult(4, name, false, "Default source 'unknown' not applied");
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(4, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(4, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario04(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 04: Empty Context Guardrails & Fallback Prompting";
+    private static ScenarioResult verifyScenario5(RagAdvisorUnderTest underTest) {
+        String name = "ContextualQueryAugmenter (Custom PromptTemplate Placeholders)";
         try {
-            String fallback = "The requested information is outside the current security boundary.";
-            QueryAugmenter fallbackAugmenter = underTest.buildFallbackAugmenter(fallback);
+            try {
+                underTest.buildTemplatedAugmenter(null);
+                return new ScenarioResult(5, name, false, "Expected IllegalArgumentException on null promptTemplate");
+            } catch (IllegalArgumentException expected) {}
 
-            if (fallbackAugmenter == null) {
-                fail(name, "buildFallbackAugmenter returned null");
-                return;
+            PromptTemplate template = new PromptTemplate("=== KNOWLEDGE ===\n{context}\n=== QUESTION ===\n{query}");
+            QueryAugmenter augmenter = underTest.buildTemplatedAugmenter(template);
+            if (augmenter == null) {
+                return new ScenarioResult(5, name, false, "buildTemplatedAugmenter returned null");
             }
 
-            Query query = new Query("What is the root password?");
-            Query augmented = fallbackAugmenter.augment(query, List.of());
+            List<Document> docs = List.of(Document.builder().id("1").text("Root cause is OOM.").build());
+            Query augmented = augmenter.augment(new Query("What happened?"), docs);
 
-            if (augmented == null || !fallback.equals(augmented.text())) {
-                fail(name, "Expected fallback prompt '" + fallback + "', got: " + (augmented != null ? augmented.text() : "null"));
-                return;
+            if (augmented == null || !augmented.text().contains("=== KNOWLEDGE ===") || !augmented.text().contains("Root cause is OOM.")) {
+                return new ScenarioResult(5, name, false, "Custom template markers not found in augmented query text");
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(5, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(5, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario05(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 05: DocumentPostProcessor Deduplication & Priority Reranking";
+    private static ScenarioResult verifyScenario6(RagAdvisorUnderTest underTest) {
+        String name = "ContextualQueryAugmenter (Fallback Empty Context Guard)";
         try {
-            DocumentPostProcessor postProcessor = underTest.buildDeduplicatingPriorityReranker(2);
+            try {
+                underTest.buildFallbackGuardedAugmenter("   ");
+                return new ScenarioResult(6, name, false, "Expected IllegalArgumentException on blank fallbackMessage");
+            } catch (IllegalArgumentException expected) {}
+
+            QueryAugmenter augmenter = underTest.buildFallbackGuardedAugmenter("No relevant documentation was found for this query.");
+            if (augmenter == null) {
+                return new ScenarioResult(6, name, false, "buildFallbackGuardedAugmenter returned null");
+            }
+
+            Query augmentedEmpty = augmenter.augment(new Query("find secrets"), List.of());
+            if (augmentedEmpty == null || !augmentedEmpty.text().contains("No relevant documentation was found")) {
+                return new ScenarioResult(6, name, false, "Empty context fallback message was not applied");
+            }
+            return new ScenarioResult(6, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(6, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 3: DocumentPostProcessor Filtering & Reranking (Scenarios 7 - 9)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario7(RagAdvisorUnderTest underTest) {
+        String name = "DocumentPostProcessor (ID Deduplication)";
+        try {
+            DocumentPostProcessor postProcessor = underTest.buildDeduplicatingPostProcessor();
             if (postProcessor == null) {
-                fail(name, "buildDeduplicatingPriorityReranker returned null");
-                return;
+                return new ScenarioResult(7, name, false, "buildDeduplicatingPostProcessor returned null");
             }
 
-            Document d1 = Document.builder().id("id-1").text("low priority").metadata(Map.of("priority", 10)).build();
-            Document d2 = Document.builder().id("id-2").text("high priority").metadata(Map.of("priority", 50)).build();
-            Document d1Dup = Document.builder().id("id-1").text("dup of id-1").metadata(Map.of("priority", 10)).build();
-            Document d3 = Document.builder().id("id-3").text("mid priority").metadata(Map.of("priority", 30)).build();
+            List<Document> duplicates = List.of(
+                    Document.builder().id("doc-1").text("version 1").build(),
+                    Document.builder().id("doc-2").text("other").build(),
+                    Document.builder().id("doc-1").text("version 2 (duplicate)").build()
+            );
 
-            List<Document> processed = postProcessor.process(new Query("test"), List.of(d1, d2, d1Dup, d3));
+            List<Document> processed = postProcessor.process(new Query("q"), duplicates);
             if (processed == null || processed.size() != 2) {
-                fail(name, "Expected exactly 2 post-processed documents, got: " + (processed != null ? processed.size() : "null"));
-                return;
+                return new ScenarioResult(7, name, false, "Expected 2 documents after deduplication, got: " + (processed == null ? "null" : processed.size()));
             }
-
-            // Expected order: id-2 (50), id-3 (30)
-            if (!processed.get(0).getId().equals("id-2") || !processed.get(1).getId().equals("id-3")) {
-                fail(name, "Expected [id-2, id-3], got: [" + processed.get(0).getId() + ", " + processed.get(1).getId() + "]");
-                return;
+            if (!"version 1".equals(processed.get(0).getText())) {
+                return new ScenarioResult(7, name, false, "Expected first occurrence to be preserved");
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(7, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(7, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario06(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 06: MultiQueryExpander Pre-Retrieval Expansion";
+    private static ScenarioResult verifyScenario8(RagAdvisorUnderTest underTest) {
+        String name = "DocumentPostProcessor (Metadata Priority Ranking & Truncation)";
         try {
-            FakeRagChatModel chatModel = new FakeRagChatModel();
-            chatModel.enqueue("k8s pod latency tuning\nk8s ingress timeout optimization");
+            try {
+                underTest.buildPriorityRankingPostProcessor(0);
+                return new ScenarioResult(8, name, false, "Expected IllegalArgumentException on maxDocs < 1");
+            } catch (IllegalArgumentException expected) {}
 
-            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
-            QueryExpander expander = underTest.buildMultiQueryExpander(chatClientBuilder, 2, true);
+            DocumentPostProcessor postProcessor = underTest.buildPriorityRankingPostProcessor(2);
+            if (postProcessor == null) {
+                return new ScenarioResult(8, name, false, "buildPriorityRankingPostProcessor returned null");
+            }
 
+            List<Document> unranked = List.of(
+                    Document.builder().id("low").text("low prio").metadata(Map.of("priority", 10)).build(),
+                    Document.builder().id("high").text("high prio").metadata(Map.of("priority", 99)).build(),
+                    Document.builder().id("mid").text("mid prio").metadata(Map.of("priority", 50)).build()
+            );
+
+            List<Document> ranked = postProcessor.process(new Query("q"), unranked);
+            if (ranked == null || ranked.size() != 2) {
+                return new ScenarioResult(8, name, false, "Expected 2 truncated documents, got: " + (ranked == null ? "null" : ranked.size()));
+            }
+            if (!"high".equals(ranked.get(0).getId()) || !"mid".equals(ranked.get(1).getId())) {
+                return new ScenarioResult(8, name, false, "Documents not ordered descending by priority");
+            }
+            return new ScenarioResult(8, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(8, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario9(RagAdvisorUnderTest underTest) {
+        String name = "DocumentPostProcessor (Score-Gated Filtering)";
+        try {
+            try {
+                underTest.buildScoreGatingPostProcessor(-0.1);
+                return new ScenarioResult(9, name, false, "Expected IllegalArgumentException on minScore < 0.0");
+            } catch (IllegalArgumentException expected) {}
+
+            DocumentPostProcessor postProcessor = underTest.buildScoreGatingPostProcessor(0.75);
+            if (postProcessor == null) {
+                return new ScenarioResult(9, name, false, "buildScoreGatingPostProcessor returned null");
+            }
+
+            List<Document> scoredDocs = List.of(
+                    Document.builder().id("good").text("relevant").score(0.85).build(),
+                    Document.builder().id("bad").text("irrelevant").score(0.40).build(),
+                    Document.builder().id("missing-score").text("no score").build()
+            );
+
+            List<Document> filtered = postProcessor.process(new Query("q"), scoredDocs);
+            if (filtered == null || filtered.size() != 1 || !"good".equals(filtered.get(0).getId())) {
+                return new ScenarioResult(9, name, false, "Expected only 'good' document with score >= 0.75, got: " + (filtered == null ? "null" : filtered.stream().map(Document::getId).toList()));
+            }
+            return new ScenarioResult(9, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(9, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 4: Pre-Retrieval Query Transformers & Expanders (Scenarios 10 - 12)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario10(RagAdvisorUnderTest underTest) {
+        String name = "MultiQueryExpander (Pre-Retrieval Query Expansion)";
+        try {
+            ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
+
+            try {
+                underTest.buildMultiQueryExpander(null, 3, true);
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on null chatClientBuilder");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                underTest.buildMultiQueryExpander(dummyBuilder, 0, true);
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on numberOfQueries < 1");
+            } catch (IllegalArgumentException expected) {}
+
+            QueryExpander expander = underTest.buildMultiQueryExpander(dummyBuilder, 3, true);
             if (expander == null) {
-                fail(name, "buildMultiQueryExpander returned null");
-                return;
+                return new ScenarioResult(10, name, false, "buildMultiQueryExpander returned null");
             }
-
-            List<Query> expanded = expander.expand(new Query("k8s latency"));
-            if (expanded == null || expanded.size() != 3) {
-                fail(name, "Expected 3 queries (original + 2 variants), got: " + (expanded != null ? expanded.size() : "null"));
-                return;
-            }
-
-            if (!"k8s latency".equals(expanded.get(0).text())) {
-                fail(name, "Expected original query first, got: " + expanded.get(0).text());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(10, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(10, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario07(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 07: RewriteQueryTransformer Query Rewriting";
+    private static ScenarioResult verifyScenario11(RagAdvisorUnderTest underTest) {
+        String name = "RewriteQueryTransformer (System-Targeted Query Rewriting)";
         try {
-            FakeRagChatModel chatModel = new FakeRagChatModel();
-            chatModel.enqueue("How to configure Spring AI vector store similarity threshold?");
+            ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
 
-            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
-            QueryTransformer transformer = underTest.buildRewriteTransformer(chatClientBuilder, "enterprise knowledge base");
+            try {
+                underTest.buildRewriteTransformer(dummyBuilder, "  ");
+                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException on blank targetSearchSystem");
+            } catch (IllegalArgumentException expected) {}
 
+            QueryTransformer transformer = underTest.buildRewriteTransformer(dummyBuilder, "Elasticsearch BM25");
             if (transformer == null) {
-                fail(name, "buildRewriteTransformer returned null");
-                return;
+                return new ScenarioResult(11, name, false, "buildRewriteTransformer returned null");
             }
-
-            Query rewritten = transformer.transform(new Query("how do i set the threshold again?"));
-            if (rewritten == null || !rewritten.text().equals("How to configure Spring AI vector store similarity threshold?")) {
-                fail(name, "Expected rewritten query text, got: " + (rewritten != null ? rewritten.text() : "null"));
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(11, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(11, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario08(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 08: ConcatenationDocumentJoiner Multi-Query Merging";
+    private static ScenarioResult verifyScenario12(RagAdvisorUnderTest underTest) {
+        String name = "TranslationQueryTransformer (Multilingual Target Language Transformation)";
         try {
-            Query q1 = new Query("query 1");
-            Query q2 = new Query("query 2");
+            ChatClient.Builder dummyBuilder = ChatClient.builder(new FakeRagChatModel());
 
-            Document docA = Document.builder().id("doc-A").text("Doc A").score(0.85).build();
-            Document docB = Document.builder().id("doc-B").text("Doc B").score(0.95).build();
-            Document docADup = Document.builder().id("doc-A").text("Doc A copy").score(0.70).build();
+            try {
+                underTest.buildTranslationTransformer(dummyBuilder, "");
+                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException on blank targetLanguage");
+            } catch (IllegalArgumentException expected) {}
 
-            Map<Query, List<List<Document>>> queryResults = new LinkedHashMap<>();
-            queryResults.put(q1, List.of(List.of(docA)));
-            queryResults.put(q2, List.of(List.of(docB, docADup)));
-
-            List<Document> joined = underTest.joinMultiQueryResults(queryResults);
-            if (joined == null || joined.size() != 2) {
-                fail(name, "Expected 2 deduplicated documents, got: " + (joined != null ? joined.size() : "null"));
-                return;
+            QueryTransformer transformer = underTest.buildTranslationTransformer(dummyBuilder, "Japanese");
+            if (transformer == null) {
+                return new ScenarioResult(12, name, false, "buildTranslationTransformer returned null");
             }
-
-            // Sorted by score descending: doc-B (0.95), doc-A (0.85)
-            if (!joined.get(0).getId().equals("doc-B") || !joined.get(1).getId().equals("doc-A")) {
-                fail(name, "Expected order [doc-B, doc-A], got: [" + joined.get(0).getId() + ", " + joined.get(1).getId() + "]");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(12, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(12, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario09(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 09: RetrievalAugmentationAdvisor End-to-End ChatClient Binding";
-        try {
-            VectorStore store = createPopulatedStore();
-            DocumentRetriever retriever = underTest.buildVectorRetriever(store, 2, 0.5);
+    // =========================================================================
+    // TOPIC 5: RetrievalAugmentationAdvisor & ChatClient Integration (Scenarios 13 - 15)
+    // =========================================================================
 
-            RetrievalAugmentationAdvisor advisor = underTest.buildRetrievalAdvisor(retriever, null, null);
+    private static ScenarioResult verifyScenario13(RagAdvisorUnderTest underTest) {
+        String name = "RetrievalAugmentationAdvisor (Basic DocumentRetriever Binding)";
+        try {
+            try {
+                underTest.buildBasicAdvisor(null);
+                return new ScenarioResult(13, name, false, "Expected IllegalArgumentException on null retriever");
+            } catch (IllegalArgumentException expected) {}
+
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            DocumentRetriever retriever = VectorStoreDocumentRetriever.builder().vectorStore(store).build();
+
+            RetrievalAugmentationAdvisor advisor = underTest.buildBasicAdvisor(retriever);
             if (advisor == null) {
-                fail(name, "buildRetrievalAdvisor returned null");
-                return;
+                return new ScenarioResult(13, name, false, "buildBasicAdvisor returned null");
             }
-
-            FakeRagChatModel chatModel = new FakeRagChatModel();
-            chatModel.enqueue("The Kafka cluster broker timeout should be adjusted to 30000ms.");
-
-            ChatClient chatClient = ChatClient.builder(chatModel)
-                    .defaultAdvisors(advisor)
-                    .build();
-
-            ChatResponse response = chatClient.prompt()
-                    .user("Kafka cluster timeout")
-                    .call()
-                    .chatResponse();
-
-            if (response == null || !response.getResult().getOutput().getText().contains("Kafka cluster broker timeout")) {
-                fail(name, "ChatClient response did not return expected generated text");
-                return;
-            }
-
-            // Verify the advisor populated DOCUMENT_CONTEXT metadata
-            Object docContext = response.getMetadata().get(RetrievalAugmentationAdvisor.DOCUMENT_CONTEXT);
-            if (docContext == null) {
-                fail(name, "ChatResponse metadata missing 'rag_document_context'");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(13, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(13, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario10(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 10: Guardrailed Enterprise Multi-Tenant RAG Gateway";
+    private static ScenarioResult verifyScenario14(RagAdvisorUnderTest underTest) {
+        String name = "RetrievalAugmentationAdvisor (Retriever & QueryAugmenter Chaining)";
         try {
-            VectorStore store = createPopulatedStore();
-            FakeRagChatModel chatModel = new FakeRagChatModel();
-            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            DocumentRetriever retriever = VectorStoreDocumentRetriever.builder().vectorStore(store).build();
+            QueryAugmenter augmenter = underTest.buildFallbackGuardedAugmenter("Fallback text");
 
-            EnterpriseRagGatewayConfig config = new EnterpriseRagGatewayConfig(3, 0.4, 2, 2, false);
-
-            // Subtest A: Missing tenant / query
             try {
-                underTest.executeGatewayQuery(config, new RagGatewayRequest("", 2, "query"), chatClientBuilder, store);
-                fail(name, "Expected RagGatewayBreachException for empty tenant");
-                return;
-            } catch (RagGatewayBreachException expected) {
-                // pass
+                underTest.buildAugmentedAdvisor(retriever, null);
+                return new ScenarioResult(14, name, false, "Expected IllegalArgumentException on null queryAugmenter");
+            } catch (IllegalArgumentException expected) {}
+
+            RetrievalAugmentationAdvisor advisor = underTest.buildAugmentedAdvisor(retriever, augmenter);
+            if (advisor == null) {
+                return new ScenarioResult(14, name, false, "buildAugmentedAdvisor returned null");
             }
-
-            // Subtest B: Clearance violation
-            try {
-                underTest.executeGatewayQuery(config, new RagGatewayRequest("fintech", 1, "Kafka timeout"), chatClientBuilder, store);
-                fail(name, "Expected RagGatewayBreachException for insufficient clearance");
-                return;
-            } catch (RagGatewayBreachException expected) {
-                // pass
-            }
-
-            // Subtest C: Empty context when allowEmptyContext = false
-            try {
-                underTest.executeGatewayQuery(config, new RagGatewayRequest("nonexistent", 5, "unknown query"), chatClientBuilder, store);
-                fail(name, "Expected RagGatewayBreachException when no docs found and allowEmptyContext=false");
-                return;
-            } catch (RagGatewayBreachException expected) {
-                // pass
-            }
-
-            // Subtest D: Empty context when allowEmptyContext = true
-            EnterpriseRagGatewayConfig allowEmptyConfig = new EnterpriseRagGatewayConfig(3, 0.4, 2, 2, true);
-            RagGatewayResponse emptyResp = underTest.executeGatewayQuery(allowEmptyConfig, new RagGatewayRequest("fintech", 5, "quantum physics non matching query"), chatClientBuilder, store);
-            if (emptyResp == null || !emptyResp.answer().contains("No confidential documentation found") || !emptyResp.citations().isEmpty()) {
-                fail(name, "Expected polite fallback with empty citations when allowEmptyContext=true, got: " + emptyResp);
-                return;
-            }
-
-            // Subtest E: Successful execution
-            chatModel.enqueue("Recommended Kafka consumer session timeout is 45000ms based on cluster guide.");
-            chatModel.setTokenUsage(200, 50);
-
-            RagGatewayResponse successResp = underTest.executeGatewayQuery(config, new RagGatewayRequest("fintech", 2, "Kafka timeout"), chatClientBuilder, store);
-            if (successResp == null || !successResp.success()) {
-                fail(name, "Expected successful gateway response");
-                return;
-            }
-
-            if (!successResp.answer().contains("Recommended Kafka consumer")) {
-                fail(name, "Expected gateway answer, got: " + successResp.answer());
-                return;
-            }
-
-            if (successResp.citations().isEmpty() || !successResp.citations().get(0).documentId().equals("doc-kafka-01")) {
-                fail(name, "Expected citation for doc-kafka-01, got: " + successResp.citations());
-                return;
-            }
-
-            if (successResp.totalTokens() != 250) {
-                fail(name, "Expected 250 total tokens, got: " + successResp.totalTokens());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(14, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(14, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario11(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 11: Hypothetical Document Embeddings (HyDE Query Transformer)";
+    private static ScenarioResult verifyScenario15(RagAdvisorUnderTest underTest) {
+        String name = "RetrievalAugmentationAdvisor (Full Pipeline Assembly)";
         try {
-            FakeRagChatModel chatModel = new FakeRagChatModel();
-            ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
-            String template = "Write a technical answer for query: {query}";
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            DocumentRetriever retriever = VectorStoreDocumentRetriever.builder().vectorStore(store).build();
+            DocumentPostProcessor postProcessor = underTest.buildDeduplicatingPostProcessor();
+            QueryAugmenter augmenter = underTest.buildFallbackGuardedAugmenter("Fallback");
 
-            QueryTransformer transformer = underTest.buildHydeTransformer(chatClientBuilder, template);
-            if (transformer == null) {
-                fail(name, "buildHydeTransformer returned null");
-                return;
+            try {
+                underTest.buildFullPipelineAdvisor(null, null, null, null);
+                return new ScenarioResult(15, name, false, "Expected IllegalArgumentException on null retriever");
+            } catch (IllegalArgumentException expected) {}
+
+            RetrievalAugmentationAdvisor advisor = underTest.buildFullPipelineAdvisor(retriever, null, postProcessor, augmenter);
+            if (advisor == null) {
+                return new ScenarioResult(15, name, false, "buildFullPipelineAdvisor returned null");
             }
-
-            // Subtest 1: Successful hypothetical document generation
-            chatModel.enqueue("HikariCP connection pool timeout is mitigated by tuning maximumPoolSize and leakDetectionThreshold.");
-            Query inputQuery = new Query("How to fix database timeout?");
-            Query transformed = transformer.transform(inputQuery);
-
-            if (transformed == null || transformed.text() == null) {
-                fail(name, "Transformed query is null or has null text");
-                return;
-            }
-
-            if (!transformed.text().contains("HikariCP connection pool timeout")) {
-                fail(name, "Expected transformed query to contain hypothetical answer, got: " + transformed.text());
-                return;
-            }
-
-            // Verify prompt was sent with {query} replaced
-            org.springframework.ai.chat.prompt.Prompt lastPrompt = chatModel.getLastPrompt();
-            String promptText = (lastPrompt != null && lastPrompt.getInstructions() != null && !lastPrompt.getInstructions().isEmpty())
-                    ? lastPrompt.getInstructions().get(0).getText() : "";
-            if (!promptText.contains("How to fix database timeout?")) {
-                fail(name, "Expected LLM prompt to contain original query formatted in template");
-                return;
-            }
-
-            // Subtest 2: Fallback when LLM returns blank content
-            chatModel.enqueue("   ");
-            Query fallbackResult = transformer.transform(inputQuery);
-            if (!"How to fix database timeout?".equals(fallbackResult.text())) {
-                fail(name, "Expected fallback to original query on blank LLM output, got: " + fallbackResult.text());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(15, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(15, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario12(RagAdvisorUnderTest underTest) {
-        String name = "Scenario 12: Token-Budget Context Packing & Dynamic Truncator";
-        try {
-            Document d1 = Document.builder().id("d1").text("A".repeat(80)).build();  // ~20 tokens
-            Document d2 = Document.builder().id("d2").text("B".repeat(120)).build(); // ~30 tokens
-            Document d3 = Document.builder().id("d3").text("C".repeat(160)).build(); // ~40 tokens
+    // =========================================================================
+    // REPORT FORMATTER
+    // =========================================================================
 
-            // Subtest 1: Budget allows d1 and d2, but not d3 (maxTokens = 60)
-            PackedContext result = underTest.packContextWithinBudget(List.of(d1, d2, d3), 60, "\n---\n");
-            if (result == null) {
-                fail(name, "packContextWithinBudget returned null");
-                return;
+    private static void printReport(List<ScenarioResult> results) {
+        System.out.println("===============================================================================");
+        System.out.println("  PHASE 07 EXERCISE 02: MODULAR RAG ADVISORS & PIPELINES");
+        System.out.println("===============================================================================");
+        int passed = 0;
+        for (ScenarioResult r : results) {
+            String tag = r.passed() ? "[PASS]" : "[FAIL]";
+            System.out.printf("  %s Scenario %02d: %s%n", tag, r.scenarioNumber(), r.name());
+            if (!r.passed()) {
+                System.out.printf("         --> DETAIL: %s%n", r.errorDetail());
+            } else {
+                passed++;
             }
-
-            if (result.packedDocumentCount() != 2) {
-                fail(name, "Expected 2 packed documents, got: " + result.packedDocumentCount());
-                return;
-            }
-
-            if (result.droppedDocumentCount() != 1) {
-                fail(name, "Expected 1 dropped document, got: " + result.droppedDocumentCount());
-                return;
-            }
-
-            if (!result.packedDocIds().equals(List.of("d1", "d2"))) {
-                fail(name, "Expected packed doc IDs [d1, d2], got: " + result.packedDocIds());
-                return;
-            }
-
-            if (!result.packedContent().contains("A".repeat(80)) || !result.packedContent().contains("B".repeat(120))) {
-                fail(name, "Packed content missing full document text");
-                return;
-            }
-
-            // Subtest 2: Single oversized document gets truncated to budget
-            Document hugeDoc = Document.builder().id("huge").text("X".repeat(500)).build(); // ~125 tokens
-            PackedContext truncResult = underTest.packContextWithinBudget(List.of(hugeDoc), 30, "\n");
-            if (truncResult.packedDocumentCount() != 1) {
-                fail(name, "Expected 1 truncated document packed, got: " + truncResult.packedDocumentCount());
-                return;
-            }
-            if (truncResult.totalEstimatedTokens() > 30) {
-                fail(name, "Truncated tokens exceed maxTokens: " + truncResult.totalEstimatedTokens());
-                return;
-            }
-
-            // Subtest 3: Empty input
-            PackedContext emptyResult = underTest.packContextWithinBudget(List.of(), 50, "\n");
-            if (emptyResult.packedDocumentCount() != 0 || !emptyResult.packedContent().isEmpty()) {
-                fail(name, "Expected empty packed context for empty input");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
         }
+        System.out.println("-------------------------------------------------------------------------------");
+        System.out.printf("  TOTAL: %d / %d PASSED%n", passed, results.size());
+        System.out.println("===============================================================================");
     }
 }

@@ -1,9 +1,15 @@
-# Golden Solution: Phase 07 Exercise 01 (Vector Stores, In-Memory Embeddings, Semantic Filtering & MMR)
+# Golden Solution: Phase 07 Exercise 01 (Vector Stores, In-Memory Embeddings, Document Chunking & Metadata Filtering)
 
 ## Overview
-This golden solution implements all 12 scenarios of `phase07-ex01-vector-stores`, providing complete, tested implementations of normalized `Document` creation, token-bounded document splitting via `TokenTextSplitter`, unit L2 vector normalization, `SimpleVectorStore` indexing, top-K ranked retrieval, cutoff similarity threshold gating, `FilterExpressionBuilder` metadata filters, document lifecycle updates, cached embedding decorators, end-to-end ingestion gateways, Maximal Marginal Relevance (MMR) diversity re-ranking, and content-hash idempotent ingestion pipelines.
+This golden solution implements all 18 scenarios of `phase07-ex01-vector-stores`, structured as 6 repetitive 3-drill clusters targeting core Spring AI framework mechanics:
+1. `Document` creation and `doc.mutate()` enrichment (Scenarios 1–3)
+2. `TokenTextSplitter` chunking and sequence metadata tagging (Scenarios 4–6)
+3. `SimpleVectorStore` indexing, deletion, and synchronized updates (Scenarios 7–9)
+4. `SearchRequest` top-K retrieval, cutoff threshold gating, and scored sorting (Scenarios 10–12)
+5. `FilterExpressionBuilder` basics: `eq`/`ne`, `gte`/`lte`, and `and`/`or` (Scenarios 13–15)
+6. `FilterExpressionBuilder` collections (`in`/`nin`), nested logical groups, and integrated filtered search (Scenarios 16–18)
 
-Verified: `12 PASSED, 0 FAILED (exit code 0)`
+Verified: `18 PASSED, 0 FAILED (exit code 0)`
 
 ---
 
@@ -13,10 +19,7 @@ Verified: `12 PASSED, 0 FAILED (exit code 0)`
 package phase07;
 
 import org.springframework.ai.document.Document;
-import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.embedding.EmbeddingRequest;
-import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -25,18 +28,20 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import phase07.VectorStoreContracts.*;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Golden implementation for Phase 07 Exercise 01.
+ * Golden implementation for Phase 07 Exercise 01:
+ * Vector Stores, In-Memory Embeddings, Document Chunking and Semantic Filtering.
+ * <p>
+ * 18 repetitive muscle-memory drills across 6 core framework topics (3 repetitions each).
  */
 public class VectorStoreUnderTest {
+
+    // =========================================================================
+    // TOPIC 1: Document Creation & Mutation (Scenarios 1 - 3)
+    // =========================================================================
 
     public static class DocumentFactory {
         public static Document createDocument(String id, String content, Map<String, Object> metadata) {
@@ -52,9 +57,82 @@ public class VectorStoreUnderTest {
         }
     }
 
-    public static class TextChunkingPipeline {
-        public static List<Document> splitDocument(Document document, ChunkConfig config) {
-            if (document == null || config == null) throw new IllegalArgumentException("Inputs must not be null");
+    public static class DocumentEnricher {
+        public static Document enrichDocument(Document document, String environment, String version) {
+            if (document == null) throw new IllegalArgumentException("document must not be null");
+            if (environment == null || environment.isBlank()) throw new IllegalArgumentException("environment must not be blank");
+            if (version == null || version.isBlank()) throw new IllegalArgumentException("version must not be blank");
+
+            Map<String, Object> updated = new HashMap<>(document.getMetadata());
+            updated.put("environment", environment.trim().toUpperCase());
+            updated.put("version", version.trim());
+            updated.put("enrichedAt", Instant.now().toString());
+
+            return document.mutate().metadata(updated).build();
+        }
+    }
+
+    public static class DocumentBatchBuilder {
+        public static List<Document> buildBatch(List<RawArticle> articles) {
+            if (articles == null || articles.isEmpty()) {
+                throw new IllegalArgumentException("articles must not be null or empty");
+            }
+
+            List<Document> batch = new ArrayList<>(articles.size());
+            for (RawArticle article : articles) {
+                if (article.id() == null || article.id().isBlank() || article.text() == null || article.text().isBlank()) {
+                    throw new IllegalArgumentException("article id and text must not be blank");
+                }
+
+                String trimmed = article.text().trim();
+                Map<String, Object> meta = new HashMap<>(article.metadata());
+                meta.put("wordCount", (long) trimmed.split("\\s+").length);
+                meta.put("source", (article.source() != null && !article.source().isBlank()) ? article.source().trim() : "unknown");
+                meta.put("indexed", true);
+
+                batch.add(Document.builder().id(article.id()).text(trimmed).metadata(meta).build());
+            }
+            return batch;
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 2: TokenTextSplitter Chunking & Enrichment (Scenarios 4 - 6)
+    // =========================================================================
+
+    public static class BasicTextSplitter {
+        public static List<Document> split(Document document, int chunkSize) {
+            if (document == null || chunkSize < 1) {
+                throw new IllegalArgumentException("document must not be null and chunkSize must be >= 1");
+            }
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(chunkSize)
+                    .build();
+            return splitter.apply(List.of(document));
+        }
+    }
+
+    public static class ConfigurableTextSplitter {
+        public static List<Document> splitWithConfig(Document document, ChunkConfig config) {
+            if (document == null || config == null) {
+                throw new IllegalArgumentException("document and config must not be null");
+            }
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(config.defaultChunkSize())
+                    .withMinChunkSizeChars(config.minChunkSizeChars())
+                    .withMinChunkLengthToEmbed(config.minChunkLengthToEmbed())
+                    .withMaxNumChunks(config.maxNumChunks())
+                    .withKeepSeparator(config.keepSeparator())
+                    .build();
+            return splitter.apply(List.of(document));
+        }
+    }
+
+    public static class ChunkEnrichmentPipeline {
+        public static List<Document> splitAndEnrich(Document document, ChunkConfig config) {
+            if (document == null || config == null) {
+                throw new IllegalArgumentException("document and config must not be null");
+            }
 
             TokenTextSplitter splitter = TokenTextSplitter.builder()
                     .withChunkSize(config.defaultChunkSize())
@@ -71,50 +149,58 @@ public class VectorStoreUnderTest {
                 Map<String, Object> meta = new HashMap<>(c.getMetadata());
                 meta.put("chunkIndex", i);
                 meta.put("totalChunks", rawChunks.size());
+                meta.put("parentDocId", document.getId());
                 enriched.add(c.mutate().metadata(meta).build());
             }
             return enriched;
         }
     }
 
-    public static class DeterministicVectorGenerator {
-        public static float[] generateNormalizedVector(String text, int dimensions) {
-            if (dimensions < 2) throw new IllegalArgumentException("dimensions must be >= 2");
-            float[] vec = new float[dimensions];
-            if (text == null || text.isBlank()) {
-                vec[0] = 1.0f;
-                return vec;
-            }
-
-            Random rand = new Random((long) text.trim().toLowerCase().hashCode());
-            float sumSq = 0.0f;
-            for (int i = 0; i < dimensions; i++) {
-                vec[i] = (rand.nextFloat() * 2.0f) - 1.0f;
-                sumSq += vec[i] * vec[i];
-            }
-
-            float norm = (float) Math.sqrt(sumSq);
-            if (norm > 1e-6f) {
-                for (int i = 0; i < dimensions; i++) {
-                    vec[i] /= norm;
-                }
-            } else {
-                vec[0] = 1.0f;
-            }
-            return vec;
-        }
-    }
+    // =========================================================================
+    // TOPIC 3: SimpleVectorStore Lifecycle Operations (Scenarios 7 - 9)
+    // =========================================================================
 
     public static class VectorStoreIndexer {
         public static SimpleVectorStore createAndIndex(EmbeddingModel embeddingModel, List<Document> documents) {
-            if (embeddingModel == null || documents == null) throw new IllegalArgumentException("Inputs must not be null");
+            if (embeddingModel == null || documents == null) {
+                throw new IllegalArgumentException("embeddingModel and documents must not be null");
+            }
             SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
             store.add(documents);
             return store;
         }
     }
 
-    public static class SimilaritySearchEngine {
+    public static class VectorStoreDeleter {
+        public static void deleteDocuments(VectorStore vectorStore, List<String> documentIds) {
+            if (vectorStore == null || documentIds == null) {
+                throw new IllegalArgumentException("vectorStore and documentIds must not be null");
+            }
+            if (!documentIds.isEmpty()) {
+                vectorStore.delete(documentIds);
+            }
+        }
+    }
+
+    public static class VectorStoreLifecycleManager {
+        public static void syncDocuments(VectorStore vectorStore, List<String> toDelete, List<Document> toAdd) {
+            if (vectorStore == null) {
+                throw new IllegalArgumentException("vectorStore must not be null");
+            }
+            if (toDelete != null && !toDelete.isEmpty()) {
+                vectorStore.delete(toDelete);
+            }
+            if (toAdd != null && !toAdd.isEmpty()) {
+                vectorStore.add(toAdd);
+            }
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 4: SearchRequest & Retrieval (Scenarios 10 - 12)
+    // =========================================================================
+
+    public static class TopKSearchEngine {
         public static List<SearchResult> searchTopK(VectorStore vectorStore, String query, int topK) {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1) {
                 throw new IllegalArgumentException("Invalid search parameters");
@@ -127,23 +213,18 @@ public class VectorStoreUnderTest {
         }
     }
 
-    public static class ThresholdSimilarityFilter {
-        public static List<SearchResult> searchWithThreshold(
-                VectorStore vectorStore,
-                String query,
-                int topK,
-                double minThreshold
-        ) {
+    public static class ThresholdSearchEngine {
+        public static List<SearchResult> searchWithThreshold(VectorStore vectorStore, String query, int topK, double threshold) {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1) {
-                throw new IllegalArgumentException("Invalid parameters");
+                throw new IllegalArgumentException("Invalid search parameters");
             }
-            if (minThreshold < 0.0 || minThreshold > 1.0) {
-                throw new IllegalArgumentException("minThreshold must be between 0.0 and 1.0");
+            if (threshold < 0.0 || threshold > 1.0) {
+                throw new IllegalArgumentException("threshold must be between 0.0 and 1.0");
             }
             SearchRequest req = SearchRequest.builder()
                     .query(query)
                     .topK(topK)
-                    .similarityThreshold(minThreshold)
+                    .similarityThreshold(threshold)
                     .build();
             List<Document> docs = vectorStore.similaritySearch(req);
             return docs.stream()
@@ -152,291 +233,117 @@ public class VectorStoreUnderTest {
         }
     }
 
-    public static class MetadataExpressionFilter {
-        public static List<SearchResult> searchWithMetadataFilter(
-                VectorStore vectorStore,
-                String query,
-                String targetCategory,
-                String targetSeverity,
-                int topK
-        ) {
+    public static class ScoredSearchEngine {
+        public static List<SearchResult> searchScoredAndSorted(VectorStore vectorStore, String query, int topK, double threshold) {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1) {
-                throw new IllegalArgumentException("Invalid parameters");
+                throw new IllegalArgumentException("Invalid search parameters");
             }
-            if (targetCategory == null || targetCategory.isBlank() || targetSeverity == null || targetSeverity.isBlank()) {
-                throw new IllegalArgumentException("Category and severity must be non-blank");
+            if (threshold < 0.0 || threshold > 1.0) {
+                throw new IllegalArgumentException("threshold must be between 0.0 and 1.0");
             }
-            FilterExpressionBuilder b = new FilterExpressionBuilder();
-            Filter.Expression expr = b.and(b.eq("category", targetCategory), b.eq("severity", targetSeverity)).build();
-
             SearchRequest req = SearchRequest.builder()
                     .query(query)
                     .topK(topK)
-                    .filterExpression(expr)
+                    .similarityThreshold(threshold)
                     .build();
             List<Document> docs = vectorStore.similaritySearch(req);
-            return docs.stream()
+            List<SearchResult> results = new ArrayList<>(docs.stream()
                     .map(d -> new SearchResult(d.getId(), d.getText(), d.getMetadata(), d.getScore() != null ? d.getScore() : 0.0))
-                    .toList();
-        }
-    }
-
-    public static class DocumentLifecycleManager {
-        public static void deleteAndReindex(
-                VectorStore vectorStore,
-                List<String> documentIdsToDelete,
-                List<Document> newDocuments
-        ) {
-            if (vectorStore == null) throw new IllegalArgumentException("vectorStore must not be null");
-            if (documentIdsToDelete != null && !documentIdsToDelete.isEmpty()) {
-                vectorStore.delete(documentIdsToDelete);
-            }
-            if (newDocuments != null && !newDocuments.isEmpty()) {
-                vectorStore.add(newDocuments);
-            }
-        }
-    }
-
-    public static class CachedEmbeddingDecorator implements EmbeddingModel {
-        private final EmbeddingModel delegate;
-        private final Map<String, float[]> cache = new ConcurrentHashMap<>();
-        private final AtomicLong hits = new AtomicLong(0);
-        private final AtomicLong misses = new AtomicLong(0);
-
-        public CachedEmbeddingDecorator(EmbeddingModel delegate) {
-            this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
-        }
-
-        public CacheStats getStats() {
-            return new CacheStats(hits.get(), misses.get());
-        }
-
-        @Override
-        public float[] embed(Document document) {
-            return embed(document != null ? document.getText() : "");
-        }
-
-        @Override
-        public float[] embed(String text) {
-            String key = text != null ? text : "";
-            float[] cached = cache.get(key);
-            if (cached != null) {
-                hits.incrementAndGet();
-                return cached;
-            }
-            misses.incrementAndGet();
-            float[] computed = delegate.embed(key);
-            cache.put(key, computed);
-            return computed;
-        }
-
-        @Override
-        public List<float[]> embed(List<String> texts) {
-            if (texts == null) return List.of();
-            List<float[]> list = new ArrayList<>(texts.size());
-            for (String t : texts) {
-                list.add(embed(t));
-            }
-            return list;
-        }
-
-        @Override
-        public EmbeddingResponse call(EmbeddingRequest request) {
-            List<String> instructions = request != null ? request.getInstructions() : List.of();
-            List<Embedding> embeddings = new ArrayList<>();
-            for (int i = 0; i < instructions.size(); i++) {
-                float[] vec = embed(instructions.get(i));
-                embeddings.add(new Embedding(vec, i));
-            }
-            return new EmbeddingResponse(embeddings);
-        }
-
-        @Override
-        public int dimensions() {
-            return delegate.dimensions();
-        }
-    }
-
-    public static class KnowledgeIngestionGateway {
-        public static IngestionReport ingestAndVerify(
-                VectorStore vectorStore,
-                List<RawKnowledgeItem> rawItems,
-                ChunkConfig chunkConfig,
-                String testQuery,
-                double minThreshold
-        ) {
-            if (vectorStore == null || rawItems == null || rawItems.isEmpty() || chunkConfig == null) {
-                throw new IllegalArgumentException("Invalid gateway parameters");
-            }
-
-            List<Document> allChunks = new ArrayList<>();
-            for (RawKnowledgeItem item : rawItems) {
-                Map<String, Object> meta = new HashMap<>(item.metadata());
-                meta.put("title", item.title());
-                String fullText = item.title() + "\n" + item.content();
-                Document rootDoc = DocumentFactory.createDocument(item.id(), fullText, meta);
-                List<Document> chunks = TextChunkingPipeline.splitDocument(rootDoc, chunkConfig);
-                allChunks.addAll(chunks);
-            }
-
-            vectorStore.add(allChunks);
-
-            List<SearchResult> verification = ThresholdSimilarityFilter.searchWithThreshold(
-                    vectorStore, testQuery, 5, minThreshold
-            );
-
-            if (verification.isEmpty()) {
-                throw new VectorStoreBreachException("VectorStore constraint breached: knowledge verification query yielded zero matches for query: " + testQuery);
-            }
-
-            List<String> chunkIds = allChunks.stream().map(Document::getId).toList();
-            return new IngestionReport(rawItems.size(), allChunks.size(), allChunks.size(), chunkIds);
-        }
-    }
-
-    public static class MaximalMarginalRelevanceSearchEngine {
-        public static List<SearchResult> searchMmr(
-                VectorStore vectorStore,
-                EmbeddingModel embeddingModel,
-                String query,
-                MmrConfig config
-        ) {
-            if (vectorStore == null || embeddingModel == null || query == null || query.isBlank() || config == null) {
-                throw new IllegalArgumentException("Inputs must not be null or blank");
-            }
-
-            float[] queryVector = embeddingModel.embed(query);
-            int candidateK = config.topK() * config.candidateFetchMultiplier();
-
-            List<Document> candidates = vectorStore.similaritySearch(
-                    SearchRequest.builder().query(query).topK(candidateK).build()
-            );
-
-            if (candidates.isEmpty()) {
-                return List.of();
-            }
-
-            Map<String, float[]> docEmbeddings = new HashMap<>();
-            for (Document doc : candidates) {
-                float[] emb = embeddingModel.embed(doc.getText());
-                docEmbeddings.put(doc.getId(), emb);
-            }
-
-            List<Document> selected = new ArrayList<>();
-            List<Document> remaining = new ArrayList<>(candidates);
-            int targetCount = Math.min(config.topK(), candidates.size());
-
-            while (selected.size() < targetCount && !remaining.isEmpty()) {
-                Document bestDoc = null;
-                double bestMmr = Double.NEGATIVE_INFINITY;
-
-                for (Document cand : remaining) {
-                    float[] candEmb = docEmbeddings.get(cand.getId());
-                    double simToQuery = cosineSimilarity(candEmb, queryVector);
-
-                    double maxSimToSelected = 0.0;
-                    for (Document sel : selected) {
-                        float[] selEmb = docEmbeddings.get(sel.getId());
-                        double simToSel = cosineSimilarity(candEmb, selEmb);
-                        if (simToSel > maxSimToSelected) {
-                            maxSimToSelected = simToSel;
-                        }
-                    }
-
-                    double mmr = config.lambda() * simToQuery - (1.0 - config.lambda()) * maxSimToSelected;
-                    if (mmr > bestMmr) {
-                        bestMmr = mmr;
-                        bestDoc = cand;
-                    }
-                }
-
-                if (bestDoc != null) {
-                    selected.add(bestDoc);
-                    remaining.remove(bestDoc);
-                } else {
-                    break;
-                }
-            }
-
-            List<SearchResult> results = new ArrayList<>();
-            for (Document doc : selected) {
-                float[] emb = docEmbeddings.get(doc.getId());
-                double score = cosineSimilarity(emb, queryVector);
-                results.add(new SearchResult(doc.getId(), doc.getText(), doc.getMetadata(), score));
-            }
+                    .toList());
+            results.sort(Comparator.comparingDouble(SearchResult::score).reversed());
             return results;
         }
+    }
 
-        private static double cosineSimilarity(float[] u, float[] v) {
-            if (u == null || v == null || u.length == 0 || v.length == 0) return 0.0;
-            int n = Math.min(u.length, v.length);
-            double dot = 0.0;
-            double normU = 0.0;
-            double normV = 0.0;
-            for (int i = 0; i < n; i++) {
-                dot += (double) u[i] * v[i];
-                normU += (double) u[i] * u[i];
-                normV += (double) v[i] * v[i];
+    // =========================================================================
+    // TOPIC 5: FilterExpressionBuilder Basics & Comparisons (Scenarios 13 - 15)
+    // =========================================================================
+
+    public static class EqualityFilterBuilder {
+        public static Filter.Expression buildEqualityFilter(String field, String value, boolean negate) {
+            if (field == null || field.isBlank() || value == null) {
+                throw new IllegalArgumentException("Field and value must not be blank/null");
             }
-            if (normU <= 1e-9 || normV <= 1e-9) return 0.0;
-            double sim = dot / (Math.sqrt(normU) * Math.sqrt(normV));
-            return Math.max(-1.0, Math.min(1.0, sim));
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return negate ? b.ne(field, value).build() : b.eq(field, value).build();
         }
     }
 
-    public static class ContentHashDeduplicationPipeline {
-        private final Set<String> indexedHashes = ConcurrentHashMap.newKeySet();
-
-        public DedupReport ingestWithDeduplication(VectorStore vectorStore, List<Document> incomingDocuments) {
-            if (vectorStore == null || incomingDocuments == null) {
-                throw new IllegalArgumentException("Inputs must not be null");
+    public static class NumericRangeFilterBuilder {
+        public static Filter.Expression buildRangeFilter(String field, double minValue, double maxValue) {
+            if (field == null || field.isBlank() || minValue > maxValue) {
+                throw new IllegalArgumentException("Invalid range parameters");
             }
-
-            List<Document> toIndex = new ArrayList<>();
-            List<String> indexedIds = new ArrayList<>();
-            int duplicatesSkipped = 0;
-
-            for (Document doc : incomingDocuments) {
-                String normalized = doc.getText() != null ? doc.getText().trim().toLowerCase() : "";
-                String hash = sha256(normalized);
-
-                if (indexedHashes.contains(hash)) {
-                    duplicatesSkipped++;
-                } else {
-                    indexedHashes.add(hash);
-                    Map<String, Object> meta = new HashMap<>(doc.getMetadata());
-                    meta.put("contentHash", hash);
-                    meta.put("indexedAt", Instant.now().toString());
-
-                    Document enriched = doc.mutate().metadata(meta).build();
-                    toIndex.add(enriched);
-                    indexedIds.add(doc.getId());
-                }
-            }
-
-            if (!toIndex.isEmpty()) {
-                vectorStore.add(toIndex);
-            }
-
-            return new DedupReport(incomingDocuments.size(), toIndex.size(), duplicatesSkipped, indexedIds);
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return b.and(b.gte(field, minValue), b.lte(field, maxValue)).build();
         }
+    }
 
-        public Set<String> getIndexedHashes() {
-            return Collections.unmodifiableSet(indexedHashes);
-        }
-
-        private static String sha256(String text) {
-            try {
-                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                byte[] encoded = digest.digest(text.getBytes(StandardCharsets.UTF_8));
-                StringBuilder hex = new StringBuilder();
-                for (byte b : encoded) {
-                    hex.append(String.format("%02x", b));
-                }
-                return hex.toString();
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("SHA-256 not available", e);
+    public static class LogicalFilterBuilder {
+        public static Filter.Expression buildConjunctiveFilter(
+                String catField, String catVal,
+                String sevField, String sevVal,
+                boolean requireBoth
+        ) {
+            if (catField == null || catField.isBlank() || catVal == null || catVal.isBlank()
+                    || sevField == null || sevField.isBlank() || sevVal == null || sevVal.isBlank()) {
+                throw new IllegalArgumentException("All filter fields and values must be non-blank");
             }
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return requireBoth
+                    ? b.and(b.eq(catField, catVal), b.eq(sevField, sevVal)).build()
+                    : b.or(b.eq(catField, catVal), b.eq(sevField, sevVal)).build();
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 6: FilterExpressionBuilder Collections & Search Integration (Scenarios 16 - 18)
+    // =========================================================================
+
+    public static class SetContainmentFilterBuilder {
+        public static Filter.Expression buildInFilter(String field, List<String> values, boolean negate) {
+            if (field == null || field.isBlank() || values == null || values.isEmpty()) {
+                throw new IllegalArgumentException("Field and values must be valid");
+            }
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return negate
+                    ? b.nin(field, values.toArray()).build()
+                    : b.in(field, values.toArray()).build();
+        }
+    }
+
+    public static class NestedFilterBuilder {
+        public static Filter.Expression buildAuditFilter(String env, String minSeverity, List<String> targetTeams) {
+            if (env == null || env.isBlank() || minSeverity == null || minSeverity.isBlank() || targetTeams == null || targetTeams.isEmpty()) {
+                throw new IllegalArgumentException("Inputs must not be null or blank");
+            }
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return b.and(
+                    b.eq("environment", env),
+                    b.or(b.eq("severity", minSeverity), b.in("team", targetTeams.toArray()))
+            ).build();
+        }
+    }
+
+    public static class FilteredSearchGateway {
+        public static List<SearchResult> searchWithFilter(
+                VectorStore vectorStore,
+                String query,
+                Filter.Expression filterExpression,
+                int topK
+        ) {
+            if (vectorStore == null || query == null || query.isBlank() || filterExpression == null || topK < 1) {
+                throw new IllegalArgumentException("Invalid search arguments");
+            }
+            SearchRequest req = SearchRequest.builder()
+                    .query(query)
+                    .topK(topK)
+                    .filterExpression(filterExpression)
+                    .build();
+            List<Document> docs = vectorStore.similaritySearch(req);
+            return docs.stream()
+                    .map(d -> new SearchResult(d.getId(), d.getText(), d.getMetadata(), d.getScore() != null ? d.getScore() : 0.0))
+                    .toList();
         }
     }
 }

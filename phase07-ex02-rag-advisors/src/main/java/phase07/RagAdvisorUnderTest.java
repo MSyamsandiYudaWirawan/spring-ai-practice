@@ -1,251 +1,292 @@
 package phase07;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
+import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.generation.augmentation.QueryAugmenter;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
 import org.springframework.ai.rag.preretrieval.query.expansion.QueryExpander;
 import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.TranslationQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
+import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
-import phase07.RagAdvisorContracts.*;
+import org.springframework.ai.vectorstore.filter.Filter;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 
 /**
- * Phase 07 Exercise 02: Modular RAG Advisors, Pre/Post Retrieval Pipelines and Enterprise RAG Gateway.
+ * Exercise implementation under test for Phase 07 Exercise 02:
+ * Modular RAG Advisors, Pre/Post Retrieval Pipelines and ChatClient Integration.
  * <p>
- * Practice Drills:
- * 1. VectorStoreDocumentRetriever Builder & Similarity Threshold Filtering
- * 2. Tenant-Isolated FilterExpression Retrieval
- * 3. Custom ContextualQueryAugmenter & Document Formatting
- * 4. Empty Context Guardrails & Fallback Prompting
- * 5. DocumentPostProcessor Deduplication & Priority Reranking
- * 6. MultiQueryExpander Pre-Retrieval Expansion
- * 7. RewriteQueryTransformer Query Rewriting
- * 8. ConcatenationDocumentJoiner Multi-Query Merging
- * 9. RetrievalAugmentationAdvisor End-to-End ChatClient Binding
- * 10. Guardrailed Enterprise Multi-Tenant RAG Gateway
- * 11. Hypothetical Document Embeddings (HyDE) Query Transformer
- * 12. Token-Budget Context Packing & Dynamic Truncator
+ * 15 repetitive muscle-memory drills across 5 core topics (3 repetitions each).
+ * Implement all 15 scenarios in this file.
  */
 public class RagAdvisorUnderTest {
 
+    // =========================================================================
+    // TOPIC 1: VectorStoreDocumentRetriever (Scenarios 1 - 3)
+    // =========================================================================
+
     /**
-     * Scenario 01: VectorStoreDocumentRetriever Builder & Similarity Threshold.
+     * Scenario 01: Basic VectorStoreDocumentRetriever with Top-K.
      * <p>
      * Instructions:
-     * - Use VectorStoreDocumentRetriever.builder().
-     * - Configure vectorStore(store), topK(topK), and similarityThreshold(threshold).
-     * - Build and return the DocumentRetriever.
+     * - Validate store != null and topK >= 1; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return VectorStoreDocumentRetriever using VectorStoreDocumentRetriever.builder():
+     *   - vectorStore(store)
+     *   - topK(topK)
+     *   - build()
      */
-    public DocumentRetriever buildVectorRetriever(VectorStore store, int topK, double threshold) {
-        // DEFECT: Returns null
+    public DocumentRetriever buildBasicRetriever(VectorStore store, int topK) {
+        // DEFECT (Scenario 1): Returns null
         return null;
     }
 
     /**
-     * Scenario 02: Tenant-Isolated FilterExpression Retrieval.
+     * Scenario 02: Threshold-Gated VectorStoreDocumentRetriever.
      * <p>
      * Instructions:
-     * - Construct a Filter.Expression using FilterExpressionBuilder: eq("tenant", tenantId).
-     * - Configure VectorStoreDocumentRetriever.builder() with vectorStore, topK, and filterExpression.
-     * - Build and return the DocumentRetriever.
+     * - Validate store != null, topK >= 1, and 0.0 <= threshold <= 1.0; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return VectorStoreDocumentRetriever using:
+     *   - vectorStore(store)
+     *   - topK(topK)
+     *   - similarityThreshold(threshold)
+     *   - build()
      */
-    public DocumentRetriever buildTenantFilteredRetriever(VectorStore store, String tenantId, int topK) {
-        // DEFECT: Returns null
+    public DocumentRetriever buildThresholdRetriever(VectorStore store, int topK, double threshold) {
+        // DEFECT (Scenario 2): Returns null
         return null;
     }
 
     /**
-     * Scenario 03: Custom ContextualQueryAugmenter & Document Formatting.
+     * Scenario 03: Metadata Filter-Constrained VectorStoreDocumentRetriever.
      * <p>
      * Instructions:
-     * - Create a document formatter function: for each Document doc in list, format as:
-     *   headerPrefix + doc.getMetadata().getOrDefault("source", "unknown") + ": " + doc.getText()
-     *   joining multiple documents with "\n\n".
-     * - Create a PromptTemplate containing placeholders {context} and {query}:
-     *   "Context information is below.\n---------------------\n{context}\n---------------------\nGiven the context, answer the query: {query}"
-     * - Configure ContextualQueryAugmenter.builder() with promptTemplate, documentFormatter, and allowEmptyContext.
-     * - Build and return the QueryAugmenter.
+     * - Validate store != null, topK >= 1, and filterExpression != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return VectorStoreDocumentRetriever using:
+     *   - vectorStore(store)
+     *   - topK(topK)
+     *   - filterExpression(filterExpression)
+     *   - build()
      */
-    public QueryAugmenter buildCustomAugmenter(String headerPrefix, boolean allowEmpty) {
-        // DEFECT: Returns null
+    public DocumentRetriever buildFilterExpressionRetriever(VectorStore store, int topK, Filter.Expression filterExpression) {
+        // DEFECT (Scenario 3): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 2: ContextualQueryAugmenter & Prompt Augmentation (Scenarios 4 - 6)
+    // =========================================================================
+
+    /**
+     * Scenario 04: Custom Document Formatter Augmenter.
+     * <p>
+     * Instructions:
+     * - Validate headerPrefix != null; throw {@link IllegalArgumentException} otherwise.
+     * - Create a document formatter Function<List<Document>, String>:
+     *   - For each Document doc in the list:
+     *     headerPrefix + doc.getMetadata().getOrDefault("source", "unknown") + ": " + doc.getText()
+     *   - Join the formatted documents with "\n\n".
+     * - Build and return ContextualQueryAugmenter using:
+     *   - documentFormatter(formatter)
+     *   - allowEmptyContext(allowEmpty)
+     *   - build()
+     */
+    public QueryAugmenter buildCustomFormattedAugmenter(String headerPrefix, boolean allowEmpty) {
+        // DEFECT (Scenario 4): Returns null
         return null;
     }
 
     /**
-     * Scenario 04: Empty Context Guardrails & Fallback Prompting.
+     * Scenario 05: Templated Augmenter with Custom Placeholders.
      * <p>
      * Instructions:
-     * - Configure ContextualQueryAugmenter.builder():
+     * - Validate customPromptTemplate != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return ContextualQueryAugmenter using:
+     *   - promptTemplate(customPromptTemplate)
+     *   - build()
+     */
+    public QueryAugmenter buildTemplatedAugmenter(PromptTemplate customPromptTemplate) {
+        // DEFECT (Scenario 5): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 06: Fallback-Guarded Empty Context Augmenter.
+     * <p>
+     * Instructions:
+     * - Validate fallbackMessage != null and !fallbackMessage.isBlank(); throw {@link IllegalArgumentException} otherwise.
+     * - Build and return ContextualQueryAugmenter using:
      *   - allowEmptyContext(false)
      *   - emptyContextPromptTemplate(new PromptTemplate(fallbackMessage))
-     * - Build and return the QueryAugmenter.
+     *   - build()
      */
-    public QueryAugmenter buildFallbackAugmenter(String fallbackMessage) {
-        // DEFECT: Returns null
+    public QueryAugmenter buildFallbackGuardedAugmenter(String fallbackMessage) {
+        // DEFECT (Scenario 6): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 3: DocumentPostProcessor Filtering & Reranking (Scenarios 7 - 9)
+    // =========================================================================
+
+    /**
+     * Scenario 07: Deduplicating DocumentPostProcessor.
+     * <p>
+     * Instructions:
+     * - Return a DocumentPostProcessor implementation ((query, documents) -> List<Document>):
+     *   - If documents is null or empty, return List.of().
+     *   - Deduplicate documents by doc.getId() while preserving first-seen order.
+     *   - Return deduplicated list.
+     */
+    public DocumentPostProcessor buildDeduplicatingPostProcessor() {
+        // DEFECT (Scenario 7): Returns null
         return null;
     }
 
     /**
-     * Scenario 05: DocumentPostProcessor Deduplication & Priority Reranking.
+     * Scenario 08: Priority-Ranking DocumentPostProcessor.
      * <p>
      * Instructions:
-     * - Implement a DocumentPostProcessor: (query, documents) -> List<Document>.
-     * - Deduplicate documents by doc.getId() (keep first occurrence if duplicate ID).
-     * - Sort deduplicated documents by metadata "priority" integer (descending):
-     *   ((Integer) doc.getMetadata().getOrDefault("priority", 0)).
-     * - Limit result to maxDocs.
-     * - Return the cleaned list of documents.
+     * - Validate maxDocs >= 1; throw {@link IllegalArgumentException} otherwise.
+     * - Return a DocumentPostProcessor implementation ((query, documents) -> List<Document>):
+     *   - If documents is null or empty, return List.of().
+     *   - Deduplicate documents by doc.getId().
+     *   - Sort descending by integer metadata "priority" (doc.getMetadata().getOrDefault("priority", 0)).
+     *   - Limit results to maxDocs.
+     *   - Return sorted list.
      */
-    public DocumentPostProcessor buildDeduplicatingPriorityReranker(int maxDocs) {
-        // DEFECT: Returns null
+    public DocumentPostProcessor buildPriorityRankingPostProcessor(int maxDocs) {
+        // DEFECT (Scenario 8): Returns null
         return null;
     }
 
     /**
-     * Scenario 06: MultiQueryExpander Pre-Retrieval Expansion.
+     * Scenario 09: Score-Gating DocumentPostProcessor.
      * <p>
      * Instructions:
-     * - Configure MultiQueryExpander.builder() with chatClientBuilder, numberOfQueries, and includeOriginal.
-     * - Build and return the QueryExpander.
+     * - Validate 0.0 <= minScore <= 1.0; throw {@link IllegalArgumentException} otherwise.
+     * - Return a DocumentPostProcessor implementation ((query, documents) -> List<Document>):
+     *   - If documents is null or empty, return List.of().
+     *   - Filter out documents where doc.getScore() == null or doc.getScore() < minScore.
+     *   - Return matching list.
+     */
+    public DocumentPostProcessor buildScoreGatingPostProcessor(double minScore) {
+        // DEFECT (Scenario 9): Returns null
+        return null;
+    }
+
+    // =========================================================================
+    // TOPIC 4: Pre-Retrieval Query Transformers & Expanders (Scenarios 10 - 12)
+    // =========================================================================
+
+    /**
+     * Scenario 10: MultiQueryExpander Builder.
+     * <p>
+     * Instructions:
+     * - Validate chatClientBuilder != null and numberOfQueries >= 1; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return MultiQueryExpander using MultiQueryExpander.builder():
+     *   - chatClientBuilder(chatClientBuilder)
+     *   - numberOfQueries(numberOfQueries)
+     *   - includeOriginal(includeOriginal)
+     *   - build()
      */
     public QueryExpander buildMultiQueryExpander(ChatClient.Builder chatClientBuilder, int numberOfQueries, boolean includeOriginal) {
-        // DEFECT: Returns null
+        // DEFECT (Scenario 10): Returns null
         return null;
     }
 
     /**
-     * Scenario 07: RewriteQueryTransformer Query Rewriting.
+     * Scenario 11: RewriteQueryTransformer Builder.
      * <p>
      * Instructions:
-     * - Configure RewriteQueryTransformer.builder() with chatClientBuilder and targetSearchSystem.
-     * - Build and return the QueryTransformer.
+     * - Validate chatClientBuilder != null and targetSearchSystem != null && !targetSearchSystem.isBlank();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Build and return RewriteQueryTransformer using RewriteQueryTransformer.builder():
+     *   - chatClientBuilder(chatClientBuilder)
+     *   - targetSearchSystem(targetSearchSystem)
+     *   - build()
      */
     public QueryTransformer buildRewriteTransformer(ChatClient.Builder chatClientBuilder, String targetSearchSystem) {
-        // DEFECT: Returns null
+        // DEFECT (Scenario 11): Returns null
         return null;
     }
 
     /**
-     * Scenario 08: ConcatenationDocumentJoiner Multi-Query Merging.
+     * Scenario 12: TranslationQueryTransformer Builder.
      * <p>
      * Instructions:
-     * - Instantiate ConcatenationDocumentJoiner.
-     * - Call joiner.join(queryResults) and return the combined list of Documents.
+     * - Validate chatClientBuilder != null and targetLanguage != null && !targetLanguage.isBlank();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Build and return TranslationQueryTransformer using TranslationQueryTransformer.builder():
+     *   - chatClientBuilder(chatClientBuilder)
+     *   - targetLanguage(targetLanguage)
+     *   - build()
      */
-    public List<Document> joinMultiQueryResults(Map<Query, List<List<Document>>> queryResults) {
-        // DEFECT: Returns empty list
-        return List.of();
+    public QueryTransformer buildTranslationTransformer(ChatClient.Builder chatClientBuilder, String targetLanguage) {
+        // DEFECT (Scenario 12): Returns null
+        return null;
     }
 
+    // =========================================================================
+    // TOPIC 5: RetrievalAugmentationAdvisor & ChatClient Integration (Scenarios 13 - 15)
+    // =========================================================================
+
     /**
-     * Scenario 09: RetrievalAugmentationAdvisor End-to-End ChatClient Binding.
+     * Scenario 13: Basic RetrievalAugmentationAdvisor.
      * <p>
      * Instructions:
-     * - Configure RetrievalAugmentationAdvisor.builder():
+     * - Validate retriever != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return RetrievalAugmentationAdvisor using RetrievalAugmentationAdvisor.builder():
      *   - documentRetriever(retriever)
-     *   - if (augmenter != null) queryAugmenter(augmenter)
-     *   - if (postProcessor != null) documentPostProcessors(postProcessor)
-     * - Build and return the RetrievalAugmentationAdvisor.
+     *   - build()
      */
-    public RetrievalAugmentationAdvisor buildRetrievalAdvisor(DocumentRetriever retriever, QueryAugmenter augmenter, DocumentPostProcessor postProcessor) {
-        // DEFECT: Returns null
+    public RetrievalAugmentationAdvisor buildBasicAdvisor(DocumentRetriever retriever) {
+        // DEFECT (Scenario 13): Returns null
         return null;
     }
 
     /**
-     * Scenario 10: Guardrailed Enterprise Multi-Tenant RAG Gateway.
+     * Scenario 14: Augmented RetrievalAugmentationAdvisor.
      * <p>
      * Instructions:
-     * 1. Validate request:
-     *    - If request is null, or request.userTenant() is null/blank, or request.query() is null/blank:
-     *      throw new RagGatewayBreachException("Invalid request: missing tenant or query").
-     *    - If request.userClearance() < config.minRequiredClearance():
-     *      throw new RagGatewayBreachException("Access denied: clearance " + request.userClearance()
-     *          + " below required " + config.minRequiredClearance()).
-     * 2. Build tenant and clearance filter:
-     *    FilterExpressionBuilder b = new FilterExpressionBuilder();
-     *    Filter.Expression filter = b.and(b.eq("tenant", request.userTenant()), b.lte("clearance", request.userClearance())).build();
-     * 3. Construct VectorStoreDocumentRetriever:
-     *    topK=config.topK(), similarityThreshold=config.similarityThreshold(), filterExpression=filter.
-     * 4. Retrieve documents for Query(request.query()).
-     * 5. Empty check:
-     *    - If docs.isEmpty():
-     *      - If !config.allowEmptyContext():
-     *        throw new RagGatewayBreachException("Zero documents found for tenant " + request.userTenant()
-     *            + " matching clearance and similarity threshold");
-     *      - Else:
-     *        return new RagGatewayResponse("No confidential documentation found for your clearance level.", List.of(), 0, true);
-     * 6. Post-processing:
-     *    - Deduplicate docs by doc.getId() and limit to config.maxDocs().
-     * 7. Execute ChatClient via RetrievalAugmentationAdvisor:
-     *    - Build RetrievalAugmentationAdvisor with the retriever and postProcessor: (q, d) -> deduplicatedDocs.
-     *    - Call chatClientBuilder.build().prompt().advisors(advisor).user(request.query()).call().chatResponse().
-     *    - Extract citations from the deduplicated documents:
-     *      Citation(doc.getId(), (String) doc.getMetadata().getOrDefault("source", "unknown"), doc.getScore()).
-     *    - Extract totalTokens from chatResponse.getMetadata().getUsage().getTotalTokens() (or 0 if null).
-     *    - Return new RagGatewayResponse(chatResponse.getResult().getOutput().getText(), citations, totalTokens, true).
+     * - Validate retriever != null and queryAugmenter != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return RetrievalAugmentationAdvisor using RetrievalAugmentationAdvisor.builder():
+     *   - documentRetriever(retriever)
+     *   - queryAugmenter(queryAugmenter)
+     *   - build()
      */
-    public RagGatewayResponse executeGatewayQuery(
-            EnterpriseRagGatewayConfig config,
-            RagGatewayRequest request,
-            ChatClient.Builder chatClientBuilder,
-            VectorStore store
+    public RetrievalAugmentationAdvisor buildAugmentedAdvisor(DocumentRetriever retriever, QueryAugmenter queryAugmenter) {
+        // DEFECT (Scenario 14): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 15: Full-Pipeline RetrievalAugmentationAdvisor.
+     * <p>
+     * Instructions:
+     * - Validate retriever != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build and return RetrievalAugmentationAdvisor using RetrievalAugmentationAdvisor.builder():
+     *   - documentRetriever(retriever)
+     *   - if queryExpander != null: queryExpander(queryExpander)
+     *   - if postProcessor != null: documentPostProcessors(postProcessor)
+     *   - if queryAugmenter != null: queryAugmenter(queryAugmenter)
+     *   - build()
+     */
+    public RetrievalAugmentationAdvisor buildFullPipelineAdvisor(
+            DocumentRetriever retriever,
+            QueryExpander queryExpander,
+            DocumentPostProcessor postProcessor,
+            QueryAugmenter queryAugmenter
     ) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 11: Hypothetical Document Embeddings (HyDE) Query Transformer.
-     * <p>
-     * Instructions:
-     * - Validate chatClientBuilder != null and hypotheticalPromptTemplate != null && !hypotheticalPromptTemplate.isBlank();
-     *   throw {@link IllegalArgumentException} otherwise.
-     * - Return a QueryTransformer implementation:
-     *   - If query == null || query.text() == null || query.text().isBlank(), return query.
-     *   - Build ChatClient from builder.
-     *   - Format user prompt by replacing "{query}" with query.text().
-     *   - Call chatClient.prompt().user(userPrompt).call().content().
-     *   - If returned content is null or blank:
-     *     return query (graceful fallback to original query).
-     *   - Else:
-     *     return query.mutate().text(returnedContent.trim()).build().
-     */
-    public QueryTransformer buildHydeTransformer(ChatClient.Builder chatClientBuilder, String hypotheticalPromptTemplate) {
-        // DEFECT: Returns null
-        return null;
-    }
-
-    /**
-     * Scenario 12: Token-Budget Context Packing & Dynamic Truncator.
-     * <p>
-     * Instructions:
-     * - Validate documents != null, maxTokens > 0, and delimiter != null;
-     *   throw {@link IllegalArgumentException} otherwise.
-     * - Helper token estimator: (int) Math.ceil(text.length() / 4.0).
-     * - Greedily pack document texts up to maxTokens:
-     *   - If documents list is empty: return PackedContext("", 0, 0, 0, List.of()).
-     *   - For each document:
-     *     - docTokens = estimateTokens(doc.getText()).
-     *     - If packedDocs is empty:
-     *       - If docTokens <= maxTokens: pack full doc.
-     *       - Else: truncate text to (maxTokens * 4) chars and pack truncated doc.
-     *     - Else:
-     *       - If (currentTokens + delimTokens + docTokens) <= maxTokens:
-     *         pack full doc.
-     *       - Else:
-     *         increment droppedDocumentCount for this and remaining docs; stop loop.
-     * - Join packed texts with delimiter.
-     * - Return PackedContext(joinedText, currentTokens, packedDocs.size(), droppedCount, packedIds).
-     */
-    public PackedContext packContextWithinBudget(List<Document> documents, int maxTokens, String delimiter) {
-        // DEFECT: Returns null
+        // DEFECT (Scenario 15): Returns null
         return null;
     }
 }

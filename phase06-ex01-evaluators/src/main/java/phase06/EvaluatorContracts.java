@@ -52,6 +52,31 @@ public final class EvaluatorContracts {
     }
 
     /**
+     * Parsed evaluation rubric verdict and reasoning.
+     */
+    public record RubricVerdict(
+            boolean pass,
+            String reason
+    ) {
+        public RubricVerdict {
+            Objects.requireNonNull(reason, "reason must not be null");
+        }
+    }
+
+    /**
+     * Parsed structured JSON evaluation rubric result.
+     */
+    public record StructuredRubricResult(
+            float score,
+            boolean verdict,
+            String reason
+    ) {
+        public StructuredRubricResult {
+            Objects.requireNonNull(reason, "reason must not be null");
+        }
+    }
+
+    /**
      * Evaluation criterion definition for multi-attribute evaluation.
      */
     public record EvaluationCriterion(

@@ -1,57 +1,46 @@
 # Phase 08 Exercise 01: Model Context Protocol (MCP) Server Architecture & Protocol Specifications
 
 ## Focus & Learning Objectives
-This exercise teaches the official Model Context Protocol (MCP) Java SDK (`io.modelcontextprotocol.sdk:mcp-core:2.0.0`) and Spring AI's native MCP integration (`org.springframework.ai:spring-ai-mcp:2.0.1`):
-- **Server Protocol Capabilities:** Negotiating server capabilities (`tools`, `resources`, `prompts`, `logging`).
-- **Tool Schema Generation:** Defining tools with JSON Schema input validation (`type: object`, `properties`, `required`).
-- **Execution Handlers:** Wrapping tool execution into `CallToolResult` with structured `TextContent`.
-- **Resilient Tool Execution:** Shielding the server runtime by catching tool errors and returning `isError: true` signals.
-- **Spring AI Tool Adapter:** Exporting native Spring AI `@Tool` and `ToolCallback` beans to MCP `SyncToolSpecification` via `McpToolUtils`.
-- **MCP Resources:** Exposing static and dynamic resources (URIs, mime-types, and read handlers).
-- **MCP Prompts:** Exposing parameterized prompt templates with arguments and variable substitution.
-- **Security Allowlists:** Enforcing tool execution allowlists and role gates.
-- **Server Telemetry & Auditing:** Tracking total tool executions, success rates, errors, and per-tool frequency.
-- **Enterprise MCP Server Registry:** Managing composite tool, resource, and prompt catalogs with unified dispatch and error boundaries.
-- **Resource URI Template Matching:** Parsing RFC 6570 URI templates with path variable extraction.
-- **MCP Protocol Log Notifications:** Dispatching structured protocol log notifications with severity filtering.
+This exercise drills the official Model Context Protocol (MCP) Java SDK (`io.modelcontextprotocol.sdk:mcp-core:2.0.0`) and Spring AI's native MCP integration (`org.springframework.ai:spring-ai-mcp:2.0.1`):
+- **Tool Definitions & JSON Schema:** Building standard `Tool` specifications with JSON Schema properties, required fields, and schema titles.
+- **SyncToolSpecification Handlers:** Implementing execution handlers, returning `CallToolResult` with `TextContent`, handling exceptions gracefully with error flags, and adapting Spring AI `ToolCallback` via `McpToolUtils`.
+- **MCP Resource Specifications:** Exposing static text, dynamic text, and binary/blob resources with `Resource.builder()` and `ReadResourceResult`.
+- **MCP Prompt Specifications:** Defining prompts with zero arguments, multi-argument templates, and role enforcement (`GetPromptResult`, `PromptMessage`).
+- **Server Capabilities & Filtering:** Declaring protocol capabilities (`ServerCapabilities.builder()`) and filtering tools by allowlists or naming prefixes.
 
 ---
 
-## Scenarios
-1. **Scenario 01: Server Capabilities Declaration**
-   - Configure and build `ServerCapabilities` declaring protocol features.
-2. **Scenario 02: Tool Definition with JSON Input Schema**
-   - Construct a `Tool` with JSON Schema input specifications.
-3. **Scenario 03: SyncToolSpecification Execution Handler**
-   - Implement execution handler logic wrapped in `CallToolResult`.
-4. **Scenario 04: Resilient Tool Execution & Error Signal Wrapping**
-   - Catch internal tool exceptions and return error results safely.
-5. **Scenario 05: Spring AI ToolCallback to MCP Tool Adapter**
-   - Bridge Spring AI `ToolCallback` into MCP `SyncToolSpecification`.
-6. **Scenario 06: MCP Static & Dynamic Resource Specification**
-   - Register MCP resources and read handlers (`ReadResourceResult`).
-7. **Scenario 07: MCP Parameterized Prompt Template Specification**
-   - Register MCP prompts with arguments and formatting logic (`GetPromptResult`).
-8. **Scenario 08: Security Allowlist & Tool Filter**
-   - Filter available tools against security allowlists.
-9. **Scenario 09: MCP Server Telemetry & Audit Recorder**
-   - Audit tool invocations, failures, and per-tool call metrics.
-10. **Scenario 10: Composite Enterprise MCP Server Registry & Router**
-    - Orchestrate tool, resource, and prompt dispatch with security and auditing.
-11. **Scenario 11: Parameterized Resource Template URI Matcher**
-    - Match requested resource URIs against dynamic parameterized templates and extract path variables.
-12. **Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter**
-    - Filter and dispatch protocol log notifications based on configured severity thresholds (`McpLogLevel`).
+## Repetitive Muscle Memory Structure (15 Scenarios)
+
+### Topic 1: MCP Tool Definition & JSON Input Schema (Scenarios 1 – 3)
+1. **Scenario 01: Primitive-Typed Tool Definition** — Build a `Tool` with primitive property types (`string`, `integer`, etc.) mapped to JSON schema.
+2. **Scenario 02: Structured Tool Definition with Pre-built Schema Maps** — Build a `Tool` with arbitrary structured schema property definitions.
+3. **Scenario 03: Title-Enriched Tool Definition** — Build a `Tool` schema enriched with title and audit metadata.
+
+### Topic 2: SyncToolSpecification Handlers (Scenarios 4 – 6)
+4. **Scenario 04: Standard SyncToolSpecification Handler** — Wrap tool execution into `CallToolResult` with `TextContent`.
+5. **Scenario 05: Resilient SyncToolSpecification with Error Trapping** — Trap execution errors into safe error results (`isError: true`).
+6. **Scenario 06: Spring AI ToolCallback to MCP SyncToolSpecification Adapter** — Adapt Spring AI `ToolCallback` into MCP `SyncToolSpecification` using `McpToolUtils`.
+
+### Topic 3: MCP Resource Specifications (Scenarios 7 – 9)
+7. **Scenario 07: Static Text Resource Specification** — Serve static text resources with MIME types.
+8. **Scenario 08: Dynamic Text Resource Specification** — Serve dynamic runtime text content via functional providers.
+9. **Scenario 09: Binary / Blob Resource Specification** — Serve base64 binary content via `BlobResourceContents`.
+
+### Topic 4: MCP Prompt Template Specifications (Scenarios 10 – 12)
+10. **Scenario 10: Simple Zero-Argument Prompt Specification** — Build a static zero-argument prompt specification.
+11. **Scenario 11: Parameterized Multi-Argument Prompt Specification** — Build a parameterized prompt template accepting argument maps.
+12. **Scenario 12: Role-Enforced Prompt Specification** — Build a prompt specification with explicit role assignment (`Role.ASSISTANT` or `Role.USER`).
+
+### Topic 5: Server Capabilities & Protocol Filtering (Scenarios 13 – 15)
+13. **Scenario 13: Server Capabilities Declaration** — Declare negotiated protocol features (`tools`, `resources`, `prompts`, `logging`) via `ServerCapabilities.builder()`.
+14. **Scenario 14: Tool Filtering by Allowlist** — Filter server tool collections against an allowlist of tool names.
+15. **Scenario 15: Tool Filtering by Name Prefix** — Filter and route server tools based on name prefixes.
 
 ---
 
 ## Verification
-Run the offline verification harness:
-```powershell
-mvn test-compile exec:java -pl phase08-ex01-mcp-server
-```
-
-Or run standard Maven tests:
+Run standard Maven tests:
 ```powershell
 mvn test -pl phase08-ex01-mcp-server
 ```

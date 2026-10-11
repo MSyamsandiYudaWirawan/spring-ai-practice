@@ -1,17 +1,25 @@
 # Phase 07 Exercise 02: Golden Reference Solution
 
 ## Overview
-This golden solution implements **Modular RAG Advisors, Pre/Post Retrieval Pipelines, HyDE Query Transformation, Token-Budget Context Packing, and the Enterprise RAG Gateway** across all 12 scenarios using native Spring AI 2.0.1 RAG components (`org.springframework.ai.rag.*`).
+This golden solution implements **Modular RAG Advisors, Context Augmenters, Document PostProcessors, Query Transformers & RetrievalAugmentationAdvisor Pipelines** across all 15 scenarios using native Spring AI 2.0.1 components (`org.springframework.ai.rag.*`).
 
-Verified: `12 PASSED, 0 FAILED (exit code 0)`
+Structured into 5 core topics (3 repetitive variations each):
+1. `VectorStoreDocumentRetriever`: Basic top-K, similarity threshold gating, metadata filter expression (Scenarios 1–3)
+2. `ContextualQueryAugmenter`: Custom doc formatter, custom prompt template placeholders, fallback empty context guard (Scenarios 4–6)
+3. `DocumentPostProcessor`: ID deduplication, metadata priority ranking, score cutoff filtering (Scenarios 7–9)
+4. Pre-Retrieval Query Transformers: `MultiQueryExpander`, `RewriteQueryTransformer`, `TranslationQueryTransformer` (Scenarios 10–12)
+5. `RetrievalAugmentationAdvisor`: Basic retriever binding, retriever + augmenter, full end-to-end pipeline (Scenarios 13–15)
 
-## Verified Solution Code
+Verified: `15 PASSED, 0 FAILED (exit code 0)`
+
+---
+
+## File: `phase07-ex02-rag-advisors/src/main/java/phase07/RagAdvisorUnderTest.java`
 
 ```java
 package phase07;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
@@ -23,27 +31,38 @@ import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpande
 import org.springframework.ai.rag.preretrieval.query.expansion.QueryExpander;
 import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
-import org.springframework.ai.rag.retrieval.join.ConcatenationDocumentJoiner;
+import org.springframework.ai.rag.preretrieval.query.transformation.TranslationQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import phase07.RagAdvisorContracts.*;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
- * Phase 07 Exercise 02: Modular RAG Advisors, Pre/Post Retrieval Pipelines and Enterprise RAG Gateway.
+ * Golden implementation for Phase 07 Exercise 02:
+ * Modular RAG Advisors, Pre/Post Retrieval Pipelines and ChatClient Integration.
  */
 public class RagAdvisorUnderTest {
 
-    /**
-     * Scenario 01: VectorStoreDocumentRetriever Builder & Similarity Threshold.
-     */
-    public DocumentRetriever buildVectorRetriever(VectorStore store, int topK, double threshold) {
+    public DocumentRetriever buildBasicRetriever(VectorStore store, int topK) {
+        if (store == null || topK < 1) {
+            throw new IllegalArgumentException("store cannot be null and topK must be >= 1");
+        }
+        return VectorStoreDocumentRetriever.builder()
+                .vectorStore(store)
+                .topK(topK)
+                .build();
+    }
+
+    public DocumentRetriever buildThresholdRetriever(VectorStore store, int topK, double threshold) {
+        if (store == null || topK < 1) {
+            throw new IllegalArgumentException("store cannot be null and topK must be >= 1");
+        }
+        if (threshold < 0.0 || threshold > 1.0) {
+            throw new IllegalArgumentException("threshold must be between 0.0 and 1.0");
+        }
         return VectorStoreDocumentRetriever.builder()
                 .vectorStore(store)
                 .topK(topK)
@@ -51,75 +70,112 @@ public class RagAdvisorUnderTest {
                 .build();
     }
 
-    /**
-     * Scenario 02: Tenant-Isolated FilterExpression Retrieval.
-     */
-    public DocumentRetriever buildTenantFilteredRetriever(VectorStore store, String tenantId, int topK) {
-        Filter.Expression filter = new FilterExpressionBuilder().eq("tenant", tenantId).build();
+    public DocumentRetriever buildFilterExpressionRetriever(VectorStore store, int topK, Filter.Expression filterExpression) {
+        if (store == null || topK < 1 || filterExpression == null) {
+            throw new IllegalArgumentException("Parameters cannot be null and topK must be >= 1");
+        }
         return VectorStoreDocumentRetriever.builder()
                 .vectorStore(store)
                 .topK(topK)
-                .filterExpression(filter)
+                .filterExpression(filterExpression)
                 .build();
     }
 
-    /**
-     * Scenario 03: Custom ContextualQueryAugmenter & Document Formatting.
-     */
-    public QueryAugmenter buildCustomAugmenter(String headerPrefix, boolean allowEmpty) {
+    public QueryAugmenter buildCustomFormattedAugmenter(String headerPrefix, boolean allowEmpty) {
+        if (headerPrefix == null) {
+            throw new IllegalArgumentException("headerPrefix cannot be null");
+        }
         Function<List<Document>, String> formatter = docs -> {
             if (docs == null || docs.isEmpty()) return "";
-            return docs.stream()
-                    .map(d -> headerPrefix + d.getMetadata().getOrDefault("source", "unknown") + ": " + d.getText())
-                    .collect(Collectors.joining("\n\n"));
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < docs.size(); i++) {
+                Document d = docs.get(i);
+                String src = (String) d.getMetadata().getOrDefault("source", "unknown");
+                sb.append(headerPrefix).append(src).append(": ").append(d.getText());
+                if (i < docs.size() - 1) {
+                    sb.append("\n\n");
+                }
+            }
+            return sb.toString();
         };
 
-        PromptTemplate template = new PromptTemplate(
-                "Context information is below.\n---------------------\n{context}\n---------------------\nGiven the context, answer the query: {query}"
-        );
-
         return ContextualQueryAugmenter.builder()
-                .promptTemplate(template)
                 .documentFormatter(formatter)
                 .allowEmptyContext(allowEmpty)
                 .build();
     }
 
-    /**
-     * Scenario 04: Empty Context Guardrails & Fallback Prompting.
-     */
-    public QueryAugmenter buildFallbackAugmenter(String fallbackMessage) {
+    public QueryAugmenter buildTemplatedAugmenter(PromptTemplate customPromptTemplate) {
+        if (customPromptTemplate == null) {
+            throw new IllegalArgumentException("customPromptTemplate cannot be null");
+        }
+        return ContextualQueryAugmenter.builder()
+                .promptTemplate(customPromptTemplate)
+                .build();
+    }
+
+    public QueryAugmenter buildFallbackGuardedAugmenter(String fallbackMessage) {
+        if (fallbackMessage == null || fallbackMessage.isBlank()) {
+            throw new IllegalArgumentException("fallbackMessage cannot be blank");
+        }
         return ContextualQueryAugmenter.builder()
                 .allowEmptyContext(false)
                 .emptyContextPromptTemplate(new PromptTemplate(fallbackMessage))
                 .build();
     }
 
-    /**
-     * Scenario 05: DocumentPostProcessor Deduplication & Priority Reranking.
-     */
-    public DocumentPostProcessor buildDeduplicatingPriorityReranker(int maxDocs) {
+    public DocumentPostProcessor buildDeduplicatingPostProcessor() {
         return (query, documents) -> {
             if (documents == null || documents.isEmpty()) return List.of();
-            Map<String, Document> unique = new LinkedHashMap<>();
-            for (Document d : documents) {
-                unique.putIfAbsent(d.getId(), d);
+            Set<String> seen = new HashSet<>();
+            List<Document> result = new ArrayList<>();
+            for (Document doc : documents) {
+                if (seen.add(doc.getId())) {
+                    result.add(doc);
+                }
             }
-            return unique.values().stream()
-                    .sorted((d1, d2) -> {
-                        int p1 = ((Number) d1.getMetadata().getOrDefault("priority", 0)).intValue();
-                        int p2 = ((Number) d2.getMetadata().getOrDefault("priority", 0)).intValue();
-                        return Integer.compare(p2, p1);
-                    })
-                    .limit(maxDocs)
+            return result;
+        };
+    }
+
+    public DocumentPostProcessor buildPriorityRankingPostProcessor(int maxDocs) {
+        if (maxDocs < 1) {
+            throw new IllegalArgumentException("maxDocs must be >= 1");
+        }
+        return (query, documents) -> {
+            if (documents == null || documents.isEmpty()) return List.of();
+            Set<String> seen = new HashSet<>();
+            List<Document> deduplicated = new ArrayList<>();
+            for (Document doc : documents) {
+                if (seen.add(doc.getId())) {
+                    deduplicated.add(doc);
+                }
+            }
+            deduplicated.sort((a, b) -> {
+                int p1 = ((Number) a.getMetadata().getOrDefault("priority", 0)).intValue();
+                int p2 = ((Number) b.getMetadata().getOrDefault("priority", 0)).intValue();
+                return Integer.compare(p2, p1);
+            });
+            return deduplicated.stream().limit(maxDocs).toList();
+        };
+    }
+
+    public DocumentPostProcessor buildScoreGatingPostProcessor(double minScore) {
+        if (minScore < 0.0 || minScore > 1.0) {
+            throw new IllegalArgumentException("minScore must be between 0.0 and 1.0");
+        }
+        return (query, documents) -> {
+            if (documents == null || documents.isEmpty()) return List.of();
+            return documents.stream()
+                    .filter(d -> d.getScore() != null && d.getScore() >= minScore)
                     .toList();
         };
     }
 
-    /**
-     * Scenario 06: MultiQueryExpander Pre-Retrieval Expansion.
-     */
     public QueryExpander buildMultiQueryExpander(ChatClient.Builder chatClientBuilder, int numberOfQueries, boolean includeOriginal) {
+        if (chatClientBuilder == null || numberOfQueries < 1) {
+            throw new IllegalArgumentException("Invalid arguments");
+        }
         return MultiQueryExpander.builder()
                 .chatClientBuilder(chatClientBuilder)
                 .numberOfQueries(numberOfQueries)
@@ -127,195 +183,60 @@ public class RagAdvisorUnderTest {
                 .build();
     }
 
-    /**
-     * Scenario 07: RewriteQueryTransformer Query Rewriting.
-     */
     public QueryTransformer buildRewriteTransformer(ChatClient.Builder chatClientBuilder, String targetSearchSystem) {
+        if (chatClientBuilder == null || targetSearchSystem == null || targetSearchSystem.isBlank()) {
+            throw new IllegalArgumentException("Invalid arguments");
+        }
         return RewriteQueryTransformer.builder()
                 .chatClientBuilder(chatClientBuilder)
                 .targetSearchSystem(targetSearchSystem)
                 .build();
     }
 
-    /**
-     * Scenario 08: ConcatenationDocumentJoiner Multi-Query Merging.
-     */
-    public List<Document> joinMultiQueryResults(Map<Query, List<List<Document>>> queryResults) {
-        return new ConcatenationDocumentJoiner().join(queryResults);
-    }
-
-    /**
-     * Scenario 09: RetrievalAugmentationAdvisor End-to-End ChatClient Binding.
-     */
-    public RetrievalAugmentationAdvisor buildRetrievalAdvisor(DocumentRetriever retriever, QueryAugmenter augmenter, DocumentPostProcessor postProcessor) {
-        RetrievalAugmentationAdvisor.Builder builder = RetrievalAugmentationAdvisor.builder()
-                .documentRetriever(retriever);
-        if (augmenter != null) {
-            builder.queryAugmenter(augmenter);
+    public QueryTransformer buildTranslationTransformer(ChatClient.Builder chatClientBuilder, String targetLanguage) {
+        if (chatClientBuilder == null || targetLanguage == null || targetLanguage.isBlank()) {
+            throw new IllegalArgumentException("Invalid arguments");
         }
-        if (postProcessor != null) {
-            builder.documentPostProcessors(postProcessor);
-        }
-        return builder.build();
-    }
-
-    /**
-     * Scenario 10: Guardrailed Enterprise Multi-Tenant RAG Gateway.
-     */
-    public RagGatewayResponse executeGatewayQuery(
-            EnterpriseRagGatewayConfig config,
-            RagGatewayRequest request,
-            ChatClient.Builder chatClientBuilder,
-            VectorStore store
-    ) {
-        if (request == null || request.userTenant() == null || request.userTenant().isBlank()
-                || request.query() == null || request.query().isBlank()) {
-            throw new RagGatewayBreachException("Invalid request: missing tenant or query");
-        }
-        if (request.userClearance() < config.minRequiredClearance()) {
-            throw new RagGatewayBreachException("Access denied: clearance " + request.userClearance()
-                    + " below required " + config.minRequiredClearance());
-        }
-
-        FilterExpressionBuilder b = new FilterExpressionBuilder();
-        Filter.Expression filter = b.and(
-                b.eq("tenant", request.userTenant()),
-                b.lte("clearance", request.userClearance())
-        ).build();
-
-        DocumentRetriever retriever = VectorStoreDocumentRetriever.builder()
-                .vectorStore(store)
-                .topK(config.topK())
-                .similarityThreshold(config.similarityThreshold())
-                .filterExpression(filter)
+        return TranslationQueryTransformer.builder()
+                .chatClientBuilder(chatClientBuilder)
+                .targetLanguage(targetLanguage)
                 .build();
+    }
 
-        List<Document> rawDocs = retriever.retrieve(new Query(request.query()));
-        if (rawDocs.isEmpty()) {
-            if (!config.allowEmptyContext()) {
-                throw new RagGatewayBreachException("Zero documents found for tenant " + request.userTenant()
-                        + " matching clearance and similarity threshold");
-            }
-            return new RagGatewayResponse("No confidential documentation found for your clearance level.", List.of(), 0, true);
+    public RetrievalAugmentationAdvisor buildBasicAdvisor(DocumentRetriever retriever) {
+        if (retriever == null) {
+            throw new IllegalArgumentException("retriever cannot be null");
         }
-
-        Map<String, Document> deduplicatedMap = new LinkedHashMap<>();
-        for (Document d : rawDocs) {
-            deduplicatedMap.putIfAbsent(d.getId(), d);
-        }
-        List<Document> deduplicated = deduplicatedMap.values().stream()
-                .limit(config.maxDocs())
-                .toList();
-
-        DocumentPostProcessor postProcessor = (q, docs) -> deduplicated;
-        RetrievalAugmentationAdvisor advisor = RetrievalAugmentationAdvisor.builder()
+        return RetrievalAugmentationAdvisor.builder()
                 .documentRetriever(retriever)
-                .documentPostProcessors(postProcessor)
                 .build();
-
-        ChatResponse chatResponse = chatClientBuilder.build().prompt()
-                .advisors(advisor)
-                .user(request.query())
-                .call()
-                .chatResponse();
-
-        List<Citation> citations = deduplicated.stream()
-                .map(d -> new Citation(d.getId(), (String) d.getMetadata().getOrDefault("source", "unknown"), d.getScore()))
-                .toList();
-
-        int totalTokens = (chatResponse != null && chatResponse.getMetadata().getUsage() != null)
-                ? chatResponse.getMetadata().getUsage().getTotalTokens()
-                : 0;
-
-        String answer = (chatResponse != null && chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null)
-                ? chatResponse.getResult().getOutput().getText()
-                : "";
-
-        return new RagGatewayResponse(answer, citations, totalTokens, true);
     }
 
-    /**
-     * Scenario 11: Hypothetical Document Embeddings (HyDE) Query Transformer.
-     */
-    public QueryTransformer buildHydeTransformer(ChatClient.Builder chatClientBuilder, String hypotheticalPromptTemplate) {
-        if (chatClientBuilder == null || hypotheticalPromptTemplate == null || hypotheticalPromptTemplate.isBlank()) {
-            throw new IllegalArgumentException("Invalid transformer arguments");
+    public RetrievalAugmentationAdvisor buildAugmentedAdvisor(DocumentRetriever retriever, QueryAugmenter queryAugmenter) {
+        if (retriever == null || queryAugmenter == null) {
+            throw new IllegalArgumentException("Arguments cannot be null");
         }
-
-        return (Query query) -> {
-            if (query == null || query.text() == null || query.text().isBlank()) {
-                return query;
-            }
-
-            String promptText = hypotheticalPromptTemplate.replace("{query}", query.text());
-            String hypothetical = chatClientBuilder.build().prompt().user(promptText).call().content();
-
-            if (hypothetical == null || hypothetical.isBlank()) {
-                return query;
-            }
-
-            return query.mutate().text(hypothetical.trim()).build();
-        };
+        return RetrievalAugmentationAdvisor.builder()
+                .documentRetriever(retriever)
+                .queryAugmenter(queryAugmenter)
+                .build();
     }
 
-    /**
-     * Scenario 12: Token-Budget Context Packing & Dynamic Truncator.
-     */
-    public PackedContext packContextWithinBudget(List<Document> documents, int maxTokens, String delimiter) {
-        if (documents == null || maxTokens <= 0 || delimiter == null) {
-            throw new IllegalArgumentException("Invalid context packing parameters");
+    public RetrievalAugmentationAdvisor buildFullPipelineAdvisor(
+            DocumentRetriever retriever,
+            QueryExpander queryExpander,
+            DocumentPostProcessor postProcessor,
+            QueryAugmenter queryAugmenter
+    ) {
+        if (retriever == null) {
+            throw new IllegalArgumentException("retriever cannot be null");
         }
-
-        if (documents.isEmpty()) {
-            return new PackedContext("", 0, 0, 0, List.of());
-        }
-
-        int delimTokens = (int) Math.ceil(delimiter.length() / 4.0);
-        List<String> packedTexts = new ArrayList<>();
-        List<String> packedDocIds = new ArrayList<>();
-        int currentTokens = 0;
-        int droppedCount = 0;
-
-        for (int i = 0; i < documents.size(); i++) {
-            Document doc = documents.get(i);
-            String docText = doc.getText() != null ? doc.getText() : "";
-            int docTokens = (int) Math.ceil(docText.length() / 4.0);
-
-            if (packedTexts.isEmpty()) {
-                if (docTokens <= maxTokens) {
-                    packedTexts.add(docText);
-                    packedDocIds.add(doc.getId());
-                    currentTokens = docTokens;
-                } else {
-                    int maxChars = maxTokens * 4;
-                    String truncated = docText.length() > maxChars ? docText.substring(0, maxChars) : docText;
-                    packedTexts.add(truncated);
-                    packedDocIds.add(doc.getId());
-                    currentTokens = (int) Math.ceil(truncated.length() / 4.0);
-                }
-            } else {
-                if (currentTokens + delimTokens + docTokens <= maxTokens) {
-                    packedTexts.add(docText);
-                    packedDocIds.add(doc.getId());
-                    currentTokens += (delimTokens + docTokens);
-                } else {
-                    droppedCount = documents.size() - i;
-                    break;
-                }
-            }
-        }
-
-        String packedContent = String.join(delimiter, packedTexts);
-        return new PackedContext(packedContent, currentTokens, packedTexts.size(), droppedCount, packedDocIds);
+        RetrievalAugmentationAdvisor.Builder b = RetrievalAugmentationAdvisor.builder()
+                .documentRetriever(retriever);
+        if (queryExpander != null) b.queryExpander(queryExpander);
+        if (postProcessor != null) b.documentPostProcessors(postProcessor);
+        if (queryAugmenter != null) b.queryAugmenter(queryAugmenter);
+        return b.build();
     }
 }
-```
-
-## Verification Command
-```powershell
-mvn clean test-compile exec:java -pl phase07-ex02-rag-advisors
-```
-Output:
-```
-VERIFICATION SUMMARY: 10 / 10 PASSED, 0 FAILED
 ```

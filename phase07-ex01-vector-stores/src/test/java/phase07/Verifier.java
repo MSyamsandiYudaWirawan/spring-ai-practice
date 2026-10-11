@@ -3,8 +3,11 @@ package phase07;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import phase07.VectorStoreContracts.*;
 import phase07.VectorStoreUnderTest.*;
 
@@ -15,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Gate Verifier for Phase 07 Exercise 01:
  * Vector Stores, In-Memory Embeddings, Document Chunking and Semantic Filtering.
+ * <p>
+ * 18 repetitive muscle-memory drills across 6 core framework topics (3 repetitions each).
  * <p>
  * DO NOT MODIFY THIS FILE.
  * <p>
@@ -68,13 +73,22 @@ public class Verifier {
         if (selected == 0 || selected == 10) list.add(verifyScenario10());
         if (selected == 0 || selected == 11) list.add(verifyScenario11());
         if (selected == 0 || selected == 12) list.add(verifyScenario12());
+        if (selected == 0 || selected == 13) list.add(verifyScenario13());
+        if (selected == 0 || selected == 14) list.add(verifyScenario14());
+        if (selected == 0 || selected == 15) list.add(verifyScenario15());
+        if (selected == 0 || selected == 16) list.add(verifyScenario16());
+        if (selected == 0 || selected == 17) list.add(verifyScenario17());
+        if (selected == 0 || selected == 18) list.add(verifyScenario18());
         return list;
     }
+
+    // =========================================================================
+    // TOPIC 1: Document Creation & Mutation (Scenarios 1 - 3)
+    // =========================================================================
 
     private static ScenarioResult verifyScenario1() {
         String name = "DocumentFactory (Normalized Creation & Metadata Enrichment)";
         try {
-            // Validation guard
             try {
                 DocumentFactory.createDocument("", "content", Map.of());
                 return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on blank id");
@@ -98,427 +112,603 @@ public class Verifier {
             if (!"PROD".equals(doc.getMetadata().get("env"))) {
                 return new ScenarioResult(1, name, false, "Metadata 'env' missing or incorrect");
             }
-            if (!doc.getMetadata().containsKey("charCount") || !doc.getMetadata().containsKey("createdAt")) {
-                return new ScenarioResult(1, name, false, "Required metadata 'charCount' or 'createdAt' missing");
+            if (!(doc.getMetadata().get("charCount") instanceof Long cc && cc == 27L)) {
+                return new ScenarioResult(1, name, false, "Metadata 'charCount' expected 27L, got: " + doc.getMetadata().get("charCount"));
             }
-
+            if (!doc.getMetadata().containsKey("createdAt") || doc.getMetadata().get("createdAt") == null) {
+                return new ScenarioResult(1, name, false, "Metadata 'createdAt' must be populated");
+            }
             return new ScenarioResult(1, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(1, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(1, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario2() {
-        String name = "TextChunkingPipeline (Token Splitting & Index Tagging)";
+        String name = "DocumentEnricher (Document Mutation via mutate())";
         try {
-            String longText = "PostgreSQL database connection pool exhaustion leads to high request queuing latency. "
-                    + "When active connections exceed maximum capacity of 50, incoming queries block in thread pool. "
-                    + "Diagnosis requires inspecting HikariCP telemetry pool metrics and thread dump deadlock states. "
-                    + "Remediation involves adjusting pool size or releasing idle connections in repository transactions.";
+            try {
+                DocumentEnricher.enrichDocument(null, "prod", "v1.0");
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on null document");
+            } catch (IllegalArgumentException expected) {}
 
-            Document doc = Document.builder().id("doc-root").text(longText).metadata(Map.of("category", "DB")).build();
-            ChunkConfig config = new ChunkConfig(15, 10, 5, 20, true);
+            try {
+                Document base = Document.builder().id("d1").text("content").build();
+                DocumentEnricher.enrichDocument(base, "  ", "v1.0");
+                return new ScenarioResult(2, name, false, "Expected IllegalArgumentException on blank environment");
+            } catch (IllegalArgumentException expected) {}
 
-            List<Document> chunks = TextChunkingPipeline.splitDocument(doc, config);
-            if (chunks == null || chunks.isEmpty()) {
-                return new ScenarioResult(2, name, false, "Splitter returned null or empty chunks");
+            Document baseDoc = Document.builder()
+                    .id("base-1")
+                    .text("High lock contention on table orders.")
+                    .metadata(Map.of("cluster", "eu-central"))
+                    .build();
+
+            Document enriched = DocumentEnricher.enrichDocument(baseDoc, " prod ", "2.4.1");
+            if (enriched == null) {
+                return new ScenarioResult(2, name, false, "DocumentEnricher returned null");
             }
-            if (chunks.size() < 2) {
-                return new ScenarioResult(2, name, false, "Expected document to be split into >= 2 chunks, got: " + chunks.size());
+            if (!"base-1".equals(enriched.getId())) {
+                return new ScenarioResult(2, name, false, "Enriched document id altered");
             }
-
-            for (int i = 0; i < chunks.size(); i++) {
-                Document c = chunks.get(i);
-                Object idx = c.getMetadata().get("chunkIndex");
-                Object total = c.getMetadata().get("totalChunks");
-                if (idx == null || (int) idx != i) {
-                    return new ScenarioResult(2, name, false, "Chunk " + i + " missing or invalid 'chunkIndex' metadata: " + idx);
-                }
-                if (total == null || (int) total != chunks.size()) {
-                    return new ScenarioResult(2, name, false, "Chunk " + i + " missing or invalid 'totalChunks' metadata: " + total);
-                }
+            if (!"PROD".equals(enriched.getMetadata().get("environment"))) {
+                return new ScenarioResult(2, name, false, "Expected environment 'PROD', got: " + enriched.getMetadata().get("environment"));
             }
-
+            if (!"2.4.1".equals(enriched.getMetadata().get("version"))) {
+                return new ScenarioResult(2, name, false, "Expected version '2.4.1', got: " + enriched.getMetadata().get("version"));
+            }
+            if (!enriched.getMetadata().containsKey("enrichedAt")) {
+                return new ScenarioResult(2, name, false, "Expected enrichedAt metadata timestamp");
+            }
+            if (!"eu-central".equals(enriched.getMetadata().get("cluster"))) {
+                return new ScenarioResult(2, name, false, "Existing metadata 'cluster' was dropped");
+            }
+            // Ensure original document is not mutated
+            if (baseDoc.getMetadata().containsKey("environment")) {
+                return new ScenarioResult(2, name, false, "Original document metadata was mutated directly");
+            }
             return new ScenarioResult(2, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(2, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(2, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario3() {
-        String name = "DeterministicVectorGenerator (Unit Vector L2 Normalization)";
+        String name = "DocumentBatchBuilder (Batch Creation from Domain Entities)";
         try {
-            float[] v1 = DeterministicVectorGenerator.generateNormalizedVector("kubernetes memory leak", 16);
-            if (v1 == null || v1.length != 16) {
-                return new ScenarioResult(3, name, false, "Expected vector of length 16, got: " + (v1 == null ? "null" : v1.length));
+            try {
+                DocumentBatchBuilder.buildBatch(null);
+                return new ScenarioResult(3, name, false, "Expected IllegalArgumentException on null articles");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                DocumentBatchBuilder.buildBatch(List.of());
+                return new ScenarioResult(3, name, false, "Expected IllegalArgumentException on empty articles");
+            } catch (IllegalArgumentException expected) {}
+
+            List<RawArticle> articles = List.of(
+                    new RawArticle("art-1", "  Latency spike in connection pool  ", "datadog", Map.of("severity", "HIGH")),
+                    new RawArticle("art-2", "Redis cache eviction cascade", null, Map.of("severity", "MEDIUM"))
+            );
+
+            List<Document> batch = DocumentBatchBuilder.buildBatch(articles);
+            if (batch == null || batch.size() != 2) {
+                return new ScenarioResult(3, name, false, "Expected batch of 2 documents, got: " + (batch == null ? "null" : batch.size()));
             }
 
-            // Verify L2 norm == 1.0
-            float sumSq = 0.0f;
-            for (float f : v1) sumSq += f * f;
-            float norm = (float) Math.sqrt(sumSq);
-            if (Math.abs(norm - 1.0f) > 1e-4f) {
-                return new ScenarioResult(3, name, false, "Expected unit L2 norm 1.0, got: " + norm);
+            Document d1 = batch.get(0);
+            if (!"art-1".equals(d1.getId()) || !"Latency spike in connection pool".equals(d1.getText())) {
+                return new ScenarioResult(3, name, false, "Document 1 id or trimmed text mismatch");
+            }
+            if (!(d1.getMetadata().get("wordCount") instanceof Long wc && wc == 5L)) {
+                return new ScenarioResult(3, name, false, "Document 1 expected wordCount=5L, got: " + d1.getMetadata().get("wordCount"));
+            }
+            if (!"datadog".equals(d1.getMetadata().get("source"))) {
+                return new ScenarioResult(3, name, false, "Document 1 source mismatch");
+            }
+            if (!Boolean.TRUE.equals(d1.getMetadata().get("indexed"))) {
+                return new ScenarioResult(3, name, false, "Document 1 indexed flag missing");
             }
 
-            // Determinism check
-            float[] v2 = DeterministicVectorGenerator.generateNormalizedVector("kubernetes memory leak", 16);
-            if (!Arrays.equals(v1, v2)) {
-                return new ScenarioResult(3, name, false, "Deterministic generator returned non-identical vectors for identical text");
+            Document d2 = batch.get(1);
+            if (!"unknown".equals(d2.getMetadata().get("source"))) {
+                return new ScenarioResult(3, name, false, "Document 2 null source should default to 'unknown', got: " + d2.getMetadata().get("source"));
             }
-
-            // Distinctness check
-            float[] v3 = DeterministicVectorGenerator.generateNormalizedVector("redis cache eviction", 16);
-            if (Arrays.equals(v1, v3)) {
-                return new ScenarioResult(3, name, false, "Deterministic generator returned identical vectors for distinct texts");
+            if (!(d2.getMetadata().get("wordCount") instanceof Long wc2 && wc2 == 4L)) {
+                return new ScenarioResult(3, name, false, "Document 2 expected wordCount=4L, got: " + d2.getMetadata().get("wordCount"));
             }
 
             return new ScenarioResult(3, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(3, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(3, name, false, "Exception: " + e.getMessage());
         }
     }
 
+    // =========================================================================
+    // TOPIC 2: TokenTextSplitter Chunking & Enrichment (Scenarios 4 - 6)
+    // =========================================================================
+
     private static ScenarioResult verifyScenario4() {
-        String name = "SimpleVectorStoreIndexer (In-Memory Vector Store Initialization)";
+        String name = "BasicTextSplitter (Token Chunking with ChunkSize)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            List<Document> docs = List.of(
-                    Document.builder().id("d1").text("Postgres Hikari connection leak").build(),
-                    Document.builder().id("d2").text("JVM Garbage Collection pause duration").build()
-            );
+            try {
+                BasicTextSplitter.split(null, 10);
+                return new ScenarioResult(4, name, false, "Expected IllegalArgumentException on null document");
+            } catch (IllegalArgumentException expected) {}
 
-            SimpleVectorStore store = VectorStoreIndexer.createAndIndex(embeddingModel, docs);
-            if (store == null) {
-                return new ScenarioResult(4, name, false, "VectorStoreIndexer returned null store");
+            try {
+                Document doc = Document.builder().id("d").text("hello").build();
+                BasicTextSplitter.split(doc, 0);
+                return new ScenarioResult(4, name, false, "Expected IllegalArgumentException on chunkSize < 1");
+            } catch (IllegalArgumentException expected) {}
+
+            String longContent = "Spring AI provides an abstraction over vector databases to support RAG workflows. ".repeat(25);
+            Document doc = Document.builder().id("long-doc").text(longContent).build();
+
+            List<Document> chunks = BasicTextSplitter.split(doc, 30);
+            if (chunks == null || chunks.size() < 2) {
+                return new ScenarioResult(4, name, false, "Expected document to be split into >= 2 chunks, got: " + (chunks == null ? "null" : chunks.size()));
             }
-
-            List<Document> results = store.similaritySearch("Hikari connection");
-            if (results == null || results.isEmpty()) {
-                return new ScenarioResult(4, name, false, "Indexed store returned zero results for query");
+            for (Document c : chunks) {
+                if (c.getText() == null || c.getText().isBlank()) {
+                    return new ScenarioResult(4, name, false, "Encountered empty text in split chunk");
+                }
             }
-
             return new ScenarioResult(4, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(4, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(4, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario5() {
-        String name = "SimilaritySearchEngine (Top-K Ranked Retrieval)";
+        String name = "ConfigurableTextSplitter (Multi-Parameter Token Splitter)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
-            store.add(List.of(
-                    Document.builder().id("d1").text("Kafka consumer group rebalance lag").metadata(Map.of("tier", "streaming")).build(),
-                    Document.builder().id("d2").text("Kafka broker partition leader election").metadata(Map.of("tier", "streaming")).build(),
-                    Document.builder().id("d3").text("Redis cluster failover timeout").metadata(Map.of("tier", "cache")).build()
-            ));
+            try {
+                ConfigurableTextSplitter.splitWithConfig(null, new ChunkConfig(50, 10, 5, 20, true));
+                return new ScenarioResult(5, name, false, "Expected IllegalArgumentException on null document");
+            } catch (IllegalArgumentException expected) {}
 
-            List<SearchResult> results = SimilaritySearchEngine.searchTopK(store, "Kafka consumer lag", 2);
-            if (results == null || results.size() != 2) {
-                return new ScenarioResult(5, name, false, "Expected exactly 2 top-k results, got: " + (results == null ? "null" : results.size()));
+            try {
+                Document doc = Document.builder().id("d").text("hello").build();
+                ConfigurableTextSplitter.splitWithConfig(doc, null);
+                return new ScenarioResult(5, name, false, "Expected IllegalArgumentException on null config");
+            } catch (IllegalArgumentException expected) {}
+
+            String longContent = "The Quick brown fox jumps over the lazy dog in diagnostic test clusters. ".repeat(30);
+            Document doc = Document.builder().id("doc-cfg").text(longContent).build();
+            ChunkConfig config = new ChunkConfig(40, 15, 5, 50, true);
+
+            List<Document> chunks = ConfigurableTextSplitter.splitWithConfig(doc, config);
+            if (chunks == null || chunks.size() < 2) {
+                return new ScenarioResult(5, name, false, "Expected >= 2 chunks, got: " + (chunks == null ? "null" : chunks.size()));
             }
-
-            // Results must be sorted descending by score
-            if (results.get(0).score() < results.get(1).score()) {
-                return new ScenarioResult(5, name, false, "Results not sorted descending by similarity score: " + results);
-            }
-
             return new ScenarioResult(5, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(5, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(5, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario6() {
-        String name = "ThresholdSimilarityFilter (Cutoff Threshold Relevance Gate)";
+        String name = "ChunkEnrichmentPipeline (Splitting & Sequence Index Tagging)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
-            store.add(List.of(
-                    Document.builder().id("exact").text("Database deadlock detected on user table").build(),
-                    Document.builder().id("other").text("Unrelated CSS style stylesheet bundle").build()
-            ));
-
-            // Guard validation
             try {
-                ThresholdSimilarityFilter.searchWithThreshold(store, "test", 5, 1.5);
-                return new ScenarioResult(6, name, false, "Expected IllegalArgumentException for threshold > 1.0");
+                ChunkEnrichmentPipeline.splitAndEnrich(null, new ChunkConfig(50, 10, 5, 20, true));
+                return new ScenarioResult(6, name, false, "Expected IllegalArgumentException on null document");
             } catch (IllegalArgumentException expected) {}
 
-            List<SearchResult> highThreshold = ThresholdSimilarityFilter.searchWithThreshold(store, "Database deadlock detected on user table", 5, 0.99);
-            if (highThreshold == null || highThreshold.isEmpty()) {
-                return new ScenarioResult(6, name, false, "Expected at least 1 match exceeding threshold 0.99, got 0");
-            }
-            for (SearchResult r : highThreshold) {
-                if (r.score() < 0.99) {
-                    return new ScenarioResult(6, name, false, "Result score " + r.score() + " is below required threshold 0.99");
-                }
+            String longContent = "Autonomous agents inspect production logs to discover systemic resource leaks. ".repeat(25);
+            Document parent = Document.builder().id("parent-root").text(longContent).build();
+            ChunkConfig config = new ChunkConfig(35, 10, 5, 30, true);
+
+            List<Document> chunks = ChunkEnrichmentPipeline.splitAndEnrich(parent, config);
+            if (chunks == null || chunks.size() < 2) {
+                return new ScenarioResult(6, name, false, "Expected >= 2 enriched chunks, got: " + (chunks == null ? "null" : chunks.size()));
             }
 
+            int total = chunks.size();
+            for (int i = 0; i < total; i++) {
+                Document c = chunks.get(i);
+                if (!Integer.valueOf(i).equals(c.getMetadata().get("chunkIndex"))) {
+                    return new ScenarioResult(6, name, false, "Chunk " + i + " expected chunkIndex=" + i + ", got: " + c.getMetadata().get("chunkIndex"));
+                }
+                if (!Integer.valueOf(total).equals(c.getMetadata().get("totalChunks"))) {
+                    return new ScenarioResult(6, name, false, "Chunk " + i + " expected totalChunks=" + total + ", got: " + c.getMetadata().get("totalChunks"));
+                }
+                if (!"parent-root".equals(c.getMetadata().get("parentDocId"))) {
+                    return new ScenarioResult(6, name, false, "Chunk " + i + " expected parentDocId='parent-root', got: " + c.getMetadata().get("parentDocId"));
+                }
+            }
             return new ScenarioResult(6, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(6, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(6, name, false, "Exception: " + e.getMessage());
         }
     }
 
+    // =========================================================================
+    // TOPIC 3: SimpleVectorStore Lifecycle Operations (Scenarios 7 - 9)
+    // =========================================================================
+
     private static ScenarioResult verifyScenario7() {
-        String name = "MetadataExpressionFilter (Structured FilterExpression Query)";
+        String name = "VectorStoreIndexer (SimpleVectorStore Creation & Indexing)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
-            store.add(List.of(
-                    Document.builder().id("doc-match").text("Postgres connection pool exhaustion").metadata(Map.of("category", "DB", "severity", "CRITICAL")).build(),
-                    Document.builder().id("doc-wrong-sev").text("Postgres slow query log alert").metadata(Map.of("category", "DB", "severity", "LOW")).build(),
-                    Document.builder().id("doc-wrong-cat").text("Kubernetes OOMKilled worker node").metadata(Map.of("category", "K8S", "severity", "CRITICAL")).build()
-            ));
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            try {
+                VectorStoreIndexer.createAndIndex(null, List.of());
+                return new ScenarioResult(7, name, false, "Expected IllegalArgumentException on null model");
+            } catch (IllegalArgumentException expected) {}
 
-            List<SearchResult> results = MetadataExpressionFilter.searchWithMetadataFilter(store, "Postgres", "DB", "CRITICAL", 5);
-            if (results == null || results.isEmpty()) {
-                return new ScenarioResult(7, name, false, "Expected at least 1 match with category=DB and severity=CRITICAL, got 0");
+            List<Document> docs = List.of(
+                    Document.builder().id("d1").text("Postgres connection timeout").build(),
+                    Document.builder().id("d2").text("Garbage collection pause").build()
+            );
+
+            SimpleVectorStore store = VectorStoreIndexer.createAndIndex(fakeModel, docs);
+            if (store == null) {
+                return new ScenarioResult(7, name, false, "VectorStoreIndexer returned null store");
             }
 
-            for (SearchResult r : results) {
-                if (!"DB".equals(r.metadata().get("category")) || !"CRITICAL".equals(r.metadata().get("severity"))) {
-                    return new ScenarioResult(7, name, false, "Returned document does not match metadata filters: " + r);
-                }
+            List<Document> found = store.similaritySearch(SearchRequest.builder().query("Postgres").topK(1).build());
+            if (found.isEmpty() || !"d1".equals(found.get(0).getId())) {
+                return new ScenarioResult(7, name, false, "Expected indexed document 'd1' to be retrieved");
             }
-
             return new ScenarioResult(7, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(7, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(7, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario8() {
-        String name = "DocumentLifecycleManager (Dynamic Delete & Re-Index)";
+        String name = "VectorStoreDeleter (Targeted Document Deletion)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
             store.add(List.of(
-                    Document.builder().id("doc-old").text("Legacy monolithic batch worker").build()
+                    Document.builder().id("keep-1").text("Memory leak in netty buffers").build(),
+                    Document.builder().id("drop-1").text("Deadlock detected on account balance table").build()
             ));
 
-            List<Document> newDocs = List.of(
-                    Document.builder().id("doc-new").text("Modern event-driven reactive consumer").build()
-            );
+            try {
+                VectorStoreDeleter.deleteDocuments(null, List.of("drop-1"));
+                return new ScenarioResult(8, name, false, "Expected IllegalArgumentException on null vectorStore");
+            } catch (IllegalArgumentException expected) {}
 
-            DocumentLifecycleManager.deleteAndReindex(store, List.of("doc-old"), newDocs);
+            VectorStoreDeleter.deleteDocuments(store, List.of("drop-1"));
 
-            List<Document> searchOld = store.similaritySearch("Legacy monolithic batch worker");
-            boolean oldFound = searchOld.stream().anyMatch(d -> "doc-old".equals(d.getId()));
-            if (oldFound) {
-                return new ScenarioResult(8, name, false, "Deleted document 'doc-old' was still found in vector store");
+            List<Document> all = store.similaritySearch(SearchRequest.builder().query("Deadlock").topK(5).build());
+            boolean dropFound = all.stream().anyMatch(d -> "drop-1".equals(d.getId()));
+            if (dropFound) {
+                return new ScenarioResult(8, name, false, "Deleted document 'drop-1' still exists in vector store");
             }
-
-            List<Document> searchNew = store.similaritySearch("Modern event-driven reactive consumer");
-            boolean newFound = searchNew.stream().anyMatch(d -> "doc-new".equals(d.getId()));
-            if (!newFound) {
-                return new ScenarioResult(8, name, false, "Newly indexed document 'doc-new' was not found in vector store");
-            }
-
             return new ScenarioResult(8, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(8, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(8, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario9() {
-        String name = "CachedEmbeddingDecorator (Zero-Redundancy Vector Cache)";
+        String name = "VectorStoreLifecycleManager (Synchronized Sync Deletion & Addition)";
         try {
-            FakeEmbeddingModel underlying = new FakeEmbeddingModel(16);
-            CachedEmbeddingDecorator cached = new CachedEmbeddingDecorator(underlying);
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("doc-stale").text("Old deployment config").build(),
+                    Document.builder().id("doc-retain").text("Retained service catalog").build()
+            ));
 
-            // First call -> cache miss
-            float[] v1 = cached.embed("kubernetes pod pending");
-            CacheStats s1 = cached.getStats();
-            if (s1.hits() != 0 || s1.misses() != 1 || underlying.getCallCount() != 1) {
-                return new ScenarioResult(9, name, false, "Expected 0 hits, 1 miss after 1st call. Got: " + s1);
+            try {
+                VectorStoreLifecycleManager.syncDocuments(null, List.of(), List.of());
+                return new ScenarioResult(9, name, false, "Expected IllegalArgumentException on null store");
+            } catch (IllegalArgumentException expected) {}
+
+            Document docNew = Document.builder().id("doc-fresh").text("Fresh deployment v2").build();
+            VectorStoreLifecycleManager.syncDocuments(store, List.of("doc-stale"), List.of(docNew));
+
+            List<Document> freshSearch = store.similaritySearch(SearchRequest.builder().query("Fresh deployment").topK(5).build());
+            boolean staleFound = freshSearch.stream().anyMatch(d -> "doc-stale".equals(d.getId()));
+            boolean freshFound = freshSearch.stream().anyMatch(d -> "doc-fresh".equals(d.getId()));
+
+            List<Document> retainSearch = store.similaritySearch(SearchRequest.builder().query("Retained service catalog").topK(5).build());
+            boolean retainFound = retainSearch.stream().anyMatch(d -> "doc-retain".equals(d.getId()));
+
+            if (staleFound) {
+                return new ScenarioResult(9, name, false, "Stale document 'doc-stale' was not deleted");
             }
-
-            // Second call with same text -> cache hit
-            float[] v2 = cached.embed("kubernetes pod pending");
-            CacheStats s2 = cached.getStats();
-            if (s2.hits() != 1 || s2.misses() != 1 || underlying.getCallCount() != 1) {
-                return new ScenarioResult(9, name, false, "Expected 1 hit, 1 miss after 2nd call. Underlying model should not be called again. Got: " + s2 + ", callCount=" + underlying.getCallCount());
+            if (!freshFound) {
+                return new ScenarioResult(9, name, false, "New document 'doc-fresh' was not added");
             }
-
-            if (!Arrays.equals(v1, v2)) {
-                return new ScenarioResult(9, name, false, "Cached vector differs from originally computed vector");
+            if (!retainFound) {
+                return new ScenarioResult(9, name, false, "Retained document 'doc-retain' was erroneously deleted");
             }
-
             return new ScenarioResult(9, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(9, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(9, name, false, "Exception: " + e.getMessage());
         }
     }
 
+    // =========================================================================
+    // TOPIC 4: SearchRequest & Retrieval (Scenarios 10 - 12)
+    // =========================================================================
+
     private static ScenarioResult verifyScenario10() {
-        String name = "KnowledgeIngestionGateway (End-to-End Ingestion & Verification Gate)";
+        String name = "TopKSearchEngine (Top-K Ranked Search & DTO Mapping)";
         try {
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("r1").text("Disk I/O bottleneck").metadata(Map.of("host", "node-1")).build(),
+                    Document.builder().id("r2").text("Disk I/O read failure").metadata(Map.of("host", "node-2")).build(),
+                    Document.builder().id("r3").text("CPU throttling on worker").metadata(Map.of("host", "node-3")).build()
+            ));
 
-            List<RawKnowledgeItem> items = List.of(
-                    new RawKnowledgeItem("kb-1", "JVM Garbage Collection Tuning",
-                            "G1GC region sizing and pause time goals. ParallelGC throughput vs ZGC sub-millisecond latency trade-offs.",
-                            Map.of("tier", "core")),
-                    new RawKnowledgeItem("kb-2", "PostgreSQL Connection Pooling",
-                            "HikariCP pool sizing calculation: connections = (core_count * 2) + effective_spindle_count.",
-                            Map.of("tier", "data"))
-            );
-            ChunkConfig config = new ChunkConfig(20, 10, 5, 10, true);
+            try {
+                TopKSearchEngine.searchTopK(store, "   ", 2);
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on blank query");
+            } catch (IllegalArgumentException expected) {}
 
-            // Test 1: Successful ingestion and verification
-            IngestionReport report = KnowledgeIngestionGateway.ingestAndVerify(
-                    store, items, config, "PostgreSQL Connection Pooling", 0.70
-            );
+            try {
+                TopKSearchEngine.searchTopK(store, "Disk", 0);
+                return new ScenarioResult(10, name, false, "Expected IllegalArgumentException on topK < 1");
+            } catch (IllegalArgumentException expected) {}
 
-            if (report == null || report.rawItemCount() != 2 || report.chunkCount() < 2 || report.indexedCount() < 2) {
-                return new ScenarioResult(10, name, false, "IngestionReport counts mismatch: " + report);
+            List<SearchResult> results = TopKSearchEngine.searchTopK(store, "Disk I/O", 2);
+            if (results == null || results.size() != 2) {
+                return new ScenarioResult(10, name, false, "Expected exactly 2 top-k results, got: " + (results == null ? "null" : results.size()));
             }
 
-            // Test 2: Unmatchable verification query triggers VectorStoreBreachException
-            boolean breachCaught = false;
-            try {
-                KnowledgeIngestionGateway.ingestAndVerify(store, items, config, "Unrelated Quantum Computing Physics Query", 0.9999);
-            } catch (VectorStoreBreachException ex) {
-                if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("vectorstore constraint breached")) {
-                    breachCaught = true;
-                } else {
-                    return new ScenarioResult(10, name, false, "Exception message missing 'VectorStore constraint breached': " + ex.getMessage());
+            for (SearchResult sr : results) {
+                if (sr.id() == null || sr.content() == null || sr.metadata() == null) {
+                    return new ScenarioResult(10, name, false, "SearchResult fields must not be null");
                 }
             }
-
-            if (!breachCaught) {
-                return new ScenarioResult(10, name, false, "Expected VectorStoreBreachException when verification query yields 0 matches");
-            }
-
             return new ScenarioResult(10, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(10, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(10, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario11() {
-        String name = "MaximalMarginalRelevanceSearchEngine (MMR Diversity Re-ranking)";
+        String name = "ThresholdSearchEngine (Similarity Threshold Gating)";
         try {
-            // Guard test
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("exact").text("Database deadlock detected in lock manager").build(),
+                    Document.builder().id("unrelated").text("Front-end css styling color scheme").build()
+            ));
+
             try {
-                MaximalMarginalRelevanceSearchEngine.searchMmr(null, null, null, null);
-                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException for null arguments");
+                ThresholdSearchEngine.searchWithThreshold(store, "deadlock", 5, -0.1);
+                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException on negative threshold");
             } catch (IllegalArgumentException expected) {}
 
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+            try {
+                ThresholdSearchEngine.searchWithThreshold(store, "deadlock", 5, 1.5);
+                return new ScenarioResult(11, name, false, "Expected IllegalArgumentException on threshold > 1.0");
+            } catch (IllegalArgumentException expected) {}
 
-            // Seed 4 documents: doc1 and doc2 are near-duplicates; doc3 is kubernetes config; doc4 is postgresql
-            Document doc1 = Document.builder().id("doc-1").text("Kubernetes pod OOMKilled memory limit exceeded container restart").build();
-            Document doc2 = Document.builder().id("doc-2").text("Container OOMKilled kubernetes memory limit exceeded pod restart").build();
-            Document doc3 = Document.builder().id("doc-3").text("ConfigMap environment variable misconfiguration in kubernetes cluster").build();
-            Document doc4 = Document.builder().id("doc-4").text("PostgreSQL database connection pool timeout exhaustion").build();
-
-            store.add(List.of(doc1, doc2, doc3, doc4));
-
-            MmrConfig config = new MmrConfig(2, 0.5, 2);
-            List<SearchResult> mmrResults = MaximalMarginalRelevanceSearchEngine.searchMmr(
-                    store, embeddingModel, "kubernetes pod memory OOMKilled restart", config
+            List<SearchResult> matches = ThresholdSearchEngine.searchWithThreshold(
+                    store, "Database deadlock detected in lock manager", 5, 0.95
             );
-
-            if (mmrResults == null || mmrResults.isEmpty()) {
-                return new ScenarioResult(11, name, false, "MMR returned null or empty result list");
+            if (matches.isEmpty()) {
+                return new ScenarioResult(11, name, false, "Expected high-similarity exact match with threshold 0.95");
             }
-
-            if (mmrResults.size() != 2) {
-                return new ScenarioResult(11, name, false, "Expected exactly 2 MMR results, got: " + mmrResults.size());
+            if (matches.stream().anyMatch(m -> "unrelated".equals(m.id()))) {
+                return new ScenarioResult(11, name, false, "Unrelated document should have been filtered by threshold");
             }
-
-            // In MMR with lambda 0.5, doc1 is chosen first.
-            // doc2 is an almost identical duplicate of doc1, so doc3 should be prioritized over doc2 for diversity
-            List<String> returnedIds = mmrResults.stream().map(SearchResult::id).toList();
-            if (!returnedIds.contains("doc-1")) {
-                return new ScenarioResult(11, name, false, "Expected primary relevant doc 'doc-1' to be selected in MMR");
-            }
-            if (returnedIds.contains("doc-2") && !returnedIds.contains("doc-3")) {
-                return new ScenarioResult(11, name, false, "MMR failed to diversify: selected duplicate 'doc-2' instead of diverse 'doc-3'");
-            }
-
-            // Verify scores are populated and non-negative
-            for (SearchResult r : mmrResults) {
-                if (Double.isNaN(r.score()) || r.score() <= 0.0) {
-                    return new ScenarioResult(11, name, false, "Invalid similarity score in SearchResult: " + r.score());
-                }
-            }
-
             return new ScenarioResult(11, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(11, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(11, name, false, "Exception: " + e.getMessage());
         }
     }
 
     private static ScenarioResult verifyScenario12() {
-        String name = "ContentHashDeduplicationPipeline (Idempotent Chunk Ingestion)";
+        String name = "ScoredSearchEngine (Scored Retrieval & Descending Sort)";
         try {
-            // Guard test
-            ContentHashDeduplicationPipeline pipeline = new ContentHashDeduplicationPipeline();
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("doc-1").text("Kafka event log error in consumer group").build(),
+                    Document.builder().id("doc-2").text("Kafka event log warning in broker partition").build(),
+                    Document.builder().id("doc-3").text("Kafka event log info in producer cluster").build()
+            ));
+
             try {
-                pipeline.ingestWithDeduplication(null, null);
-                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException for null arguments");
+                ScoredSearchEngine.searchScoredAndSorted(null, "Kafka", 3, 0.1);
+                return new ScenarioResult(12, name, false, "Expected IllegalArgumentException on null store");
             } catch (IllegalArgumentException expected) {}
 
-            EmbeddingModel embeddingModel = new FakeEmbeddingModel(16);
-            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
-
-            // Batch 1: 3 documents (doc1 and doc3 have identical content after trim/case normalization)
-            Document doc1 = Document.builder().id("doc-1").text("JVM garbage collection pause latency spikes").build();
-            Document doc2 = Document.builder().id("doc-2").text("HikariCP database pool saturation timeout").build();
-            Document doc3 = Document.builder().id("doc-3").text("  jvm garbage collection pause latency spikes  ").build();
-
-            DedupReport report1 = pipeline.ingestWithDeduplication(store, List.of(doc1, doc2, doc3));
-            if (report1 == null) {
-                return new ScenarioResult(12, name, false, "Pipeline returned null report for batch 1");
-            }
-            if (report1.totalSubmitted() != 3) {
-                return new ScenarioResult(12, name, false, "Batch 1: expected totalSubmitted=3, got: " + report1.totalSubmitted());
-            }
-            if (report1.newOrUpdatedCount() != 2) {
-                return new ScenarioResult(12, name, false, "Batch 1: expected newOrUpdatedCount=2, got: " + report1.newOrUpdatedCount());
-            }
-            if (report1.duplicateSkippedCount() != 1) {
-                return new ScenarioResult(12, name, false, "Batch 1: expected duplicateSkippedCount=1, got: " + report1.duplicateSkippedCount());
-            }
-            if (!report1.indexedIds().contains("doc-1") || !report1.indexedIds().contains("doc-2") || report1.indexedIds().contains("doc-3")) {
-                return new ScenarioResult(12, name, false, "Batch 1: indexed IDs mismatch: " + report1.indexedIds());
+            List<SearchResult> sorted = ScoredSearchEngine.searchScoredAndSorted(store, "Kafka event log", 3, 0.0);
+            if (sorted == null || sorted.size() != 3) {
+                return new ScenarioResult(12, name, false, "Expected 3 search results, got: " + (sorted == null ? "null" : sorted.size()));
             }
 
-            // Batch 2: Resubmit doc1 under new ID, plus new doc4
-            Document doc1Resubmitted = Document.builder().id("doc-1-replay").text("jvm garbage collection pause latency spikes").build();
-            Document doc4 = Document.builder().id("doc-4").text("Tomcat thread pool exhaustion").build();
-
-            DedupReport report2 = pipeline.ingestWithDeduplication(store, List.of(doc1Resubmitted, doc4));
-            if (report2.totalSubmitted() != 2) {
-                return new ScenarioResult(12, name, false, "Batch 2: expected totalSubmitted=2, got: " + report2.totalSubmitted());
+            for (int i = 0; i < sorted.size() - 1; i++) {
+                if (sorted.get(i).score() < sorted.get(i + 1).score()) {
+                    return new ScenarioResult(12, name, false, "Results not sorted descending by score: " + sorted.get(i).score() + " < " + sorted.get(i + 1).score());
+                }
             }
-            if (report2.newOrUpdatedCount() != 1) {
-                return new ScenarioResult(12, name, false, "Batch 2: expected newOrUpdatedCount=1, got: " + report2.newOrUpdatedCount());
-            }
-            if (report2.duplicateSkippedCount() != 1) {
-                return new ScenarioResult(12, name, false, "Batch 2: expected duplicateSkippedCount=1, got: " + report2.duplicateSkippedCount());
-            }
-            if (!report2.indexedIds().contains("doc-4") || report2.indexedIds().contains("doc-1-replay")) {
-                return new ScenarioResult(12, name, false, "Batch 2: indexed IDs mismatch: " + report2.indexedIds());
-            }
-
-            if (pipeline.getIndexedHashes().size() != 3) {
-                return new ScenarioResult(12, name, false, "Expected 3 indexed hashes in pipeline, got: " + pipeline.getIndexedHashes().size());
-            }
-
             return new ScenarioResult(12, name, true, "OK");
-        } catch (Throwable t) {
-            return new ScenarioResult(12, name, false, "Exception: " + t.getMessage());
+        } catch (Exception e) {
+            return new ScenarioResult(12, name, false, "Exception: " + e.getMessage());
         }
     }
+
+    // =========================================================================
+    // TOPIC 5: FilterExpressionBuilder Basics & Comparisons (Scenarios 13 - 15)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario13() {
+        String name = "EqualityFilterBuilder (EQ and NE Filter Expressions)";
+        try {
+            try {
+                EqualityFilterBuilder.buildEqualityFilter("  ", "val", false);
+                return new ScenarioResult(13, name, false, "Expected IllegalArgumentException on blank field");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                EqualityFilterBuilder.buildEqualityFilter("field", null, false);
+                return new ScenarioResult(13, name, false, "Expected IllegalArgumentException on null value");
+            } catch (IllegalArgumentException expected) {}
+
+            Filter.Expression eqExpr = EqualityFilterBuilder.buildEqualityFilter("status", "ACTIVE", false);
+            if (eqExpr == null || eqExpr.type() != Filter.ExpressionType.EQ) {
+                return new ScenarioResult(13, name, false, "Expected Filter.ExpressionType.EQ, got: " + (eqExpr == null ? "null" : eqExpr.type()));
+            }
+
+            Filter.Expression neExpr = EqualityFilterBuilder.buildEqualityFilter("status", "ARCHIVED", true);
+            if (neExpr == null || neExpr.type() != Filter.ExpressionType.NE) {
+                return new ScenarioResult(13, name, false, "Expected Filter.ExpressionType.NE, got: " + (neExpr == null ? "null" : neExpr.type()));
+            }
+            return new ScenarioResult(13, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(13, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario14() {
+        String name = "NumericRangeFilterBuilder (GTE & LTE Conjunction Expression)";
+        try {
+            try {
+                NumericRangeFilterBuilder.buildRangeFilter("latency", 500.0, 100.0);
+                return new ScenarioResult(14, name, false, "Expected IllegalArgumentException when min > max");
+            } catch (IllegalArgumentException expected) {}
+
+            try {
+                NumericRangeFilterBuilder.buildRangeFilter(" ", 10.0, 20.0);
+                return new ScenarioResult(14, name, false, "Expected IllegalArgumentException on blank field");
+            } catch (IllegalArgumentException expected) {}
+
+            Filter.Expression range = NumericRangeFilterBuilder.buildRangeFilter("latencyMs", 50.0, 250.0);
+            if (range == null || range.type() != Filter.ExpressionType.AND) {
+                return new ScenarioResult(14, name, false, "Expected top-level AND expression, got: " + (range == null ? "null" : range.type()));
+            }
+
+            if (!(range.left() instanceof Filter.Expression left && left.type() == Filter.ExpressionType.GTE)) {
+                return new ScenarioResult(14, name, false, "Expected left operand to be GTE expression");
+            }
+            if (!(range.right() instanceof Filter.Expression right && right.type() == Filter.ExpressionType.LTE)) {
+                return new ScenarioResult(14, name, false, "Expected right operand to be LTE expression");
+            }
+            return new ScenarioResult(14, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(14, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario15() {
+        String name = "LogicalFilterBuilder (AND / OR Dual-Branch Conjunctions)";
+        try {
+            try {
+                LogicalFilterBuilder.buildConjunctiveFilter("cat", "DB", " ", "HIGH", true);
+                return new ScenarioResult(15, name, false, "Expected IllegalArgumentException on blank param");
+            } catch (IllegalArgumentException expected) {}
+
+            Filter.Expression andExpr = LogicalFilterBuilder.buildConjunctiveFilter("category", "DB", "severity", "CRITICAL", true);
+            if (andExpr == null || andExpr.type() != Filter.ExpressionType.AND) {
+                return new ScenarioResult(15, name, false, "Expected AND expression when requireBoth is true, got: " + (andExpr == null ? "null" : andExpr.type()));
+            }
+
+            Filter.Expression orExpr = LogicalFilterBuilder.buildConjunctiveFilter("category", "DB", "severity", "CRITICAL", false);
+            if (orExpr == null || orExpr.type() != Filter.ExpressionType.OR) {
+                return new ScenarioResult(15, name, false, "Expected OR expression when requireBoth is false, got: " + (orExpr == null ? "null" : orExpr.type()));
+            }
+            return new ScenarioResult(15, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(15, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 6: FilterExpressionBuilder Collections & Search Integration (Scenarios 16 - 18)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario16() {
+        String name = "SetContainmentFilterBuilder (IN and NIN Set Expressions)";
+        try {
+            try {
+                SetContainmentFilterBuilder.buildInFilter("tier", List.of(), false);
+                return new ScenarioResult(16, name, false, "Expected IllegalArgumentException on empty values");
+            } catch (IllegalArgumentException expected) {}
+
+            Filter.Expression inExpr = SetContainmentFilterBuilder.buildInFilter("env", List.of("PROD", "STAGING"), false);
+            if (inExpr == null || inExpr.type() != Filter.ExpressionType.IN) {
+                return new ScenarioResult(16, name, false, "Expected IN expression, got: " + (inExpr == null ? "null" : inExpr.type()));
+            }
+
+            Filter.Expression ninExpr = SetContainmentFilterBuilder.buildInFilter("env", List.of("DEV"), true);
+            if (ninExpr == null || ninExpr.type() != Filter.ExpressionType.NIN) {
+                return new ScenarioResult(16, name, false, "Expected NIN expression, got: " + (ninExpr == null ? "null" : ninExpr.type()));
+            }
+            return new ScenarioResult(16, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(16, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario17() {
+        String name = "NestedFilterBuilder (Complex Grouped Audit Expression)";
+        try {
+            try {
+                NestedFilterBuilder.buildAuditFilter("PROD", "CRITICAL", List.of());
+                return new ScenarioResult(17, name, false, "Expected IllegalArgumentException on empty teams");
+            } catch (IllegalArgumentException expected) {}
+
+            Filter.Expression nested = NestedFilterBuilder.buildAuditFilter("PROD", "CRITICAL", List.of("sre", "security"));
+            if (nested == null || nested.type() != Filter.ExpressionType.AND) {
+                return new ScenarioResult(17, name, false, "Expected top-level AND expression, got: " + (nested == null ? "null" : nested.type()));
+            }
+
+            if (!(nested.left() instanceof Filter.Expression left && left.type() == Filter.ExpressionType.EQ)) {
+                return new ScenarioResult(17, name, false, "Expected left branch to be EQ expression");
+            }
+            if (!(nested.right() instanceof Filter.Expression right && right.type() == Filter.ExpressionType.OR)) {
+                return new ScenarioResult(17, name, false, "Expected right branch to be OR expression");
+            }
+            return new ScenarioResult(17, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(17, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario18() {
+        String name = "FilteredSearchGateway (Integrated SearchRequest with FilterExpression)";
+        try {
+            EmbeddingModel fakeModel = new FakeEmbeddingModel();
+            SimpleVectorStore store = SimpleVectorStore.builder(fakeModel).build();
+            store.add(List.of(
+                    Document.builder().id("doc-match").text("Systemic database deadlock in cluster")
+                            .metadata(Map.of("env", "PROD", "severity", "CRITICAL")).build(),
+                    Document.builder().id("doc-wrong-env").text("Systemic database deadlock in cluster")
+                            .metadata(Map.of("env", "DEV", "severity", "CRITICAL")).build(),
+                    Document.builder().id("doc-wrong-sev").text("Systemic database deadlock in cluster")
+                            .metadata(Map.of("env", "PROD", "severity", "LOW")).build()
+            ));
+
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            Filter.Expression filter = b.and(b.eq("env", "PROD"), b.eq("severity", "CRITICAL")).build();
+
+            try {
+                FilteredSearchGateway.searchWithFilter(null, "deadlock", filter, 5);
+                return new ScenarioResult(18, name, false, "Expected IllegalArgumentException on null store");
+            } catch (IllegalArgumentException expected) {}
+
+            List<SearchResult> results = FilteredSearchGateway.searchWithFilter(store, "database deadlock", filter, 5);
+            if (results == null || results.size() != 1) {
+                return new ScenarioResult(18, name, false, "Expected exactly 1 matching result, got: " + (results == null ? "null" : results.size()));
+            }
+
+            if (!"doc-match".equals(results.get(0).id())) {
+                return new ScenarioResult(18, name, false, "Expected match 'doc-match', got: " + results.get(0).id());
+            }
+            return new ScenarioResult(18, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(18, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // REPORT FORMATTER
+    // =========================================================================
 
     private static void printReport(List<ScenarioResult> results) {
         System.out.println("===============================================================================");
@@ -526,8 +716,8 @@ public class Verifier {
         System.out.println("===============================================================================");
         int passed = 0;
         for (ScenarioResult r : results) {
-            String mark = r.passed() ? "[PASS]" : "[FAIL]";
-            System.out.printf("  %s Scenario %02d: %s%n", mark, r.scenarioNumber(), r.name());
+            String tag = r.passed() ? "[PASS]" : "[FAIL]";
+            System.out.printf("  %s Scenario %02d: %s%n", tag, r.scenarioNumber(), r.name());
             if (!r.passed()) {
                 System.out.printf("         --> DETAIL: %s%n", r.errorDetail());
             } else {

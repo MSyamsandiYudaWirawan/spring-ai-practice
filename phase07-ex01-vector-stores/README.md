@@ -1,18 +1,13 @@
 # Phase 07 — Exercise 01: Vector Stores, In-Memory Embeddings, Document Chunking & Semantic Filtering
 
 ## Mission Overview
-In **Phase 07 Exercise 01**, you build foundational muscle memory on Spring AI's Vector Store and Embedding primitives:
-- Creating normalized `Document` instances with metadata attributes via `Document.builder()`.
-- Token-bounded text chunking and overlap handling via `TokenTextSplitter`.
-- In-memory `SimpleVectorStore` creation and `EmbeddingModel` binding.
-- Semantic top-K similarity search with score ranking (`SearchRequest`).
-- Cutoff similarity threshold gating.
-- Structured metadata filter expressions using `FilterExpressionBuilder`.
-- Incremental document deletion and re-indexing.
-- Zero-cost in-memory embedding cache decorator.
-- End-to-end knowledge ingestion and retrieval verification gateway.
-- Maximal Marginal Relevance (MMR) diversity search re-ranking.
-- Content-hash idempotent ingestion and compaction pipeline.
+In **Phase 07 Exercise 01**, you build cold muscle memory on Spring AI's Vector Store, Document, and Metadata Filtering primitives through **18 repetitive drills organized into 6 core framework topics (3 repetitions per topic)**:
+- **Topic 1: Document Creation & Mutation:** `Document.builder()`, `doc.mutate()`, and batch generation.
+- **Topic 2: Token Text Splitting:** `TokenTextSplitter` basic chunking, multi-param boundary configs, and chunk enrichment.
+- **Topic 3: Vector Store Lifecycle:** In-memory `SimpleVectorStore` indexing, targeted deletion, and synchronized updates.
+- **Topic 4: Search & Retrieval:** Top-K `SearchRequest`, similarity threshold gating, and score sorting.
+- **Topic 5: FilterExpression Basics & Comparisons:** `FilterExpressionBuilder` equality (`eq`/`ne`), ranges (`gte`/`lte`), and logical conjunctions (`and`/`or`).
+- **Topic 6: FilterExpression Collections & Search Integration:** Set containment (`in`/`nin`), nested logical groups, and full filtered search execution.
 
 ---
 
@@ -22,27 +17,31 @@ In **Phase 07 Exercise 01**, you build foundational muscle memory on Spring AI's
    - Contracts in [`src/main/java/phase07/VectorStoreContracts.java`](src/main/java/phase07/VectorStoreContracts.java) and [`src/test/java/phase07/Verifier.java`](src/test/java/phase07/Verifier.java) are immutable.
 2. **Deterministic Offline Execution:**
    - Runs 100% offline with zero live token costs using `FakeEmbeddingModel`.
-3. **Non-Flaky Exception Contract:**
-   - **Scenario 10:** [`VectorStoreBreachException`](src/main/java/phase07/VectorStoreContracts.java) message **MUST contain** `"VectorStore constraint breached"` (case-insensitive).
 
 ---
 
-## 12 Scenarios Breakdown
+## 18 Scenarios Breakdown (6 Topics × 3 Repetitions)
 
-| # | Component | Key Responsibility |
-|---|---|---|
-| **01** | `DocumentFactory` | Validates and creates normalized `Document`s enriched with metadata (`charCount`, `createdAt`). |
-| **02** | `TextChunkingPipeline` | Splits documents using `TokenTextSplitter` and tags chunks with `chunkIndex` and `totalChunks`. |
-| **03** | `DeterministicVectorGenerator` | Computes deterministic float vectors with unit L2 norm (`\|\|v\|\| == 1.0f`). |
-| **04** | `VectorStoreIndexer` | Initializes `SimpleVectorStore` around an `EmbeddingModel` and indexes documents. |
-| **05** | `SimilaritySearchEngine` | Executes top-K ranked retrieval via `SearchRequest` and maps results to `SearchResult`s. |
-| **06** | `ThresholdSimilarityFilter` | Enforces minimum similarity score cutoffs via `similarityThreshold`. |
-| **07** | `MetadataExpressionFilter` | Builds composite boolean filter expressions via `FilterExpressionBuilder`. |
-| **08** | `DocumentLifecycleManager` | Atomically deletes obsolete document IDs and indexes fresh document versions. |
-| **09** | `CachedEmbeddingDecorator` | Caches computed float vectors in memory to eliminate redundant embedding calls. |
-| **10** | `KnowledgeIngestionGateway` | Ingests raw articles into chunked vector store entries and enforces searchability gates. |
-| **11** | `MaximalMarginalRelevanceSearchEngine` | Re-ranks candidates using MMR diversity penalties ($\lambda \cdot \text{sim}(d,q) - (1-\lambda) \max \text{sim}(d,s)$). |
-| **12** | `ContentHashDeduplicationPipeline` | Computes SHA-256 hashes of normalized chunks to skip redundant embeddings and prevent duplicate indexing. |
+| # | Topic | Component | Key Responsibility |
+|---|---|---|---|
+| **01** | **Topic 1: Document** | `DocumentFactory` | Validates and creates normalized `Document`s enriched with metadata (`charCount`, `createdAt`). |
+| **02** | **Topic 1: Document** | `DocumentEnricher` | Mutates existing documents via `doc.mutate().metadata(...)` with environment and version tags. |
+| **03** | **Topic 1: Document** | `DocumentBatchBuilder` | Converts batch `RawArticle` entities into `Document`s with derived `wordCount` and `source`. |
+| **04** | **Topic 2: Splitting** | `BasicTextSplitter` | Splits document into token chunks using `TokenTextSplitter.builder().withChunkSize().build()`. |
+| **05** | **Topic 2: Splitting** | `ConfigurableTextSplitter` | Configures `TokenTextSplitter` with min/max chunk sizes, max chunks, and separators. |
+| **06** | **Topic 2: Splitting** | `ChunkEnrichmentPipeline` | Splits documents and enriches chunks with `chunkIndex`, `totalChunks`, and `parentDocId`. |
+| **07** | **Topic 3: VectorStore** | `VectorStoreIndexer` | Initializes `SimpleVectorStore` around `EmbeddingModel` and indexes documents. |
+| **08** | **Topic 3: VectorStore** | `VectorStoreDeleter` | Deletes targeted documents from `VectorStore` by ID list. |
+| **09** | **Topic 3: VectorStore** | `VectorStoreLifecycleManager` | Synchronizes store state by atomically deleting obsolete IDs and indexing fresh documents. |
+| **10** | **Topic 4: Search** | `TopKSearchEngine` | Executes top-K ranked retrieval via `SearchRequest` and maps results to `SearchResult` records. |
+| **11** | **Topic 4: Search** | `ThresholdSearchEngine` | Filters retrieval candidates using `similarityThreshold(threshold)`. |
+| **12** | **Topic 4: Search** | `ScoredSearchEngine` | Executes scored similarity search and sorts results descending by score. |
+| **13** | **Topic 5: Filter DSL** | `EqualityFilterBuilder` | Builds `EQ` and `NE` metadata expressions via `FilterExpressionBuilder`. |
+| **14** | **Topic 5: Filter DSL** | `NumericRangeFilterBuilder` | Builds range expressions combining `GTE` and `LTE` inside an `AND` conjunction. |
+| **15** | **Topic 5: Filter DSL** | `LogicalFilterBuilder` | Builds dual-branch `AND` or `OR` conjunction expressions with field-value pairs. |
+| **16** | **Topic 6: Filter Search** | `SetContainmentFilterBuilder` | Builds set containment `IN` and `NIN` expressions from collections. |
+| **17** | **Topic 6: Filter Search** | `NestedFilterBuilder` | Builds complex nested expressions: `(env == targetEnv AND (severity == minSev OR team IN teams))`. |
+| **18** | **Topic 6: Filter Search** | `FilteredSearchGateway` | Executes end-to-end `SearchRequest` combining query, top-K, and `Filter.Expression` against `VectorStore`. |
 
 ---
 

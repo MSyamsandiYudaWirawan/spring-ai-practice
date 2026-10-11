@@ -1,52 +1,48 @@
-# Phase 06 â€” Exercise 01: Deterministic Evaluators & LLM-as-a-Judge
+# Phase 06 — Exercise 01: Deterministic Evaluators & Benchmark Gates
 
-## Mission Overview
-In **Phase 06 Exercise 01**, you master the foundational evaluation interfaces and contracts of Spring AI and deterministic metric gates.
-In robust agentic architectures, evaluating whether an AI recommendation improved system health or answered a query requires both:
-1. **Deterministic mathematical gates** (e.g. `NoiseFloorEvaluator` and `GroundTruthAccuracyEvaluator`).
-2. **Spring AI LLM-as-a-Judge evaluators** (`Evaluator`, `RelevancyEvaluator`, `FactCheckingEvaluator`, rubric-based judging, and multi-criteria scoring).
-
-This drill provides 10 high-repetition scenarios building instinctive muscle memory on creating, adapting, and chaining evaluators.
-
----
-
-## Pedagogical Protocol & Guardrails
-1. **Strict Seam Boundary:**
-   - The **ONLY** file you modify is [`src/main/java/phase06/EvaluatorUnderTest.java`](src/main/java/phase06/EvaluatorUnderTest.java).
-   - Contracts in [`src/main/java/phase06/EvaluatorContracts.java`](src/main/java/phase06/EvaluatorContracts.java) and [`src/test/java/phase06/Verifier.java`](src/test/java/phase06/Verifier.java) are immutable.
-2. **Deterministic Offline Execution:**
-   - Evaluator tests run 100% offline using deterministic in-memory `FakeEvaluatorChatModel` fixtures with zero live API calls.
-3. **Non-Flaky Exception Contract:**
-   - **Scenario 10:** [`EvaluationGateException`](src/main/java/phase06/EvaluatorContracts.java) message **MUST contain** `"Evaluation threshold breach"` (case-insensitive).
+## Focus & Learning Objectives
+In **Phase 06 Exercise 01**, you master the foundational evaluation interfaces and contracts of Spring AI and deterministic metric gates:
+- **Spring AI Evaluator Primitives:** Building `EvaluationRequest`, `EvaluationResponse`, and integrating Spring AI's built-in `RelevancyEvaluator`.
+- **Deterministic Metric & Accuracy Evaluators:** Exact string ground truth matching, categorical set membership, and bounded score windows.
+- **LLM Judge Rubric Parsing:** Parsing numeric scores, binary verdicts with reasoning, and structured JSON outputs with markdown fence stripping.
+- **Composite Evaluators:** Aggregating weighted multi-criteria, fail-fast short-circuit chains, and all-must-pass consensus rules.
+- **Benchmark Suite Execution & Quality Gates:** Running dataset batches, aggregating multi-metric summaries, and enforcing quality gate thresholds (`EvaluationGateException`).
 
 ---
 
-## 10 Scenarios Breakdown
+## Repetitive Muscle Memory Structure (15 Scenarios)
 
-| # | Component | Responsibility & Contract |
-|---|---|---|
-| **01** | `RelevancyEvaluatorAdapter` | Adapts Spring AI's built-in `RelevancyEvaluator` via `RelevancyEvaluator.builder().chatClientBuilder(...)`. Evaluates if response aligns with query and context. |
-| **02** | `FactCheckingEvaluatorAdapter` | Adapts Spring AI's built-in `FactCheckingEvaluator` via `FactCheckingEvaluator.builder(chatClientBuilder).build()`. Checks if claim is supported by context documents. |
-| **03** | `NoiseFloorThresholdEvaluator` | Deterministic telemetry keep gate (from Diagnostician `KeepRule` v2): verifies telemetry deltas clear noise floors (`rpsFloor`, `p95FloorMs`) and guards against `failRate` regressions. |
-| **04** | `GroundTruthAccuracyEvaluator` | Deterministic root-cause convergence evaluator (from Diagnostician `EvalScorerImpl`): checks if diagnosed category matches ground truth (case-insensitive after trim). |
-| **05** | `SingleMetricThresholdEvaluator` | Configurable numeric threshold gate: validates `0.0 <= threshold <= 1.0` and asserts whether incoming score meets or exceeds threshold. |
-| **06** | `RubricScoreParser` | Structured LLM judge parser: extracts normalized score (e.g. `4/5` -> `0.80`, `0.95` -> `0.95`) and reasoning text from formatted LLM judge output. Pre-compiled patterns provided in class. |
-| **07** | `BinaryJudgeEvaluator` | Prompt-driven LLM-as-a-judge: prompts `ChatClient` with explicit evaluation instructions and parses `PASS`/`FAIL` verdict. |
-| **08** | `WeightedMultiCriteriaEvaluator` | Multi-dimension score aggregator: validates criterion weights sum to 1.0, computes weighted composite score, and evaluates against passing threshold. |
-| **09** | `ShortCircuitCompositeEvaluator` | Chained evaluator composite with fast-fail: evaluates chain sequentially; immediately returns on first failure without executing remaining evaluators. |
-| **10** | `BatchEvaluationRunner` | Benchmark suite runner: executes batch of evaluation requests, computes `BenchmarkSummary` (`passRate`, `averageScore`), and enforces minimum pass-rate threshold. |
+### Topic 1: Spring AI Evaluator Interface & Request/Response Basics (Scenarios 1 – 3)
+1. **Scenario 01: Direct EvaluationRequest & Threshold Evaluation** — Construct basic `EvaluationRequest` and gate score against threshold.
+2. **Scenario 02: Context-Enriched EvaluationRequest (RAG Triad Triplet)** — Construct `EvaluationRequest` with `List<Document>` context and record metadata.
+3. **Scenario 03: Spring AI Built-in Evaluator Adapter** — Adapt built-in `RelevancyEvaluator` with exception fallback guards.
+
+### Topic 2: Deterministic Metric & Accuracy Evaluators (Scenarios 4 – 6)
+4. **Scenario 04: Exact Match Ground Truth Evaluator** — Case-insensitive exact comparison against expected labels.
+5. **Scenario 05: Categorical Convergence Evaluator** — Set membership validation against allowed taxonomy categories.
+6. **Scenario 06: Bounded Numeric Score Evaluator** — Numeric window verification ensuring scores fall within [min, max].
+
+### Topic 3: LLM Rubric Parsing & Score Extraction (Scenarios 7 – 9)
+7. **Scenario 07: Single Numeric Rubric Score Parser** — Regex parsing for fraction, decimal, and integer scores with reason text.
+8. **Scenario 08: Multi-Field Verdict & Reasoning Rubric Parser** — Extracting `PASS`/`FAIL` verdict and reasoning fields.
+9. **Scenario 09: Structured JSON Rubric Parser** — Stripping markdown code fences and extracting JSON rubric maps.
+
+### Topic 4: Composite & Chained Evaluators (Scenarios 10 – 12)
+10. **Scenario 10: Weighted Multi-Criteria Evaluator** — Weighted linear combination of criterion scores with sum-to-1.0 validation.
+11. **Scenario 11: Fail-Fast Short-Circuit Composite Evaluator** — Sequential chain execution that immediately returns on first failure.
+12. **Scenario 12: AllMustPass Composite Evaluator** — Strict consensus requiring 100% pass across all evaluators with aggregated feedback.
+
+### Topic 5: Benchmark Runner & Suite Aggregation (Scenarios 13 – 15)
+13. **Scenario 13: Simple Batch Evaluation Runner** — Executing a single evaluator across request datasets and computing pass rate / mean score.
+14. **Scenario 14: Multi-Metric Benchmark Suite Runner** — Running multiple evaluators concurrently across request datasets.
+15. **Scenario 15: Quality Gate Threshold Enforcer** — Gating releases against minimum pass-rate and average-score thresholds.
 
 ---
 
 ## Verification Commands
 
 ```powershell
-# Run the complete test suite:
-mvn test-compile exec:java -pl phase06-ex01-evaluators
-
-# Run a single scenario (e.g. Scenario 3):
-mvn test-compile exec:java -pl phase06-ex01-evaluators "-Dexec.args=3"
-
-# Run JUnit / Surefire test:
 mvn test -pl phase06-ex01-evaluators
 ```
+
+A verified reference implementation is available in `docs/golden/phase06-ex01-golden.md`.

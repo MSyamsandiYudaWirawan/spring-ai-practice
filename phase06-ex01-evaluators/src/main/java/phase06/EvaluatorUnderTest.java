@@ -1,46 +1,90 @@
 package phase06;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.evaluation.FactCheckingEvaluator;
 import org.springframework.ai.chat.evaluation.RelevancyEvaluator;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.evaluation.EvaluationRequest;
 import org.springframework.ai.evaluation.EvaluationResponse;
 import org.springframework.ai.evaluation.Evaluator;
+import org.springframework.ai.util.JsonHelper;
 import phase06.EvaluatorContracts.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Service under test — THE ONLY FILE YOU MODIFY for Phase 06 Exercise 01.
+ * Exercise implementation under test for Phase 06 Exercise 01:
+ * Deterministic Evaluators, Spring AI Evaluator Interface & Foundational LLM-as-a-Judge.
  * <p>
- * Practice implementing deterministic evaluators, Spring AI Evaluator interfaces,
- * noise floor gates, rubric parsers, and benchmark runners:
- * 1. RelevancyEvaluatorAdapter (Spring AI built-in RelevancyEvaluator)
- * 2. FactCheckingEvaluatorAdapter (Spring AI built-in FactCheckingEvaluator)
- * 3. NoiseFloorThresholdEvaluator (Deterministic telemetry keep gate)
- * 4. GroundTruthAccuracyEvaluator (Exact ground-truth category convergence)
- * 5. SingleMetricThresholdEvaluator (Configurable numeric threshold gate)
- * 6. RubricScoreParser (Structured LLM judge rubric extraction)
- * 7. BinaryJudgeEvaluator (Prompt-driven LLM-as-a-judge with binary verdict)
- * 8. WeightedMultiCriteriaEvaluator (Multi-dimension score aggregator)
- * 9. ShortCircuitCompositeEvaluator (Chained evaluators with fast fail)
- * 10. BatchEvaluationRunner (Benchmark suite runner with aggregate metrics)
+ * 15 repetitive muscle-memory drills across 5 core evaluation topics (3 repetitions each).
+ * Implement all 15 scenarios in this file.
  */
 public class EvaluatorUnderTest {
 
+    private static final JsonHelper JSON_HELPER = new JsonHelper();
+
+    // =========================================================================
+    // TOPIC 1: Spring AI Evaluator Interface & Request/Response Basics (Scenarios 1 - 3)
+    // =========================================================================
+
     /**
-     * Scenario 1: Spring AI RelevancyEvaluator Adapter.
+     * Scenario 01: Direct EvaluationRequest & Threshold Evaluation.
      * <p>
      * Instructions:
-     * - Build a RelevancyEvaluator using RelevancyEvaluator.builder().chatClientBuilder(chatClientBuilder).build()
-     * (or new RelevancyEvaluator(chatClientBuilder)).
-     * - Construct an EvaluationRequest using query, contextDocs, and response.
-     * - Call relevancyEvaluator.evaluate(request) and return the EvaluationResponse.
+     * - Validate userQuery and modelResponse are not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Validate 0.0f <= threshold && threshold <= 1.0f; throw {@link IllegalArgumentException} otherwise.
+     * - Construct new EvaluationRequest(userQuery, modelResponse).
+     * - Build and return EvaluationResponse:
+     *   - isPass = score >= threshold
+     *   - score = score
+     *   - feedback = isPass ? "PASSED" : "FAILED"
+     *   - metadata = Map.of("threshold", threshold)
+     */
+    public static EvaluationResponse evaluateThreshold(
+            String userQuery,
+            String modelResponse,
+            float score,
+            float threshold
+    ) {
+        // DEFECT (Scenario 1): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 02: Context-Enriched EvaluationRequest (RAG Triad Triplet).
+     * <p>
+     * Instructions:
+     * - Validate userQuery, contextDocs, and modelResponse are not null; throw {@link IllegalArgumentException} otherwise.
+     * - Validate 0.0f <= threshold && threshold <= 1.0f; throw {@link IllegalArgumentException} otherwise.
+     * - Construct new EvaluationRequest(userQuery, contextDocs, modelResponse).
+     * - Return EvaluationResponse:
+     *   - isPass = score >= threshold
+     *   - score = score
+     *   - feedback = isPass ? "GROUNDED" : "UNGROUNDED"
+     *   - metadata = Map.of("contextDocCount", contextDocs.size(), "threshold", threshold)
+     */
+    public static EvaluationResponse evaluateContextGrounded(
+            String userQuery,
+            List<Document> contextDocs,
+            String modelResponse,
+            float score,
+            float threshold
+    ) {
+        // DEFECT (Scenario 2): Returns null
+        return null;
+    }
+
+    /**
+     * Scenario 03: Spring AI Built-in Evaluator Adapter with Fallback Guard.
+     * <p>
+     * Instructions:
+     * - Validate chatClientBuilder != null; throw {@link IllegalArgumentException} otherwise.
+     * - Build RelevancyEvaluator: RelevancyEvaluator.builder().chatClientBuilder(chatClientBuilder).build().
+     * - Construct EvaluationRequest(query, contextDocs != null ? contextDocs : List.of(), response).
+     * - In a try/catch:
+     *   - Return relevancyEvaluator.evaluate(request).
+     *   - On Throwable t: return new EvaluationResponse(false, 0.0f, "Evaluator error: " + t.getMessage(), Map.of());
      */
     public static EvaluationResponse evaluateRelevancy(
             ChatClient.Builder chatClientBuilder,
@@ -48,75 +92,29 @@ public class EvaluatorUnderTest {
             String response,
             List<Document> contextDocs
     ) {
-        // DEFECT (Scenario 1): Returns dummy failing response without invoking Spring AI RelevancyEvaluator
-        return new EvaluationResponse(false, 0.0f, "Unimplemented", Map.of());
+        // DEFECT (Scenario 3): Returns null
+        return null;
     }
 
-    /**
-     * Scenario 2: Spring AI FactCheckingEvaluator Adapter.
-     * <p>
-     * Instructions:
-     * - Build a FactCheckingEvaluator using FactCheckingEvaluator.builder(chatClientBuilder).build().
-     * - Construct an EvaluationRequest using contextDocs (dataList) and claim (responseContent).
-     * - Call factCheckingEvaluator.evaluate(request) and return the EvaluationResponse.
-     */
-    public static EvaluationResponse evaluateFactuality(
-            ChatClient.Builder chatClientBuilder,
-            String claim,
-            List<Document> contextDocs
-    ) {
-        // DEFECT (Scenario 2): Returns dummy failing response without invoking Spring AI FactCheckingEvaluator
-        return new EvaluationResponse(false, 0.0f, "Unimplemented", Map.of());
-    }
+    // =========================================================================
+    // TOPIC 2: Deterministic Metric & Accuracy Evaluators (Scenarios 4 - 6)
+    // =========================================================================
 
     /**
-     * Scenario 3: Deterministic Noise Floor Threshold Evaluator.
+     * Scenario 04: Exact Match Ground Truth Evaluator.
      * <p>
      * Instructions:
-     * - Evaluate TelemetryDelta against NoiseFloors (from Diagnostician KeepRule v2).
-     * - Guard check: if failRateAfter > failRateBefore, return EvaluationResponse(false, 0.0f,
-     * "REJECTED: failRate worsened from " + delta.failRateBefore() + " to " + delta.failRateAfter(), metadata).
-     * - Improvement check:
-     * rpsImproved = delta.rpsDelta() > floors.rpsFloor()
-     * p95Improved = delta.p95DeltaMs() > floors.p95FloorMs()
-     * - If (rpsImproved || p95Improved):
-     * return EvaluationResponse(true, 1.0f, "KEPT: " + (rpsImproved ? "RPS" : "P95") + " improved beyond noise floor", metadata)
-     * - Else:
-     * return EvaluationResponse(false, 0.0f, "REJECTED: deltas did not clear noise floors", metadata)
-     */
-    public static class NoiseFloorThresholdEvaluator implements Evaluator {
-        private final NoiseFloors floors;
-
-        public NoiseFloorThresholdEvaluator(NoiseFloors floors) {
-            this.floors = Objects.requireNonNull(floors, "floors must not be null");
-        }
-
-        public EvaluationResponse evaluateTelemetry(TelemetryDelta delta) {
-            // DEFECT (Scenario 3): Always rejects without evaluating noise floors
-            return new EvaluationResponse(false, 0.0f, "REJECTED: noise floor not cleared", Map.of());
-        }
-
-        @Override
-        public EvaluationResponse evaluate(EvaluationRequest request) {
-            return evaluateTelemetry(new TelemetryDelta(0, 0, 0, 0, 0));
-        }
-    }
-
-    /**
-     * Scenario 4: Ground-Truth Category Accuracy Evaluator.
-     * <p>
-     * Instructions:
-     * - Compare predictedCategory against groundTruthCategory (case-insensitive after trim).
+     * - Compare predictedAnswer against expectedGroundTruth (case-insensitive after trim).
      * - If match:
-     * return EvaluationResponse(true, 1.0f, "ACCURATE: predicted '" + predicted.trim() + "' matched ground truth '" + truth.trim() + "'", metadata)
+     *   return EvaluationResponse(true, 1.0f, "MATCH", Map.of())
      * - If mismatch:
-     * return EvaluationResponse(false, 0.0f, "MISMATCH: predicted '" + predicted.trim() + "' != ground truth '" + truth.trim() + "'", metadata)
+     *   return EvaluationResponse(false, 0.0f, "MISMATCH: expected '" + expected.trim() + "', got '" + predicted.trim() + "'", Map.of())
      */
     public static class GroundTruthAccuracyEvaluator implements Evaluator {
 
-        public EvaluationResponse evaluateGroundTruth(String predictedCategory, String groundTruthCategory) {
-            // DEFECT (Scenario 4): Hardcoded mismatch
-            return new EvaluationResponse(false, 0.0f, "MISMATCH", Map.of());
+        public EvaluationResponse evaluateGroundTruth(String predictedAnswer, String expectedGroundTruth) {
+            // DEFECT (Scenario 4): Returns null
+            return null;
         }
 
         @Override
@@ -126,199 +124,279 @@ public class EvaluatorUnderTest {
     }
 
     /**
-     * Scenario 5: Configurable Numeric Single Metric Threshold Evaluator.
+     * Scenario 05: Categorical Convergence Evaluator.
      * <p>
      * Instructions:
-     * - Constructor validates 0.0f <= passingThreshold && passingThreshold <= 1.0f, else throws IllegalArgumentException.
-     * - evaluateScore(actualScore):
-     * - if actualScore >= passingThreshold:
-     * return EvaluationResponse(true, actualScore, "PASSED: score " + actualScore + " >= threshold " + passingThreshold, metadata)
-     * - else:
-     * return EvaluationResponse(false, actualScore, "FAILED: score " + actualScore + " < threshold " + passingThreshold, metadata)
+     * - Validate predictedCategory != null and allowedCategories != null && !allowedCategories.isEmpty();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Check if allowedCategories contains predictedCategory (case-insensitive after trim).
+     * - If contains:
+     *   return EvaluationResponse(true, 1.0f, "VALID_CATEGORY: " + predictedCategory.trim(), Map.of())
+     * - Else:
+     *   return EvaluationResponse(false, 0.0f, "INVALID_CATEGORY: " + predictedCategory.trim(), Map.of())
      */
-    public static class SingleMetricThresholdEvaluator implements Evaluator {
-        private final float passingThreshold;
+    public static class CategoricalConvergenceEvaluator implements Evaluator {
 
-        public SingleMetricThresholdEvaluator(float passingThreshold) {
-            // DEFECT (Scenario 5): Missing bounds validation
-            this.passingThreshold = passingThreshold;
-        }
-
-        public EvaluationResponse evaluateScore(float actualScore) {
-            // DEFECT (Scenario 5): Always passes
-            return new EvaluationResponse(true, actualScore, "PASSED", Map.of());
+        public EvaluationResponse evaluateCategory(String predictedCategory, Set<String> allowedCategories) {
+            // DEFECT (Scenario 5): Returns null
+            return null;
         }
 
         @Override
         public EvaluationResponse evaluate(EvaluationRequest request) {
-            float score = 0.0f;
-            try {
-                score = Float.parseFloat(request.getResponseContent());
-            } catch (Exception ignored) {
-            }
-            return evaluateScore(score);
+            return evaluateCategory(request.getResponseContent(), Set.of(request.getUserText().split(",")));
         }
     }
 
     /**
-     * Scenario 6: Structured LLM Judge Rubric Score Parser.
+     * Scenario 06: Bounded Numeric Score Evaluator.
      * <p>
      * Instructions:
-     * - Parse text formatted as "SCORE: <value>" and "REASON: <text>" (case-insensitive).
-     * - Supported value formats:
-     *   - Fraction: "4/5" -> 4.0 / 5.0 = 0.80f
-     *   - Fraction: "8/10" -> 8.0 / 10.0 = 0.80f
-     *   - Decimal: "0.85" -> 0.85f
-     *   - Integer: "4" (assumed out of 5 if > 1.0) -> 4.0 / 5.0 = 0.80f
-     * - Extract reason text following "REASON:" (trimmed, default to "Unspecified" if missing).
-     * - Return new RubricScore(normalizedScore, reason).
-     * - If llmOutput is null or blank, or if "SCORE:" is missing or unparseable:
-     *   throw IllegalArgumentException.
-     * <p>
-     * Note: Pre-compiled {@link #SCORE_PATTERN} and {@link #REASON_PATTERN} constants are provided below.
+     * - Validate 0.0f <= minScore && minScore <= maxScore && maxScore <= 1.0f;
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - Check if minScore <= actualScore && actualScore <= maxScore.
+     * - If true:
+     *   return EvaluationResponse(true, actualScore, "WITHIN_BOUNDS", Map.of("min", minScore, "max", maxScore))
+     * - Else:
+     *   return EvaluationResponse(false, actualScore, "OUT_OF_BOUNDS", Map.of("min", minScore, "max", maxScore))
      */
-    public static class RubricScoreParser {
+    public static class BoundedScoreEvaluator implements Evaluator {
 
-        /**
-         * Pre-compiled Regex Pattern for parsing score lines:
-         * Group 1: Numerator or decimal value. Group 2: Optional denominator after slash.
-         */
+        public EvaluationResponse evaluateBounds(float actualScore, float minScore, float maxScore) {
+            // DEFECT (Scenario 6): Returns null
+            return null;
+        }
+
+        @Override
+        public EvaluationResponse evaluate(EvaluationRequest request) {
+            float val = Float.parseFloat(request.getResponseContent());
+            return evaluateBounds(val, 0.0f, 1.0f);
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 3: LLM Rubric Parsing & Score Extraction (Scenarios 7 - 9)
+    // =========================================================================
+
+    /**
+     * Scenario 07: Single Numeric Rubric Score Parser.
+     * <p>
+     * Instructions:
+     * - Validate llmOutput is not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Parse SCORE: <val> and REASON: <text> (case-insensitive).
+     *   - Fraction: "4/5" -> 4.0 / 5.0 = 0.80f, "8/10" -> 0.80f
+     *   - Decimal: "0.85" -> 0.85f
+     *   - Integer: "4" (if > 1.0, assumed out of 5.0 -> 0.80f)
+     * - Extract reason following REASON: (trimmed, default "Unspecified" if missing).
+     * - Return RubricScore(score, reason).
+     * - If SCORE is missing or unparseable: throw {@link IllegalArgumentException}.
+     */
+    public static class NumericRubricParser {
+
         public static final Pattern SCORE_PATTERN =
                 Pattern.compile("(?i)score:\\s*([0-9]+(?:\\.[0-9]+)?)(?:\\s*/\\s*([0-9]+(?:\\.[0-9]+)?))?");
-
-        /**
-         * Pre-compiled Regex Pattern for parsing reason lines:
-         * Group 1: Everything following "REASON:".
-         */
         public static final Pattern REASON_PATTERN =
                 Pattern.compile("(?i)reason:\\s*(.*)", Pattern.DOTALL);
 
-        public static RubricScore parse(String llmOutput) {
-            // DEFECT (Scenario 6): Always returns 0.0 without parsing
-            if (llmOutput == null || llmOutput.isBlank()) {
-                throw new IllegalArgumentException("llmOutput must not be blank");
-            }
-            return new RubricScore(0.0f, "Unparsed");
+        public static RubricScore parseScore(String llmOutput) {
+            // DEFECT (Scenario 7): Returns null
+            return null;
         }
     }
 
     /**
-     * Scenario 7: Prompt-Driven Binary LLM Judge Evaluator.
+     * Scenario 08: Multi-Field Verdict & Reasoning Rubric Parser.
      * <p>
      * Instructions:
-     * - Prompt the injected ChatClient:
-     * "Evaluate if the following response correctly answers the user query.\n" +
-     * "Query: " + request.getUserText() + "\n" +
-     * "Response: " + request.getResponseContent() + "\n" +
-     * "Instructions: Respond with PASS or FAIL on the first line, followed by reasoning."
-     * - Call chatClient.prompt().user(prompt).call().content().
-     * - If output stripped starts with or contains "PASS" (case-insensitive):
-     * isPass = true, score = 1.0f
-     * - Else:
-     * isPass = false, score = 0.0f
-     * - Return EvaluationResponse(isPass, score, rawOutput, Map.of()).
+     * - Validate llmOutput is not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Extract VERDICT: <PASS|FAIL> and REASON: <text> (case-insensitive).
+     * - If VERDICT is missing or not PASS/FAIL, throw {@link IllegalArgumentException}.
+     * - Extract reason following REASON: (trimmed, default "Unspecified" if missing).
+     * - Return RubricVerdict(pass, reason).
      */
-    public static class BinaryJudgeEvaluator implements Evaluator {
-        private final ChatClient chatClient;
+    public static class VerdictRubricParser {
 
-        public BinaryJudgeEvaluator(ChatClient chatClient) {
-            this.chatClient = Objects.requireNonNull(chatClient, "chatClient must not be null");
-        }
+        public static final Pattern VERDICT_PATTERN =
+                Pattern.compile("(?i)verdict:\\s*(PASS|FAIL)");
+        public static final Pattern REASON_PATTERN =
+                Pattern.compile("(?i)reason:\\s*(.*)", Pattern.DOTALL);
 
-        @Override
-        public EvaluationResponse evaluate(EvaluationRequest request) {
-            // DEFECT (Scenario 7): Doesn't call chatClient
-            return new EvaluationResponse(false, 0.0f, "Unimplemented", Map.of());
+        public static RubricVerdict parseVerdict(String llmOutput) {
+            // DEFECT (Scenario 8): Returns null
+            return null;
         }
     }
 
     /**
-     * Scenario 8: Weighted Multi-Criteria Evaluator.
+     * Scenario 09: Structured JSON Rubric Parser.
      * <p>
      * Instructions:
-     * - Constructor:
-     * - Validates criteria is not null and not empty.
-     * - Validates that sum of weights == 1.0f (Math.abs(sum - 1.0f) < 0.001f).
-     * Else throws IllegalArgumentException("Criteria weights must sum to 1.0, current sum: " + sum).
-     * - Validates 0.0f <= passingThreshold && passingThreshold <= 1.0f.
-     * - evaluate(criterionScores):
-     * - Computes compositeScore = sum(criterionScores.getOrDefault(c.name(), 0.0f) * c.weight()).
-     * - passed = compositeScore >= passingThreshold.
-     * - Returns MultiCriteriaResult(compositeScore, passed, detailedList, passed ? "PASS" : "FAIL").
+     * - Validate llmOutput is not null/blank; throw {@link IllegalArgumentException} otherwise.
+     * - Find JSON object between { and }.
+     * - Parse JSON map using JSON_HELPER.fromJsonToMap(clean).
+     * - Extract:
+     *   - score: ((Number) map.get("score")).floatValue()
+     *   - verdict: (Boolean) map.get("verdict")
+     *   - reason: (String) map.getOrDefault("reason", "Unspecified")
+     * - Return StructuredRubricResult(score, verdict, reason).
+     * - Throw {@link IllegalArgumentException} if parsing fails or required fields are missing.
+     */
+    public static class JsonRubricParser {
+
+        public static StructuredRubricResult parseJsonRubric(String llmOutput) {
+            // DEFECT (Scenario 9): Returns null
+            return null;
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 4: Composite & Chained Evaluators (Scenarios 10 - 12)
+    // =========================================================================
+
+    /**
+     * Scenario 10: Weighted Multi-Criteria Evaluator.
+     * <p>
+     * Instructions:
+     * - In constructor:
+     *   - Validate criteria is not null and not empty; throw {@link IllegalArgumentException} otherwise.
+     *   - Validate sum of weights == 1.0f (Math.abs(sum - 1.0f) < 0.001f); throw {@link IllegalArgumentException} otherwise.
+     *   - Validate 0.0f <= passingThreshold && passingThreshold <= 1.0f; throw {@link IllegalArgumentException} otherwise.
+     * - In evaluate(Map<String, Float> criterionScores):
+     *   - Compute compositeScore = sum(criterionScores.getOrDefault(c.name(), 0.0f) * c.weight()).
+     *   - passed = compositeScore >= passingThreshold.
+     *   - Return MultiCriteriaResult(compositeScore, passed, detailedList, passed ? "PASS" : "FAIL").
      */
     public static class WeightedMultiCriteriaEvaluator {
         private final List<EvaluationCriterion> criteria;
         private final float passingThreshold;
 
         public WeightedMultiCriteriaEvaluator(List<EvaluationCriterion> criteria, float passingThreshold) {
-            // DEFECT (Scenario 8): Missing weight validation
+            // DEFECT (Scenario 10): No validation
             this.criteria = criteria != null ? List.copyOf(criteria) : List.of();
             this.passingThreshold = passingThreshold;
         }
 
         public MultiCriteriaResult evaluate(Map<String, Float> criterionScores) {
-            // DEFECT (Scenario 8): Always returns 0.0f composite score
-            return new MultiCriteriaResult(0.0f, false, List.of(), "FAIL");
+            // DEFECT (Scenario 10): Returns null
+            return null;
         }
     }
 
     /**
-     * Scenario 9: Short-Circuiting Composite Evaluator Chain.
+     * Scenario 11: Fail-Fast Short-Circuit Composite Evaluator.
      * <p>
      * Instructions:
-     * - Constructor takes List<Evaluator> evaluators.
-     * - evaluate(request):
-     * - Iterates through evaluators in list order.
-     * - Evaluates each evaluator.evaluate(request).
-     * - If any evaluator returns !response.isPass():
-     * IMMEDIATELY returns that failing response (short-circuit, do NOT execute remaining evaluators).
-     * - If all pass:
-     * returns new EvaluationResponse(true, 1.0f, "All " + evaluators.size() + " evaluators passed",
-     * Map.of("stepsExecuted", evaluators.size()));
+     * - Constructor: validate evaluators != null && !evaluators.isEmpty(); throw {@link IllegalArgumentException} otherwise.
+     * - evaluate(EvaluationRequest request):
+     *   - Iterate through evaluators in list order.
+     *   - As soon as any evaluator returns !response.isPass():
+     *     IMMEDIATELY return that failing response (short-circuit).
+     *   - If all pass, return EvaluationResponse(true, 1.0f, "All " + evaluators.size() + " evaluators passed", Map.of("stepsExecuted", evaluators.size())).
      */
     public static class ShortCircuitCompositeEvaluator implements Evaluator {
         private final List<Evaluator> evaluators;
 
         public ShortCircuitCompositeEvaluator(List<Evaluator> evaluators) {
+            // DEFECT (Scenario 11): No validation
             this.evaluators = evaluators != null ? List.copyOf(evaluators) : List.of();
         }
 
         @Override
         public EvaluationResponse evaluate(EvaluationRequest request) {
-            // DEFECT (Scenario 9): Does not evaluate chain or short-circuit
-            return new EvaluationResponse(false, 0.0f, "Unimplemented", Map.of());
+            // DEFECT (Scenario 11): Returns null
+            return null;
         }
     }
 
     /**
-     * Scenario 10: Batch Evaluation Suite Runner with Threshold Gate.
+     * Scenario 12: All-Must-Pass Strict Composite Evaluator.
      * <p>
      * Instructions:
-     * - runBatch(evaluator, requests):
-     * - Validates evaluator != null and requests != null && !requests.isEmpty(), else throws IllegalArgumentException.
-     * - Evaluates each request with evaluator.evaluate(req).
-     * - Calculates:
-     * totalRequests = requests.size()
-     * passCount = count of resp.isPass()
-     * failCount = totalRequests - passCount
-     * passRate = passCount / (float) totalRequests
-     * averageScore = sum(scores) / totalRequests
-     * - Returns new BenchmarkSummary(totalRequests, passCount, failCount, passRate, averageScore).
-     * - enforceThreshold(summary, minPassRate):
-     * - If summary.passRate() < minPassRate:
-     * throws EvaluationGateException("Evaluation threshold breach: passRate " + summary.passRate() + " < required " + minPassRate).
+     * - Constructor: validate evaluators != null && !evaluators.isEmpty(); throw {@link IllegalArgumentException} otherwise.
+     * - evaluate(EvaluationRequest request):
+     *   - Run ALL evaluators (do not short-circuit).
+     *   - Collect all results.
+     *   - allPassed = true if every evaluator returned isPass() == true.
+     *   - avgScore = sum(scores) / evaluators.size().
+     *   - combinedFeedback = join feedbacks of failing evaluators, or "All passed" if allPassed.
+     *   - Return EvaluationResponse(allPassed, avgScore, combinedFeedback, Map.of("totalEvaluators", size, "failedCount", failedCount)).
+     */
+    public static class AllMustPassCompositeEvaluator implements Evaluator {
+        private final List<Evaluator> evaluators;
+
+        public AllMustPassCompositeEvaluator(List<Evaluator> evaluators) {
+            // DEFECT (Scenario 12): No validation
+            this.evaluators = evaluators != null ? List.copyOf(evaluators) : List.of();
+        }
+
+        @Override
+        public EvaluationResponse evaluate(EvaluationRequest request) {
+            // DEFECT (Scenario 12): Returns null
+            return null;
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 5: Benchmark Runner & Suite Aggregation (Scenarios 13 - 15)
+    // =========================================================================
+
+    /**
+     * Scenario 13: Simple Batch Evaluation Runner.
+     * <p>
+     * Instructions:
+     * - Validate evaluator != null and requests != null && !requests.isEmpty(); throw {@link IllegalArgumentException} otherwise.
+     * - Evaluate each request with evaluator.evaluate(req).
+     * - Compute:
+     *   - totalRequests = requests.size()
+     *   - passCount = count of isPass() == true
+     *   - failCount = totalRequests - passCount
+     *   - passRate = passCount / (float) totalRequests
+     *   - averageScore = sum(scores) / (float) totalRequests
+     * - Return BenchmarkSummary(totalRequests, passCount, failCount, passRate, averageScore).
      */
     public static class BatchEvaluationRunner {
         public static BenchmarkSummary runBatch(Evaluator evaluator, List<EvaluationRequest> requests) {
-            // DEFECT (Scenario 10): Returns empty summary without evaluating requests
-            if (evaluator == null || requests == null || requests.isEmpty()) {
-                throw new IllegalArgumentException("evaluator and non-empty requests required");
-            }
-            return new BenchmarkSummary(0, 0, 0, 0.0f, 0.0f);
+            // DEFECT (Scenario 13): Returns null
+            return null;
         }
+    }
 
-        public static void enforceThreshold(BenchmarkSummary summary, float minPassRate) {
-            // DEFECT (Scenario 10): Does not enforce threshold or throw EvaluationGateException
+    /**
+     * Scenario 14: Multi-Metric Benchmark Suite Runner.
+     * <p>
+     * Instructions:
+     * - Validate evaluators != null && !evaluators.isEmpty() and requests != null && !requests.isEmpty();
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - For each entry in evaluators (evaluatorName -> evaluator):
+     *   - Run BatchEvaluationRunner.runBatch(evaluator, requests).
+     *   - Store in Map<String, BenchmarkSummary>.
+     * - Return Map<String, BenchmarkSummary>.
+     */
+    public static class BenchmarkSuiteRunner {
+        public static Map<String, BenchmarkSummary> runSuite(
+                Map<String, Evaluator> evaluators,
+                List<EvaluationRequest> requests
+        ) {
+            // DEFECT (Scenario 14): Returns empty map
+            return Map.of();
+        }
+    }
+
+    /**
+     * Scenario 15: Quality Gate Threshold Enforcer.
+     * <p>
+     * Instructions:
+     * - Validate summary != null; throw {@link IllegalArgumentException} otherwise.
+     * - Validate 0.0f <= minPassRate && minPassRate <= 1.0f && 0.0f <= minAvgScore && minAvgScore <= 1.0f;
+     *   throw {@link IllegalArgumentException} otherwise.
+     * - If summary.passRate() < minPassRate:
+     *   throw new EvaluationGateException("Evaluation threshold breach: passRate " + summary.passRate() + " < required " + minPassRate);
+     * - If summary.averageScore() < minAvgScore:
+     *   throw new EvaluationGateException("Evaluation threshold breach: averageScore " + summary.averageScore() + " < required " + minAvgScore);
+     */
+    public static class QualityGateEnforcer {
+        public static void enforceGate(BenchmarkSummary summary, float minPassRate, float minAvgScore) {
+            // DEFECT (Scenario 15): No-op
         }
     }
 }

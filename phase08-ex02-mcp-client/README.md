@@ -1,57 +1,46 @@
 # Phase 08 Exercise 02: Model Context Protocol (MCP) Client Integration, Tool Providers & Agentic Orchestration
 
 ## Focus & Learning Objectives
-This exercise teaches the client side of the official Model Context Protocol (MCP) Java SDK (`io.modelcontextprotocol.sdk:mcp-core:2.0.0`) and Spring AI's native MCP integration (`org.springframework.ai:spring-ai-mcp:2.0.1`):
-- **Client Protocol Capabilities:** Negotiating client capabilities (`roots`, `sampling`).
-- **MCP Tool Adaptation:** Converting MCP schema definitions into Spring AI `ToolDefinition` instances.
-- **Spring AI ToolCallback Adapter:** Bridging MCP synchronous tools into executable Spring AI `ToolCallback` instances with JSON parameter parsing.
-- **Multi-Tool Discovery:** Querying server tool catalogs and bulk-generating Spring AI callbacks.
-- **Namespace Collision Prevention:** Prefixing tool names across federated servers via `McpToolUtils.prefixedToolName`.
-- **Resource Reading into Context:** Fetching MCP resources and formatting them into LLM prompt contexts.
-- **Parameterized Prompt Retrieval:** Retrieving and formatting prompt templates hosted on MCP servers.
-- **Resilient Tool Execution:** Implementing defensive error boundaries that intercept failures and return standardized error signals.
-- **Multi-Server Federated Registry:** Aggregating tools across heterogeneous MCP servers into a single dispatchable catalog.
-- **End-to-End Enterprise Agentic Gateway:** Orchestrating autonomous workflows using `ChatClient` with dynamic MCP tool binding and token guardrails.
-- **Dynamic Tool List Reloading:** Handling server-side tool updates (`notifications/tools/list_changed`) and re-indexing active tools.
-- **MCP Sampling Protocol:** Implementing reverse LLM delegation where an MCP server requests completions from the client under token guardrails.
+This exercise drills the client side of the official Model Context Protocol (MCP) Java SDK (`io.modelcontextprotocol.sdk:mcp-core:2.0.0`) and Spring AI's native MCP integration (`org.springframework.ai:spring-ai-mcp:2.0.1`):
+- **Client Protocol Capabilities & Roots:** Declaring client capabilities (`roots`, `sampling`) and constructing root URI lists with validation.
+- **Adapting MCP Tools to Spring AI ToolCallbacks:** Converting MCP schemas to `ToolDefinition`, bridging synchronous tool execution into `ToolCallback`, and implementing resilient exception shielding.
+- **Tool Discovery, Batch Adaptation & Namespacing:** Discovering tools from remote servers, formatting multi-server prefixes (`McpToolUtils.prefixedToolName`), and generating prefixed tool callback maps.
+- **MCP Resources & Prompts Retrieval:** Reading single and multiple resources into LLM prompt contexts, and querying parameterized prompt templates with argument bindings.
+- **Multi-Server Routing & Fault Resilience:** Managing federated multi-server registries, dynamic tool catalog reloading upon server updates, and executing reverse LLM sampling requests under token ceilings.
 
 ---
 
-## Scenarios
-1. **Scenario 01: Client Capability Negotiation & Specs**
-   - Declare client protocol features (`roots`, `sampling`).
-2. **Scenario 02: Tool Definition Adaptation from MCP Schemas**
-   - Convert MCP `Tool` schemas into Spring AI `ToolDefinition`.
-3. **Scenario 03: Adapting MCP Sync Tools to ToolCallbacks**
-   - Bridge MCP tool invocations to Spring AI `ToolCallback` with JSON argument handling.
-4. **Scenario 04: Multi-Tool Discovery & Callback Provider Generation**
-   - Discover all tools from an MCP server and construct callback providers.
-5. **Scenario 05: Multi-Server Tool Name Prefixing (Collision Prevention)**
-   - Generate namespaced tool identifiers to avoid collisions in multi-server environments.
-6. **Scenario 06: MCP Resource Reading into Prompt Context**
-   - Read server resources and format them as contextual prompt attachments.
-7. **Scenario 07: MCP Parameterized Prompt Retrieval**
-   - Query parameterized prompt templates from MCP servers with variable substitution.
-8. **Scenario 08: Tool Execution Resilience & Error Boundary**
-   - Intercept tool runtime errors and format graceful error feedback for LLM recovery.
-9. **Scenario 09: Multi-Server Client Registry & Unified Tool Dispatcher**
-   - Register multiple MCP servers, index prefixed tools, and route tool calls.
-10. **Scenario 10: End-to-End Enterprise Agentic Gateway with MCP Tool Calling**
-    - Execute an autonomous multi-tool agentic loop using `ChatClient` with token ceiling validation.
-11. **Scenario 11: Dynamic Tool List Reloading & Registry Re-indexing**
-    - Invalidate cached tool definitions upon server catalog updates and re-index active tools.
-12. **Scenario 12: MCP Protocol Sampling Handler (Server-to-Client LLM Delegation)**
-    - Execute client-side LLM sampling requested by an MCP server while enforcing token limits.
+## Repetitive Muscle Memory Structure (15 Scenarios)
+
+### Topic 1: Client Capabilities & Specs (Scenarios 1 – 3)
+1. **Scenario 01: Client Capabilities Declaration** — Build `ClientCapabilities` with `roots` and `sampling` flags.
+2. **Scenario 02: Client Roots List Construction & URI Validation** — Validate `file://` URIs and construct `Root` descriptors.
+3. **Scenario 03: Client Implementation & Metadata Spec** — Construct `Implementation` client descriptors with name, version, and description.
+
+### Topic 2: Adapting MCP Tools to Spring AI ToolCallbacks (Scenarios 4 – 6)
+4. **Scenario 04: ToolDefinition Adaptation from MCP Schemas** — Convert MCP `Tool` schemas to Spring AI `ToolDefinition` via `McpToolUtils`.
+5. **Scenario 05: Standard MCP Tool to ToolCallback Adaptation** — Bridge synchronous tool calls into executable Spring AI `ToolCallback` instances.
+6. **Scenario 06: Resilient ToolCallback with Fault Shielding** — Intercept execution faults and error flags, formatting resilient `ERROR: ` feedback without crashing.
+
+### Topic 3: Tool Discovery, Batch Adaptation & Namespacing (Scenarios 7 – 9)
+7. **Scenario 07: Multi-Tool Discovery & Batch Callback Generation** — Discover all tools from a client and batch-adapt to `List<ToolCallback>`.
+8. **Scenario 08: Multi-Server Tool Name Prefixing** — Construct collision-free namespaced tool identifiers via `McpToolUtils.prefixedToolName`.
+9. **Scenario 09: Prefixed Tool Discovery with Collision Prevention** — Discover tools across federated servers, namespacing tool definitions while maintaining execution routing.
+
+### Topic 4: MCP Resources & Prompts Retrieval (Scenarios 10 – 12)
+10. **Scenario 10: Single Resource Reading into Prompt Context** — Fetch a server resource and format it as context header and text.
+11. **Scenario 11: Multi-Resource Context Assembly** — Batch-fetch multiple resources and join them into a single delimited context block.
+12. **Scenario 12: Parameterized Prompt Retrieval & Argument Binding** — Query prompt templates with arguments and extract rendered prompt message text.
+
+### Topic 5: Multi-Server Routing & Fault Resilience (Scenarios 13 – 15)
+13. **Scenario 13: Multi-Server Tool Routing Registry** — Maintain federated servers, index prefixed tools, and route tool invocations.
+14. **Scenario 14: Dynamic Tool List Reloading & Registry Re-indexing** — Invalidate cached tools, query updated catalogs, and re-index active tools.
+15. **Scenario 15: MCP Protocol Sampling Handler (Server-to-Client LLM Delegation)** — Execute reverse LLM sampling requests while enforcing token ceilings.
 
 ---
 
 ## Verification
-Run the offline verification harness:
-```powershell
-mvn test-compile exec:java -pl phase08-ex02-mcp-client
-```
-
-Or run standard Maven tests:
+Run standard Maven tests:
 ```powershell
 mvn test -pl phase08-ex02-mcp-client
 ```

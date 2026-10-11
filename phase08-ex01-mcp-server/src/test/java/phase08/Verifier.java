@@ -2,52 +2,43 @@ package phase08;
 
 import io.modelcontextprotocol.server.McpServerFeatures.*;
 import io.modelcontextprotocol.spec.McpSchema.*;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import phase08.McpServerContracts.*;
-import phase08.McpServerUnderTest.*;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Verification harness for Phase 08 Exercise 01 (MCP Server).
- * Executes 10 deterministic offline tests against {@link McpServerUnderTest}.
+ * Gate Verifier for Phase 08 Exercise 01:
+ * Model Context Protocol (MCP) Server Architecture & Protocol Specifications.
+ * <p>
+ * 15 repetitive muscle-memory drills across 5 core topics (3 repetitions each).
  * <p>
  * DO NOT MODIFY THIS FILE.
+ * <p>
+ * Exits with status 99 on FAIL.
+ * Exits with status 0 on PASS.
  */
 public class Verifier {
 
-    private static final AtomicInteger passed = new AtomicInteger(0);
-    private static final AtomicInteger failed = new AtomicInteger(0);
+    public record ScenarioResult(int scenarioNumber, String name, boolean passed, String errorDetail) {}
 
     public static void main(String[] args) {
-        System.out.println("=================================================================");
-        System.out.println("  PHASE 08 EXERCISE 01: MCP SERVER ARCHITECTURE & SPEC VERIFIER  ");
-        System.out.println("=================================================================\n");
+        int selected = 0;
+        if (args.length > 0 && !args[0].isBlank()) {
+            try {
+                selected = Integer.parseInt(args[0].trim());
+            } catch (NumberFormatException ignored) {}
+        }
 
-        McpServerUnderTest underTest = new McpServerUnderTest();
+        List<ScenarioResult> results = runScenarios(selected);
+        printReport(results);
 
-        testScenario01(underTest);
-        testScenario02(underTest);
-        testScenario03(underTest);
-        testScenario04(underTest);
-        testScenario05(underTest);
-        testScenario06(underTest);
-        testScenario07(underTest);
-        testScenario08(underTest);
-        testScenario09(underTest);
-        testScenario10(underTest);
-        testScenario11(underTest);
-        testScenario12(underTest);
-
-        System.out.println("\n-----------------------------------------------------------------");
-        System.out.printf("VERIFICATION SUMMARY: %d / 12 PASSED, %d FAILED%n", passed.get(), failed.get());
-        System.out.println("-----------------------------------------------------------------");
-
-        if (failed.get() > 0) {
+        boolean allPassed = results.stream().allMatch(ScenarioResult::passed);
+        if (!allPassed) {
             System.exit(99);
         } else {
             System.exit(0);
@@ -56,546 +47,440 @@ public class Verifier {
 
     @Test
     public void verifyAll() {
+        List<ScenarioResult> results = runScenarios(0);
+        printReport(results);
+        boolean allPassed = results.stream().allMatch(ScenarioResult::passed);
+        if (!allPassed) {
+            fail("Verifier detected scenario failures. See printed report above.");
+        }
+    }
+
+    public static List<ScenarioResult> runScenarios(int selected) {
         McpServerUnderTest underTest = new McpServerUnderTest();
-        passed.set(0);
-        failed.set(0);
-
-        testScenario01(underTest);
-        testScenario02(underTest);
-        testScenario03(underTest);
-        testScenario04(underTest);
-        testScenario05(underTest);
-        testScenario06(underTest);
-        testScenario07(underTest);
-        testScenario08(underTest);
-        testScenario09(underTest);
-        testScenario10(underTest);
-        testScenario11(underTest);
-        testScenario12(underTest);
-
-        Assertions.assertEquals(0, failed.get(), "Verifier detected scenario failures.");
+        List<ScenarioResult> list = new ArrayList<>();
+        if (selected == 0 || selected == 1) list.add(verifyScenario1(underTest));
+        if (selected == 0 || selected == 2) list.add(verifyScenario2(underTest));
+        if (selected == 0 || selected == 3) list.add(verifyScenario3(underTest));
+        if (selected == 0 || selected == 4) list.add(verifyScenario4(underTest));
+        if (selected == 0 || selected == 5) list.add(verifyScenario5(underTest));
+        if (selected == 0 || selected == 6) list.add(verifyScenario6(underTest));
+        if (selected == 0 || selected == 7) list.add(verifyScenario7(underTest));
+        if (selected == 0 || selected == 8) list.add(verifyScenario8(underTest));
+        if (selected == 0 || selected == 9) list.add(verifyScenario9(underTest));
+        if (selected == 0 || selected == 10) list.add(verifyScenario10(underTest));
+        if (selected == 0 || selected == 11) list.add(verifyScenario11(underTest));
+        if (selected == 0 || selected == 12) list.add(verifyScenario12(underTest));
+        if (selected == 0 || selected == 13) list.add(verifyScenario13(underTest));
+        if (selected == 0 || selected == 14) list.add(verifyScenario14(underTest));
+        if (selected == 0 || selected == 15) list.add(verifyScenario15(underTest));
+        return list;
     }
 
-    private static void pass(String name) {
-        passed.incrementAndGet();
-        System.out.println("  [PASS] " + name);
-    }
+    // =========================================================================
+    // TOPIC 1: MCP Tool Definition & JSON Input Schema (Scenarios 1 - 3)
+    // =========================================================================
 
-    private static void fail(String name, String detail) {
-        failed.incrementAndGet();
-        System.out.println("  [FAIL] " + name);
-        if (detail != null && !detail.isBlank()) {
-            System.out.println("         --> DETAIL: " + detail);
-        }
-    }
-
-    private static void testScenario01(McpServerUnderTest underTest) {
-        String name = "Scenario 01: Server Capabilities Declaration";
+    private static ScenarioResult verifyScenario1(McpServerUnderTest underTest) {
+        String name = "ToolDefinition (Primitive-Typed JSON Schema)";
         try {
-            ServerCapabilities caps = underTest.createServerCapabilities(true, true, false, true);
-            if (caps == null) {
-                fail(name, "createServerCapabilities returned null");
-                return;
-            }
+            try {
+                underTest.buildPrimitiveToolDefinition(" ", "desc", Map.of(), List.of());
+                return new ScenarioResult(1, name, false, "Expected IllegalArgumentException on blank name");
+            } catch (IllegalArgumentException expected) {}
 
-            if (caps.tools() == null || !Boolean.TRUE.equals(caps.tools().listChanged())) {
-                fail(name, "Expected tools capability with listChanged=true");
-                return;
-            }
+            Tool tool = underTest.buildPrimitiveToolDefinition(
+                    "lookupUser",
+                    "Fetches user by email",
+                    Map.of("email", "string", "retries", "integer"),
+                    List.of("email")
+            );
 
-            if (caps.resources() == null || !Boolean.TRUE.equals(caps.resources().subscribe())) {
-                fail(name, "Expected resources capability with subscribe=true");
-                return;
-            }
-
-            if (caps.prompts() != null) {
-                fail(name, "Expected prompts capability to be null when disabled");
-                return;
-            }
-
-            if (caps.logging() == null) {
-                fail(name, "Expected logging capability to be non-null when enabled");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
-        }
-    }
-
-    private static void testScenario02(McpServerUnderTest underTest) {
-        String name = "Scenario 02: Tool Definition with JSON Input Schema";
-        try {
-            Map<String, Object> props = Map.of("query", Map.of("type", "string", "description", "SQL query"));
-            List<String> required = List.of("query");
-
-            Tool tool = underTest.createToolDefinition("sql_runner", "Executes SQL query", props, required);
             if (tool == null) {
-                fail(name, "createToolDefinition returned null");
-                return;
+                return new ScenarioResult(1, name, false, "buildPrimitiveToolDefinition returned null");
             }
-
-            if (!"sql_runner".equals(tool.name())) {
-                fail(name, "Expected name 'sql_runner', got: " + tool.name());
-                return;
+            if (!"lookupUser".equals(tool.name()) || !"Fetches user by email".equals(tool.description())) {
+                return new ScenarioResult(1, name, false, "Tool name or description mismatch");
             }
-
-            if (!"Executes SQL query".equals(tool.description())) {
-                fail(name, "Expected description 'Executes SQL query', got: " + tool.description());
-                return;
+            if (tool.inputSchema() == null || !"object".equals(tool.inputSchema().get("type"))) {
+                return new ScenarioResult(1, name, false, "Input schema type must be 'object'");
             }
-
-            Map<String, Object> schema = tool.inputSchema();
-            if (schema == null || !"object".equals(schema.get("type"))) {
-                fail(name, "Expected inputSchema type 'object'");
-                return;
-            }
-
-            if (!schema.containsKey("properties") || !schema.containsKey("required")) {
-                fail(name, "Expected inputSchema to contain 'properties' and 'required'");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(1, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(1, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario03(McpServerUnderTest underTest) {
-        String name = "Scenario 03: SyncToolSpecification Execution Handler";
+    private static ScenarioResult verifyScenario2(McpServerUnderTest underTest) {
+        String name = "ToolDefinition (Structured Properties Map)";
         try {
-            Tool tool = Tool.builder("echo_tool").description("echo").build();
-            SyncToolSpecification spec = underTest.createToolSpecification(tool, (args, ctx) -> "ECHO: " + args.get("msg") + " from " + ctx.tenantId());
+            Map<String, Object> props = Map.of(
+                    "service", Map.of("type", "string", "description", "target microservice"),
+                    "timeoutMs", Map.of("type", "number")
+            );
+
+            Tool tool = underTest.buildStructuredToolDefinition(
+                    "restartService",
+                    "Restarts target pod or deployment",
+                    props,
+                    List.of("service")
+            );
+
+            if (tool == null) {
+                return new ScenarioResult(2, name, false, "buildStructuredToolDefinition returned null");
+            }
+            if (!"restartService".equals(tool.name())) {
+                return new ScenarioResult(2, name, false, "Tool name mismatch");
+            }
+            if (tool.inputSchema() == null || !tool.inputSchema().containsKey("properties")) {
+                return new ScenarioResult(2, name, false, "Input schema properties missing");
+            }
+            return new ScenarioResult(2, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(2, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario3(McpServerUnderTest underTest) {
+        String name = "ToolDefinition (Title & Metadata Enriched Schema)";
+        try {
+            Tool tool = underTest.buildAuditValidatedToolDefinition(
+                    "auditCluster",
+                    "Audits cluster configuration",
+                    Map.of("namespace", Map.of("type", "string")),
+                    List.of("namespace"),
+                    "ClusterAuditSpec"
+            );
+
+            if (tool == null) {
+                return new ScenarioResult(3, name, false, "buildAuditValidatedToolDefinition returned null");
+            }
+            if (!"ClusterAuditSpec".equals(tool.inputSchema().get("title"))) {
+                return new ScenarioResult(3, name, false, "Expected title 'ClusterAuditSpec' in input schema");
+            }
+            return new ScenarioResult(3, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(3, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 2: SyncToolSpecification Handlers (Scenarios 4 - 6)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario4(McpServerUnderTest underTest) {
+        String name = "SyncToolSpecification (Standard Execution Handler)";
+        try {
+            Tool tool = new Tool("echo", null, "Echo tool", Map.of("type", "object"), null, null, null, null);
+            SyncToolSpecification spec = underTest.createSyncToolSpecification(tool, (args, ctx) -> "echoed: " + args.get("msg"));
 
             if (spec == null || spec.callHandler() == null) {
-                fail(name, "createToolSpecification returned null or null callHandler");
-                return;
+                return new ScenarioResult(4, name, false, "createSyncToolSpecification returned null spec or callHandler");
             }
 
-            CallToolResult result = spec.callHandler().apply(null, new CallToolRequest("echo_tool", Map.of("msg", "hello")));
-            if (result == null || Boolean.TRUE.equals(result.isError())) {
-                fail(name, "Expected successful CallToolResult, got: " + result);
-                return;
+            CallToolResult res = spec.callHandler().apply(null, new CallToolRequest("echo", Map.of("msg", "hello")));
+            if (res == null || res.content() == null || res.content().isEmpty()) {
+                return new ScenarioResult(4, name, false, "Execution result was empty");
             }
-
-            if (result.content().isEmpty() || !(result.content().get(0) instanceof TextContent tc) || !tc.text().contains("ECHO: hello")) {
-                fail(name, "Expected TextContent containing 'ECHO: hello', got: " + result.content());
-                return;
+            TextContent text = (TextContent) res.content().get(0);
+            if (!"echoed: hello".equals(text.text())) {
+                return new ScenarioResult(4, name, false, "Expected output 'echoed: hello', got: " + text.text());
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(4, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(4, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario04(McpServerUnderTest underTest) {
-        String name = "Scenario 04: Resilient Tool Execution & Error Signal Wrapping";
+    private static ScenarioResult verifyScenario5(McpServerUnderTest underTest) {
+        String name = "SyncToolSpecification (Resilient Error Signal Trapping)";
         try {
-            Tool tool = Tool.builder("fail_tool").description("fails").build();
+            Tool tool = new Tool("failing", null, "Failing tool", Map.of("type", "object"), null, null, null, null);
             SyncToolSpecification spec = underTest.createResilientToolSpecification(tool, (args, ctx) -> {
-                throw new IllegalArgumentException("Invalid partition ID: -1");
+                throw new RuntimeException("Database unreachable");
             });
 
             if (spec == null || spec.callHandler() == null) {
-                fail(name, "createResilientToolSpecification returned null");
-                return;
+                return new ScenarioResult(5, name, false, "createResilientToolSpecification returned null");
             }
 
-            CallToolResult result = spec.callHandler().apply(null, new CallToolRequest("fail_tool", Map.of()));
-            if (result == null || !Boolean.TRUE.equals(result.isError())) {
-                fail(name, "Expected isError=true on exception, got: " + result);
-                return;
+            CallToolResult res = spec.callHandler().apply(null, new CallToolRequest("failing", Map.of()));
+            if (res == null || !Boolean.TRUE.equals(res.isError())) {
+                return new ScenarioResult(5, name, false, "Expected res.isError() to be true on exception");
             }
-
-            if (result.content().isEmpty() || !(result.content().get(0) instanceof TextContent tc) || !tc.text().contains("Invalid partition ID: -1")) {
-                fail(name, "Expected error message in TextContent, got: " + result.content());
-                return;
+            TextContent text = (TextContent) res.content().get(0);
+            if (!text.text().contains("Database unreachable")) {
+                return new ScenarioResult(5, name, false, "Expected exception message in result content");
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(5, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(5, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario05(McpServerUnderTest underTest) {
-        String name = "Scenario 05: Spring AI ToolCallback to MCP Tool Adapter";
+    private static ScenarioResult verifyScenario6(McpServerUnderTest underTest) {
+        String name = "SyncToolSpecification (Spring AI ToolCallback Adaptation)";
         try {
-            ToolCallback springTool = new ToolCallback() {
+            ToolCallback dummyCallback = new ToolCallback() {
                 @Override
                 public ToolDefinition getToolDefinition() {
                     return ToolDefinition.builder()
-                            .name("spring_calc")
-                            .description("Spring calculation tool")
+                            .name("springAiEcho")
+                            .description("Spring AI echo tool")
                             .inputSchema("{\"type\":\"object\"}")
                             .build();
                 }
 
                 @Override
                 public String call(String toolInput) {
-                    return "Calculated: 42";
+                    return "callback output";
                 }
             };
 
-            SyncToolSpecification spec = underTest.adaptSpringAiTool(springTool);
+            SyncToolSpecification spec = underTest.adaptSpringAiToolCallback(dummyCallback);
             if (spec == null || spec.tool() == null) {
-                fail(name, "adaptSpringAiTool returned null spec or tool");
-                return;
+                return new ScenarioResult(6, name, false, "adaptSpringAiToolCallback returned null");
             }
-
-            if (!"spring_calc".equals(spec.tool().name())) {
-                fail(name, "Expected adapted tool name 'spring_calc', got: " + spec.tool().name());
-                return;
+            if (!"springAiEcho".equals(spec.tool().name())) {
+                return new ScenarioResult(6, name, false, "Adapted tool name mismatch");
             }
-
-            CallToolResult result = spec.callHandler().apply(null, new CallToolRequest("spring_calc", Map.of()));
-            if (result == null || result.content().isEmpty() || !(result.content().get(0) instanceof TextContent tc) || !tc.text().contains("Calculated: 42")) {
-                fail(name, "Expected execution output 'Calculated: 42', got: " + result);
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(6, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(6, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario06(McpServerUnderTest underTest) {
-        String name = "Scenario 06: MCP Static & Dynamic Resource Specification";
+    // =========================================================================
+    // TOPIC 3: MCP Resource Specifications (Scenarios 7 - 9)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario7(McpServerUnderTest underTest) {
+        String name = "ResourceSpecification (Static Text Resource)";
         try {
-            SyncResourceSpecification spec = underTest.createResourceSpecification(
-                    "config://cluster/kafka.json",
-                    "kafka-config",
-                    "application/json",
-                    uri -> "{\"brokerId\": 101, \"rack\": \"us-east-1a\"}"
+            SyncResourceSpecification spec = underTest.createStaticResourceSpecification(
+                    "config://system/env", "SystemEnvironment", "text/plain", "ACTIVE"
             );
 
             if (spec == null || spec.resource() == null || spec.readHandler() == null) {
-                fail(name, "createResourceSpecification returned null");
-                return;
+                return new ScenarioResult(7, name, false, "createStaticResourceSpecification returned null spec or handler");
             }
 
-            if (!"config://cluster/kafka.json".equals(spec.resource().uri())) {
-                fail(name, "Expected URI 'config://cluster/kafka.json', got: " + spec.resource().uri());
-                return;
+            ReadResourceResult res = spec.readHandler().apply(null, new ReadResourceRequest("config://system/env"));
+            if (res == null || res.contents().isEmpty()) {
+                return new ScenarioResult(7, name, false, "ReadResourceResult contents was empty");
             }
-
-            ReadResourceResult result = spec.readHandler().apply(null, new ReadResourceRequest("config://cluster/kafka.json"));
-            if (result == null || result.contents().isEmpty()) {
-                fail(name, "Expected non-empty ReadResourceResult contents");
-                return;
+            TextResourceContents content = (TextResourceContents) res.contents().get(0);
+            if (!"ACTIVE".equals(content.text())) {
+                return new ScenarioResult(7, name, false, "Expected content 'ACTIVE', got: " + content.text());
             }
-
-            if (!(result.contents().get(0) instanceof TextResourceContents trc) || !trc.text().contains("brokerId\": 101")) {
-                fail(name, "Expected TextResourceContents with JSON content, got: " + result.contents());
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(7, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(7, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario07(McpServerUnderTest underTest) {
-        String name = "Scenario 07: MCP Parameterized Prompt Template Specification";
+    private static ScenarioResult verifyScenario8(McpServerUnderTest underTest) {
+        String name = "ResourceSpecification (Dynamic Text Provider)";
         try {
-            List<PromptArgument> args = List.of(new PromptArgument("system_name", "target system", true));
-            SyncPromptSpecification spec = underTest.createPromptSpecification(
-                    "diagnose_service",
-                    "Root cause analysis prompt",
-                    args,
-                    (pName, argMap) -> "Diagnose the incident on system: " + argMap.get("system_name")
+            SyncResourceSpecification spec = underTest.createDynamicResourceSpecification(
+                    "metrics://jvm/memory", "JvmMemory", "application/json", uri -> "{\"heapUsedMb\": 512}"
             );
 
-            if (spec == null || spec.prompt() == null || spec.promptHandler() == null) {
-                fail(name, "createPromptSpecification returned null");
-                return;
+            if (spec == null || spec.readHandler() == null) {
+                return new ScenarioResult(8, name, false, "createDynamicResourceSpecification returned null");
             }
 
-            GetPromptResult result = spec.promptHandler().apply(null, new GetPromptRequest("diagnose_service", Map.of("system_name", "PaymentGateway")));
-            if (result == null || result.messages().isEmpty()) {
-                fail(name, "Expected non-empty GetPromptResult messages");
-                return;
+            ReadResourceResult res = spec.readHandler().apply(null, new ReadResourceRequest("metrics://jvm/memory"));
+            TextResourceContents content = (TextResourceContents) res.contents().get(0);
+            if (!content.text().contains("512")) {
+                return new ScenarioResult(8, name, false, "Dynamic content missing expected heap value");
             }
-
-            PromptMessage msg = result.messages().get(0);
-            if (msg.role() != Role.USER || !(msg.content() instanceof TextContent tc) || !tc.text().contains("PaymentGateway")) {
-                fail(name, "Expected USER message containing 'PaymentGateway', got: " + msg);
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(8, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(8, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario08(McpServerUnderTest underTest) {
-        String name = "Scenario 08: Security Allowlist & Tool Filter";
+    private static ScenarioResult verifyScenario9(McpServerUnderTest underTest) {
+        String name = "ResourceSpecification (Binary Blob Resource)";
         try {
-            SyncToolSpecification t1 = underTest.createToolSpecification(Tool.builder("read_users").description("read").build(), (a, c) -> "users");
-            SyncToolSpecification t2 = underTest.createToolSpecification(Tool.builder("write_users").description("write").build(), (a, c) -> "ok");
-            SyncToolSpecification t3 = underTest.createToolSpecification(Tool.builder("delete_database").description("delete").build(), (a, c) -> "dropped");
+            SyncResourceSpecification spec = underTest.createBinaryResourceSpecification(
+                    "files://icons/app.png", "AppIcon", "image/png", uri -> "iVBORw0KGgoAAAANSUhEUg=="
+            );
 
-            List<SyncToolSpecification> filtered = underTest.filterToolsByAllowlist(List.of(t1, t2, t3), Set.of("read_users", "write_users"));
+            if (spec == null || spec.readHandler() == null) {
+                return new ScenarioResult(9, name, false, "createBinaryResourceSpecification returned null");
+            }
+
+            ReadResourceResult res = spec.readHandler().apply(null, new ReadResourceRequest("files://icons/app.png"));
+            BlobResourceContents blob = (BlobResourceContents) res.contents().get(0);
+            if (!"iVBORw0KGgoAAAANSUhEUg==".equals(blob.blob())) {
+                return new ScenarioResult(9, name, false, "Expected base64 blob content mismatch");
+            }
+            return new ScenarioResult(9, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(9, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 4: MCP Prompt Template Specifications (Scenarios 10 - 12)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario10(McpServerUnderTest underTest) {
+        String name = "PromptSpecification (Simple Zero-Argument Prompt)";
+        try {
+            SyncPromptSpecification spec = underTest.createSimplePromptSpecification(
+                    "systemDiagnosis", "System diagnostic prompt", args -> "Perform full health check."
+            );
+
+            if (spec == null || spec.promptHandler() == null) {
+                return new ScenarioResult(10, name, false, "createSimplePromptSpecification returned null");
+            }
+
+            GetPromptResult res = spec.promptHandler().apply(null, new GetPromptRequest("systemDiagnosis", Map.of()));
+            PromptMessage msg = res.messages().get(0);
+            TextContent content = (TextContent) msg.content();
+            if (!"Perform full health check.".equals(content.text())) {
+                return new ScenarioResult(10, name, false, "Prompt message text mismatch");
+            }
+            return new ScenarioResult(10, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(10, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario11(McpServerUnderTest underTest) {
+        String name = "PromptSpecification (Parameterized Multi-Argument Prompt)";
+        try {
+            List<PromptArgument> args = List.of(new PromptArgument("service", "target service", true));
+            SyncPromptSpecification spec = underTest.createParameterizedPromptSpecification(
+                    "serviceTriage", "Triage prompt", args, (name1, map) -> "Triage for service: " + map.get("service")
+            );
+
+            if (spec == null || spec.promptHandler() == null) {
+                return new ScenarioResult(11, name, false, "createParameterizedPromptSpecification returned null");
+            }
+
+            GetPromptResult res = spec.promptHandler().apply(null, new GetPromptRequest("serviceTriage", Map.of("service", "billing")));
+            TextContent content = (TextContent) res.messages().get(0).content();
+            if (!"Triage for service: billing".equals(content.text())) {
+                return new ScenarioResult(11, name, false, "Parameterized prompt text mismatch: " + content.text());
+            }
+            return new ScenarioResult(11, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(11, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario12(McpServerUnderTest underTest) {
+        String name = "PromptSpecification (Role-Enforced System/User Prompt)";
+        try {
+            SyncPromptSpecification spec = underTest.createRoleEnforcedPromptSpecification(
+                    "systemInit", "Initialization prompt", List.of(), Role.ASSISTANT, (n, m) -> "You are a cloud architect."
+            );
+
+            if (spec == null || spec.promptHandler() == null) {
+                return new ScenarioResult(12, name, false, "createRoleEnforcedPromptSpecification returned null");
+            }
+
+            GetPromptResult res = spec.promptHandler().apply(null, new GetPromptRequest("systemInit", Map.of()));
+            PromptMessage msg = res.messages().get(0);
+            if (msg.role() != Role.ASSISTANT) {
+                return new ScenarioResult(12, name, false, "Expected Role.ASSISTANT, got: " + msg.role());
+            }
+            return new ScenarioResult(12, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(12, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // TOPIC 5: Server Capabilities & Protocol Filtering (Scenarios 13 - 15)
+    // =========================================================================
+
+    private static ScenarioResult verifyScenario13(McpServerUnderTest underTest) {
+        String name = "ServerCapabilities (Feature Negotiation Flags)";
+        try {
+            ServerCapabilities caps = underTest.createServerCapabilities(true, true, false, true);
+            if (caps == null) {
+                return new ScenarioResult(13, name, false, "createServerCapabilities returned null");
+            }
+            if (caps.tools() == null || caps.resources() == null || caps.logging() == null) {
+                return new ScenarioResult(13, name, false, "Configured capabilities missing");
+            }
+            if (caps.prompts() != null) {
+                return new ScenarioResult(13, name, false, "Prompts should be null when disabled");
+            }
+            return new ScenarioResult(13, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(13, name, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    private static ScenarioResult verifyScenario14(McpServerUnderTest underTest) {
+        String name = "ProtocolFilter (Allowlist Tool Filtering)";
+        try {
+            List<Tool> allTools = List.of(
+                    new Tool("readLog", null, "Read", Map.of("type", "object"), null, null, null, null),
+                    new Tool("dropDatabase", null, "Drop", Map.of("type", "object"), null, null, null, null),
+                    new Tool("restartPod", null, "Restart", Map.of("type", "object"), null, null, null, null)
+            );
+
+            List<Tool> filtered = underTest.filterToolsByAllowlist(allTools, Set.of("readLog", "restartPod"));
             if (filtered == null || filtered.size() != 2) {
-                fail(name, "Expected 2 allowlisted tools, got: " + (filtered != null ? filtered.size() : "null"));
-                return;
+                return new ScenarioResult(14, name, false, "Expected 2 tools in allowlist, got: " + (filtered == null ? "null" : filtered.size()));
             }
-
-            Set<String> names = Set.of(filtered.get(0).tool().name(), filtered.get(1).tool().name());
-            if (!names.contains("read_users") || !names.contains("write_users") || names.contains("delete_database")) {
-                fail(name, "Unexpected tools in allowlist result: " + names);
-                return;
+            if (filtered.stream().anyMatch(t -> "dropDatabase".equals(t.name()))) {
+                return new ScenarioResult(14, name, false, "Forbidden tool 'dropDatabase' passed through filter");
             }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(14, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(14, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario09(McpServerUnderTest underTest) {
-        String name = "Scenario 09: MCP Server Telemetry & Audit Recorder";
+    private static ScenarioResult verifyScenario15(McpServerUnderTest underTest) {
+        String name = "ProtocolFilter (Prefix-Based Tool Routing)";
         try {
-            McpServerAuditRecorder recorder = new McpServerAuditRecorder();
-            recorder.recordSuccess("tool_ping");
-            recorder.recordSuccess("tool_ping");
-            recorder.recordError("tool_ping");
-            recorder.recordSuccess("tool_query");
+            List<Tool> allTools = List.of(
+                    new Tool("k8s_restartPod", null, "Restart", Map.of("type", "object"), null, null, null, null),
+                    new Tool("k8s_getLogs", null, "Logs", Map.of("type", "object"), null, null, null, null),
+                    new Tool("db_queryMetrics", null, "Metrics", Map.of("type", "object"), null, null, null, null)
+            );
 
-            McpAuditReport report = recorder.getReport();
-            if (report == null) {
-                fail(name, "getReport returned null");
-                return;
+            List<Tool> k8sTools = underTest.filterToolsByPrefix(allTools, "k8s_");
+            if (k8sTools == null || k8sTools.size() != 2) {
+                return new ScenarioResult(15, name, false, "Expected 2 k8s tools, got: " + (k8sTools == null ? "null" : k8sTools.size()));
             }
-
-            if (report.totalCalls() != 4 || report.successCount() != 3 || report.errorCount() != 1) {
-                fail(name, "Expected (total=4, success=3, error=1), got: " + report);
-                return;
+            if (k8sTools.stream().anyMatch(t -> "db_queryMetrics".equals(t.name()))) {
+                return new ScenarioResult(15, name, false, "db tool passed through k8s prefix filter");
             }
-
-            if (report.toolCallCounts().getOrDefault("tool_ping", 0) != 3) {
-                fail(name, "Expected 3 calls for tool_ping, got: " + report.toolCallCounts().get("tool_ping"));
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
+            return new ScenarioResult(15, name, true, "OK");
+        } catch (Exception e) {
+            return new ScenarioResult(15, name, false, "Exception: " + e.getMessage());
         }
     }
 
-    private static void testScenario10(McpServerUnderTest underTest) {
-        String name = "Scenario 10: Composite Enterprise MCP Server Registry & Router";
-        try {
-            EnterpriseMcpRegistry registry = new EnterpriseMcpRegistry();
+    // =========================================================================
+    // REPORT FORMATTER
+    // =========================================================================
 
-            SyncToolSpecification t1 = underTest.createToolSpecification(
-                    Tool.builder("query_orders").description("query").build(),
-                    (a, c) -> "orders-found"
-            );
-            SyncToolSpecification t2 = underTest.createToolSpecification(
-                    Tool.builder("drop_tables").description("drop").build(),
-                    (a, c) -> "dropped"
-            );
-
-            registry.registerTool(t1);
-            registry.registerTool(t2);
-            registry.setAllowlist(Set.of("query_orders"));
-
-            SyncResourceSpecification r1 = underTest.createResourceSpecification(
-                    "metrics://latency",
-                    "latency-metrics",
-                    "text/plain",
-                    u -> "p99=45ms"
-            );
-            registry.registerResource(r1);
-
-            SyncPromptSpecification p1 = underTest.createPromptSpecification(
-                    "review_code",
-                    "Code review prompt",
-                    List.of(),
-                    (n, a) -> "Review code template"
-            );
-            registry.registerPrompt(p1);
-
-            // Subtest A: Unregistered tool
-            try {
-                registry.handleCallTool("unknown_tool", Map.of(), new ServerContext("t1", "user", "tr1"));
-                fail(name, "Expected McpRegistryBreachException for unregistered tool");
-                return;
-            } catch (McpRegistryBreachException expected) {
-                // pass
+    private static void printReport(List<ScenarioResult> results) {
+        System.out.println("===============================================================================");
+        System.out.println("  PHASE 08 EXERCISE 01: MCP SERVER ARCHITECTURE & SPECIFICATIONS");
+        System.out.println("===============================================================================");
+        int passed = 0;
+        for (ScenarioResult r : results) {
+            String tag = r.passed() ? "[PASS]" : "[FAIL]";
+            System.out.printf("  %s Scenario %02d: %s%n", tag, r.scenarioNumber(), r.name());
+            if (!r.passed()) {
+                System.out.printf("         --> DETAIL: %s%n", r.errorDetail());
+            } else {
+                passed++;
             }
-
-            // Subtest B: Disallowed tool
-            try {
-                registry.handleCallTool("drop_tables", Map.of(), new ServerContext("t1", "user", "tr1"));
-                fail(name, "Expected McpSecurityBreachException for tool not in allowlist");
-                return;
-            } catch (McpSecurityBreachException expected) {
-                // pass
-            }
-
-            // Subtest C: Allowed tool execution
-            CallToolResult toolResult = registry.handleCallTool("query_orders", Map.of(), new ServerContext("fintech", "admin", "tr2"));
-            if (toolResult == null || Boolean.TRUE.equals(toolResult.isError())) {
-                fail(name, "Expected successful execution of query_orders, got: " + toolResult);
-                return;
-            }
-
-            // Subtest D: Read resource
-            ReadResourceResult resResult = registry.handleReadResource("metrics://latency");
-            if (resResult == null || resResult.contents().isEmpty()) {
-                fail(name, "Expected successful read of metrics://latency");
-                return;
-            }
-
-            // Subtest E: Get prompt
-            GetPromptResult promptResult = registry.handleGetPrompt("review_code", Map.of());
-            if (promptResult == null || promptResult.messages().isEmpty()) {
-                fail(name, "Expected successful prompt retrieval for review_code");
-                return;
-            }
-
-            // Subtest F: Audit report check
-            McpAuditReport report = registry.getAuditReport();
-            if (report.totalCalls() != 1 || report.successCount() != 1) {
-                fail(name, "Expected exactly 1 successful tool call in audit report, got: " + report);
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
         }
-    }
-
-    private static void testScenario11(McpServerUnderTest underTest) {
-        String name = "Scenario 11: Parameterized Resource Template URI Matcher";
-        try {
-            List<String> templates = List.of(
-                    "metrics://{cluster}/{service}/{metric}",
-                    "logs://{cluster}/{service}"
-            );
-
-            // Subtest A: Exact match with 3 path variables
-            MatchedResourceRoute match1 = ParameterizedResourceTemplateMatcher.matchTemplate(
-                    templates,
-                    "metrics://prod-east/payment-svc/p99"
-            );
-
-            if (match1 == null) {
-                fail(name, "matchTemplate returned null for valid URI");
-                return;
-            }
-            if (!"metrics://{cluster}/{service}/{metric}".equals(match1.uriTemplate())) {
-                fail(name, "Expected template 'metrics://{cluster}/{service}/{metric}', got: " + match1.uriTemplate());
-                return;
-            }
-            if (!"prod-east".equals(match1.pathVariables().get("cluster")) ||
-                    !"payment-svc".equals(match1.pathVariables().get("service")) ||
-                    !"p99".equals(match1.pathVariables().get("metric"))) {
-                fail(name, "Unexpected pathVariables: " + match1.pathVariables());
-                return;
-            }
-
-            // Subtest B: Match second template with 2 path variables
-            MatchedResourceRoute match2 = ParameterizedResourceTemplateMatcher.matchTemplate(
-                    templates,
-                    "logs://staging-west/auth-svc"
-            );
-            if (match2 == null || !"logs://{cluster}/{service}".equals(match2.uriTemplate()) ||
-                    !"staging-west".equals(match2.pathVariables().get("cluster")) ||
-                    !"auth-svc".equals(match2.pathVariables().get("service"))) {
-                fail(name, "Failed matching second template: " + match2);
-                return;
-            }
-
-            // Subtest C: Unmatched URI throws McpRegistryBreachException
-            try {
-                ParameterizedResourceTemplateMatcher.matchTemplate(templates, "config://prod/database");
-                fail(name, "Expected McpRegistryBreachException for unmatched URI");
-                return;
-            } catch (McpRegistryBreachException expected) {
-                // Expected
-            }
-
-            // Subtest D: Argument validation throws IllegalArgumentException
-            try {
-                ParameterizedResourceTemplateMatcher.matchTemplate(null, "metrics://a/b/c");
-                fail(name, "Expected IllegalArgumentException for null template list");
-                return;
-            } catch (IllegalArgumentException expected) {
-                // Expected
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
-        }
-    }
-
-    private static void testScenario12(McpServerUnderTest underTest) {
-        String name = "Scenario 12: MCP Protocol Log Notification Dispatcher & Level Filter";
-        try {
-            McpProtocolLogNotificationDispatcher dispatcher = new McpProtocolLogNotificationDispatcher();
-
-            // Default minLevel is INFO
-            if (dispatcher.getMinLevel() != McpLogLevel.INFO) {
-                fail(name, "Expected default minLevel to be INFO, got: " + dispatcher.getMinLevel());
-                return;
-            }
-
-            // Subtest A: DEBUG filtered out under INFO
-            boolean d1 = dispatcher.dispatchLog(new McpLogMessage(
-                    McpLogLevel.DEBUG, "engine.core", "Detailed tick trace", Map.of("tick", 100)
-            ));
-            if (d1 || !dispatcher.getEmittedLogs().isEmpty()) {
-                fail(name, "Expected DEBUG message to be filtered out under default INFO level");
-                return;
-            }
-
-            // Subtest B: INFO and ERROR accepted under INFO
-            boolean d2 = dispatcher.dispatchLog(new McpLogMessage(
-                    McpLogLevel.INFO, "engine.core", "Service started", Map.of("port", 8080)
-            ));
-            boolean d3 = dispatcher.dispatchLog(new McpLogMessage(
-                    McpLogLevel.ERROR, "engine.db", "Connection timeout", Map.of("db", "primary")
-            ));
-            if (!d2 || !d3 || dispatcher.getEmittedLogs().size() != 2) {
-                fail(name, "Expected INFO and ERROR logs to be dispatched, count: " + dispatcher.getEmittedLogs().size());
-                return;
-            }
-
-            // Subtest C: Lower threshold to DEBUG allows DEBUG
-            dispatcher.setMinimumLevel(McpLogLevel.DEBUG);
-            boolean d4 = dispatcher.dispatchLog(new McpLogMessage(
-                    McpLogLevel.DEBUG, "engine.core", "Cache hit: key_123", Map.of()
-            ));
-            if (!d4 || dispatcher.getEmittedLogs().size() != 3) {
-                fail(name, "Expected DEBUG log to be dispatched when minLevel=DEBUG");
-                return;
-            }
-
-            // Subtest D: Raise threshold to ERROR filters WARNING
-            dispatcher.setMinimumLevel(McpLogLevel.ERROR);
-            boolean d5 = dispatcher.dispatchLog(new McpLogMessage(
-                    McpLogLevel.WARNING, "engine.disk", "Disk usage at 85%", Map.of()
-            ));
-            if (d5 || dispatcher.getEmittedLogs().size() != 3) {
-                fail(name, "Expected WARNING log to be filtered out when minLevel=ERROR");
-                return;
-            }
-
-            pass(name);
-        } catch (Throwable t) {
-            fail(name, t.getMessage());
-        }
+        System.out.println("-------------------------------------------------------------------------------");
+        System.out.printf("  TOTAL: %d / %d PASSED%n", passed, results.size());
+        System.out.println("===============================================================================");
     }
 }
