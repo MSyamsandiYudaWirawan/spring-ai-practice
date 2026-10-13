@@ -126,7 +126,26 @@ Default implementation: `VectorStoreDocumentRetriever.builder().vectorStore(stor
 ### 4.2 Query Transformation & Expansion
 - **`MultiQueryExpander`**: Generates $N$ semantic query variants using an LLM to mitigate lexical mismatch.
 - **`RewriteQueryTransformer`**: Resolves conversational pronouns (`"What about that one?"` -> `"What about the PetClinic database bottleneck?"`) using chat history.
+- **`CompressionQueryTransformer`**: Compresses multi-turn conversation history and follow-up prompts into a concise, standalone search query.
+- **`TranslationQueryTransformer`**: Translates user queries into the target corpus/index language.
 - **`HydeQueryTransformer` (HyDE)**: Hypothetical Document Embeddings. Generates a synthetic candidate document using an LLM, embeds the synthetic document, and queries the vector store to find true documents nearest to the answer space.
+
+```java
+// Pre-retrieval Query Transformers:
+QueryTransformer compressionTransformer = CompressionQueryTransformer.builder()
+        .chatClientBuilder(chatClientBuilder)
+        .build();
+
+QueryTransformer rewriteTransformer = RewriteQueryTransformer.builder()
+        .chatClientBuilder(chatClientBuilder)
+        .targetSearchSystem("VectorStore BM25")
+        .build();
+
+QueryTransformer translationTransformer = TranslationQueryTransformer.builder()
+        .chatClientBuilder(chatClientBuilder)
+        .targetLanguage("Spanish")
+        .build();
+```
 
 ### 4.3 Post-Retrieval Reranking, Deduplication & Budget Packing
 - **`ConcatenationDocumentJoiner`**: Merges document lists from multi-query retrievals, deduplicating by document ID or text content.

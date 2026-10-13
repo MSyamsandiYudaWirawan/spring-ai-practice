@@ -8,10 +8,15 @@ import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import phase07.VectorStoreContracts.*;
+import phase07.VectorStoreContracts.ChunkConfig;
+import phase07.VectorStoreContracts.RawArticle;
+import phase07.VectorStoreContracts.SearchResult;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Exercise implementation under test for Phase 07 Exercise 01:
@@ -34,14 +39,25 @@ public class VectorStoreUnderTest {
      * - Trim whitespace from content.
      * - Create a mutable copy of the provided metadata (or an empty map if null).
      * - Enforce required metadata:
-     *   - Put "charCount" mapped to (long) content.length().
-     *   - If "createdAt" is absent, put Instant.now().toString().
+     * - Put "charCount" mapped to (long) content.length().
+     * - If "createdAt" is absent, put Instant.now().toString().
      * - Build and return immutable Document via {@link Document#builder()}.
      */
     public static class DocumentFactory {
         public static Document createDocument(String id, String content, Map<String, Object> metadata) {
             // DEFECT (Scenario 1): Blindly returns null without validation
-            return null;
+            if (id == null || id.isBlank() || content == null || content.isBlank()) {
+                throw new IllegalArgumentException("ID and Content must not be null or blank");
+            }
+            Map<String, Object> newMetadata = new HashMap<>(metadata == null || metadata.isEmpty() ? Map.of() : metadata);
+            String newContent = content.trim();
+            newMetadata.put("charCount", (long) newContent.length());
+            newMetadata.putIfAbsent("createdAt", Instant.now().toString());
+            return Document.builder()
+                    .id(id)
+                    .text(newContent)
+                    .metadata(newMetadata)
+                    .build();
         }
     }
 
@@ -50,7 +66,7 @@ public class VectorStoreUnderTest {
      * <p>
      * Instructions:
      * - Validate document != null, environment != null && !environment.isBlank(), version != null && !version.isBlank();
-     *   throw {@link IllegalArgumentException} otherwise.
+     * throw {@link IllegalArgumentException} otherwise.
      * - Copy existing document metadata into a mutable map.
      * - Add "environment" -> environment.trim().toUpperCase().
      * - Add "version" -> version.trim().
@@ -63,7 +79,11 @@ public class VectorStoreUnderTest {
             if (document == null || environment == null || environment.isBlank() || version == null || version.isBlank()) {
                 throw new IllegalArgumentException("Invalid arguments");
             }
-            return document;
+            Map<String, Object> newMetadata = new HashMap<>(document.getMetadata());
+            newMetadata.put("environment", environment.trim().toUpperCase());
+            newMetadata.put("version", version.trim());
+            newMetadata.put("enrichedAt", Instant.now().toString());
+            return document.mutate().metadata(newMetadata).build();
         }
     }
 
@@ -73,20 +93,39 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate articles != null and !articles.isEmpty(); throw {@link IllegalArgumentException} otherwise.
      * - For each RawArticle:
-     *   - Validate id and text are not null and not blank; throw {@link IllegalArgumentException} otherwise.
-     *   - Trim text.
-     *   - Copy article.metadata() into a mutable map.
-     *   - Put "wordCount" -> (long) trimmedText.split("\\s+").length.
-     *   - Put "source" -> (article.source() != null && !article.source().isBlank()) ? article.source().trim() : "unknown".
-     *   - Put "indexed" -> true.
-     *   - Build Document via Document.builder().id(article.id()).text(trimmedText).metadata(meta).build().
+     * - Validate id and text are not null and not blank; throw {@link IllegalArgumentException} otherwise.
+     * - Trim text.
+     * - Copy article.metadata() into a mutable map.
+     * - Put "wordCount" -> (long) trimmedText.split("\\s+").length.
+     * - Put "source" -> (article.source() != null && !article.source().isBlank()) ? article.source().trim() : "unknown".
+     * - Put "indexed" -> true.
+     * - Build Document via Document.builder().id(article.id()).text(trimmedText).metadata(meta).build().
      * - Return list of constructed Documents.
      */
     public static class DocumentBatchBuilder {
         public static List<Document> buildBatch(List<RawArticle> articles) {
             // DEFECT (Scenario 3): Returns empty list
-            if (articles == null || articles.isEmpty()) throw new IllegalArgumentException("articles must not be empty");
-            return List.of();
+            if (articles == null || articles.isEmpty())
+                throw new IllegalArgumentException("articles must not be empty");
+
+            List<Document> res = new ArrayList<>();
+            for (RawArticle ar : articles) {
+                if (ar.id() == null || ar.id().isBlank() || ar.text() == null || ar.text().isBlank()) {
+                    throw new IllegalArgumentException("Article ID and Text must not be null or blank");
+                }
+                String newText = ar.text().trim();
+                Map<String, Object> newMetadata = new HashMap<>(ar.metadata());
+                newMetadata.put("wordCount", (long) newText.split("\\s+").length);
+                newMetadata.put("source", ar.source() == null || ar.source().isBlank() ? "unknown" : ar.source().trim());
+                newMetadata.put("indexed", true);
+                res.add(Document.builder()
+                        .id(ar.id())
+                        .text(newText)
+                        .metadata(newMetadata)
+                        .build());
+
+            }
+            return res;
         }
     }
 
@@ -106,7 +145,10 @@ public class VectorStoreUnderTest {
         public static List<Document> split(Document document, int chunkSize) {
             // DEFECT (Scenario 4): Returns unchunked document list
             if (document == null || chunkSize < 1) throw new IllegalArgumentException("Invalid arguments");
-            return List.of(document);
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(chunkSize)
+                    .build();
+            return splitter.apply(List.of(document));
         }
     }
 
@@ -116,19 +158,29 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate document != null and config != null; throw {@link IllegalArgumentException} otherwise.
      * - Construct TokenTextSplitter via TokenTextSplitter.builder():
-     *   - withChunkSize(config.defaultChunkSize())
-     *   - withMinChunkSizeChars(config.minChunkSizeChars())
-     *   - withMinChunkLengthToEmbed(config.minChunkLengthToEmbed())
-     *   - withMaxNumChunks(config.maxNumChunks())
-     *   - withKeepSeparator(config.keepSeparator())
-     *   - build()
+     * - withChunkSize(config.defaultChunkSize())
+     * - withMinChunkSizeChars(config.minChunkSizeChars())
+     * - withMinChunkLengthToEmbed(config.minChunkLengthToEmbed())
+     * - withMaxNumChunks(config.maxNumChunks())
+     * - withKeepSeparator(config.keepSeparator())
+     * - build()
      * - Return splitter.apply(List.of(document)).
      */
     public static class ConfigurableTextSplitter {
         public static List<Document> splitWithConfig(Document document, ChunkConfig config) {
             // DEFECT (Scenario 5): Returns unchunked document
             if (document == null || config == null) throw new IllegalArgumentException("Inputs must not be null");
-            return List.of(document);
+            //consider this then hard cap
+            // int chunkSize = document.getText().length() / config.maxNumChunks() + buffer;
+
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(config.defaultChunkSize())
+                    .withMinChunkSizeChars(config.minChunkSizeChars())
+                    .withMinChunkLengthToEmbed(config.minChunkLengthToEmbed())
+                    .withMaxNumChunks(config.maxNumChunks())
+                    .withKeepSeparator(config.keepSeparator())
+                    .build();
+            return splitter.apply(List.of(document));
         }
     }
 
@@ -139,18 +191,35 @@ public class VectorStoreUnderTest {
      * - Validate document != null and config != null; throw {@link IllegalArgumentException} otherwise.
      * - Split document using TokenTextSplitter built with config parameters.
      * - For each chunk document in the returned list (index i from 0 to size-1):
-     *   - Copy chunk metadata.
-     *   - Put "chunkIndex" -> i (Integer).
-     *   - Put "totalChunks" -> rawChunks.size() (Integer).
-     *   - Put "parentDocId" -> document.getId().
-     *   - Mutate chunk: chunk.mutate().metadata(meta).build().
+     * - Copy chunk metadata.
+     * - Put "chunkIndex" -> i (Integer).
+     * - Put "totalChunks" -> rawChunks.size() (Integer).
+     * - Put "parentDocId" -> document.getId().
+     * - Mutate chunk: chunk.mutate().metadata(meta).build().
      * - Return list of enriched chunk documents.
      */
     public static class ChunkEnrichmentPipeline {
         public static List<Document> splitAndEnrich(Document document, ChunkConfig config) {
             // DEFECT (Scenario 6): Returns un-enriched single document
             if (document == null || config == null) throw new IllegalArgumentException("Inputs must not be null");
-            return List.of(document);
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(config.defaultChunkSize())
+                    .withMinChunkSizeChars(config.minChunkSizeChars())
+                    .withMinChunkLengthToEmbed(config.minChunkLengthToEmbed())
+                    .withMaxNumChunks(config.maxNumChunks())
+                    .withKeepSeparator(config.keepSeparator())
+                    .build();
+
+            List<Document> documents = splitter.apply(List.of(document));
+
+            for (int i = 0; i < documents.size(); i++) {
+                Map<String, Object> newMetadata = new HashMap<>(documents.get(i).getMetadata());
+                newMetadata.put("chunkIndex", i);
+                newMetadata.put("totalChunks", documents.size());
+                newMetadata.put("parentDocId", document.getId());
+                documents.set(i, documents.get(i).mutate().metadata(newMetadata).build());
+            }
+            return documents;
         }
     }
 
@@ -170,8 +239,11 @@ public class VectorStoreUnderTest {
     public static class VectorStoreIndexer {
         public static SimpleVectorStore createAndIndex(EmbeddingModel embeddingModel, List<Document> documents) {
             // DEFECT (Scenario 7): Returns null store
-            if (embeddingModel == null || documents == null) throw new IllegalArgumentException("Inputs must not be null");
-            return null;
+            if (embeddingModel == null || documents == null)
+                throw new IllegalArgumentException("Inputs must not be null");
+            SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+            store.add(documents);
+            return store;
         }
     }
 
@@ -185,7 +257,12 @@ public class VectorStoreUnderTest {
     public static class VectorStoreDeleter {
         public static void deleteDocuments(VectorStore vectorStore, List<String> documentIds) {
             // DEFECT (Scenario 8): Does not call delete
-            if (vectorStore == null || documentIds == null) throw new IllegalArgumentException("Inputs must not be null");
+            if (vectorStore == null || documentIds == null)
+                throw new IllegalArgumentException("Inputs must not be null");
+
+            if (!documentIds.isEmpty()) {
+                vectorStore.delete(documentIds);
+            }
         }
     }
 
@@ -201,6 +278,13 @@ public class VectorStoreUnderTest {
         public static void syncDocuments(VectorStore vectorStore, List<String> toDelete, List<Document> toAdd) {
             // DEFECT (Scenario 9): No-op
             if (vectorStore == null) throw new IllegalArgumentException("vectorStore must not be null");
+            if (toDelete != null && !toDelete.isEmpty()) {
+                vectorStore.delete(toDelete);
+            }
+
+            if (toAdd != null && !toAdd.isEmpty()) {
+                vectorStore.add(toAdd);
+            }
         }
     }
 
@@ -216,10 +300,10 @@ public class VectorStoreUnderTest {
      * - Build SearchRequest via SearchRequest.builder().query(query).topK(topK).build().
      * - Call vectorStore.similaritySearch(req).
      * - Map each matching Document to SearchResult:
-     *   - id: doc.getId()
-     *   - content: doc.getText()
-     *   - metadata: doc.getMetadata()
-     *   - score: doc.getScore() != null ? doc.getScore() : 0.0
+     * - id: doc.getId()
+     * - content: doc.getText()
+     * - metadata: doc.getMetadata()
+     * - score: doc.getScore() != null ? doc.getScore() : 0.0
      * - Return List of SearchResult.
      */
     public static class TopKSearchEngine {
@@ -228,7 +312,22 @@ public class VectorStoreUnderTest {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1) {
                 throw new IllegalArgumentException("Invalid search parameters");
             }
-            return List.of();
+            SearchRequest request = SearchRequest.builder()
+                    .topK(topK)
+                    .query(query)
+                    .build();
+
+            List<Document> documents = vectorStore.similaritySearch(request);
+            List<SearchResult> res = new ArrayList<>();
+            for (Document doc : documents) {
+                res.add(new SearchResult(
+                        doc.getId(),
+                        doc.getText(),
+                        doc.getMetadata(),
+                        doc.getScore() != null ? doc.getScore() : 0.0
+                ));
+            }
+            return res;
         }
     }
 
@@ -237,12 +336,12 @@ public class VectorStoreUnderTest {
      * <p>
      * Instructions:
      * - Validate vectorStore != null, query != null && !query.isBlank(), topK >= 1, and 0.0 <= threshold <= 1.0;
-     *   throw {@link IllegalArgumentException} otherwise.
+     * throw {@link IllegalArgumentException} otherwise.
      * - Build SearchRequest via SearchRequest.builder()
-     *   - query(query)
-     *   - topK(topK)
-     *   - similarityThreshold(threshold)
-     *   - build()
+     * - query(query)
+     * - topK(topK)
+     * - similarityThreshold(threshold)
+     * - build()
      * - Execute vectorStore.similaritySearch(req).
      * - Map matching Documents to List of SearchResult.
      */
@@ -252,7 +351,24 @@ public class VectorStoreUnderTest {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1 || threshold < 0.0 || threshold > 1.0) {
                 throw new IllegalArgumentException("Invalid search parameters");
             }
-            return List.of();
+            SearchRequest request = SearchRequest.builder()
+                    .topK(topK)
+                    .query(query)
+                    .similarityThreshold(threshold)
+                    .build();
+
+            List<Document> documents = vectorStore.similaritySearch(request);
+            List<SearchResult> res = new ArrayList<>();
+
+            for (Document doc : documents) {
+                res.add(new SearchResult(
+                        doc.getId(),
+                        doc.getText(),
+                        doc.getMetadata(),
+                        doc.getScore() != null ? doc.getScore() : 0.0
+                ));
+            }
+            return res;
         }
     }
 
@@ -261,7 +377,7 @@ public class VectorStoreUnderTest {
      * <p>
      * Instructions:
      * - Validate vectorStore != null, query != null && !query.isBlank(), topK >= 1, and 0.0 <= threshold <= 1.0;
-     *   throw {@link IllegalArgumentException} otherwise.
+     * throw {@link IllegalArgumentException} otherwise.
      * - Build SearchRequest with query, topK, and similarityThreshold.
      * - Execute similaritySearch(req).
      * - Map to SearchResult list.
@@ -274,7 +390,24 @@ public class VectorStoreUnderTest {
             if (vectorStore == null || query == null || query.isBlank() || topK < 1 || threshold < 0.0 || threshold > 1.0) {
                 throw new IllegalArgumentException("Invalid search parameters");
             }
-            return List.of();
+            SearchRequest request = SearchRequest.builder()
+                    .topK(topK)
+                    .query(query)
+                    .similarityThreshold(threshold)
+                    .build();
+
+            List<Document> documents = vectorStore.similaritySearch(request);
+            List<SearchResult> res = new ArrayList<>();
+            for (Document doc : documents) {
+                res.add(new SearchResult(
+                        doc.getId(),
+                        doc.getText(),
+                        doc.getMetadata(),
+                        doc.getScore() != null ? doc.getScore() : 0.0
+                ));
+            }
+            res.sort((a, b) -> Double.compare(b.score(), a.score()));
+            return res;
         }
     }
 
@@ -288,8 +421,8 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate field != null && !field.isBlank() and value != null; throw {@link IllegalArgumentException} otherwise.
      * - Using FilterExpressionBuilder:
-     *   - If !negate: return b.eq(field, value).build().
-     *   - If negate: return b.ne(field, value).build().
+     * - If !negate: return b.eq(field, value).build().
+     * - If negate: return b.ne(field, value).build().
      */
     public static class EqualityFilterBuilder {
         public static Filter.Expression buildEqualityFilter(String field, String value, boolean negate) {
@@ -297,7 +430,11 @@ public class VectorStoreUnderTest {
             if (field == null || field.isBlank() || value == null) {
                 throw new IllegalArgumentException("Field and value must not be blank/null");
             }
-            return null;
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            if (negate) {
+                return b.ne(field, value).build();
+            }
+            return b.eq(field, value).build();
         }
     }
 
@@ -307,7 +444,7 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate field != null && !field.isBlank() and minValue <= maxValue; throw {@link IllegalArgumentException} otherwise.
      * - Using FilterExpressionBuilder:
-     *   - Return b.and(b.gte(field, minValue), b.lte(field, maxValue)).build().
+     * - Return b.and(b.gte(field, minValue), b.lte(field, maxValue)).build().
      */
     public static class NumericRangeFilterBuilder {
         public static Filter.Expression buildRangeFilter(String field, double minValue, double maxValue) {
@@ -315,7 +452,8 @@ public class VectorStoreUnderTest {
             if (field == null || field.isBlank() || minValue > maxValue) {
                 throw new IllegalArgumentException("Invalid range parameters");
             }
-            return null;
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return b.and(b.gte(field, maxValue), b.lte(field, maxValue)).build();
         }
     }
 
@@ -325,8 +463,8 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate catField, catVal, sevField, and sevVal are all non-null and non-blank; throw {@link IllegalArgumentException} otherwise.
      * - Using FilterExpressionBuilder:
-     *   - If requireBoth is true: return b.and(b.eq(catField, catVal), b.eq(sevField, sevVal)).build().
-     *   - Else: return b.or(b.eq(catField, catVal), b.eq(sevField, sevVal)).build().
+     * - If requireBoth is true: return b.and(b.eq(catField, catVal), b.eq(sevField, sevVal)).build().
+     * - Else: return b.or(b.eq(catField, catVal), b.eq(sevField, sevVal)).build().
      */
     public static class LogicalFilterBuilder {
         public static Filter.Expression buildConjunctiveFilter(
@@ -339,7 +477,11 @@ public class VectorStoreUnderTest {
                     || sevField == null || sevField.isBlank() || sevVal == null || sevVal.isBlank()) {
                 throw new IllegalArgumentException("All filter fields and values must be non-blank");
             }
-            return null;
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            if (requireBoth) {
+                return b.and(b.eq(catField, catVal), b.eq(sevField, sevVal)).build();
+            }
+            return b.or(b.eq(catField, catVal), b.eq(sevField, sevVal)).build();
         }
     }
 
@@ -353,8 +495,8 @@ public class VectorStoreUnderTest {
      * Instructions:
      * - Validate field != null && !field.isBlank() and values != null && !values.isEmpty(); throw {@link IllegalArgumentException} otherwise.
      * - Using FilterExpressionBuilder:
-     *   - If !negate: return b.in(field, values.toArray()).build().
-     *   - If negate: return b.nin(field, values.toArray()).build().
+     * - If !negate: return b.in(field, values.toArray()).build().
+     * - If negate: return b.nin(field, values.toArray()).build().
      */
     public static class SetContainmentFilterBuilder {
         public static Filter.Expression buildInFilter(String field, List<String> values, boolean negate) {
@@ -362,7 +504,11 @@ public class VectorStoreUnderTest {
             if (field == null || field.isBlank() || values == null || values.isEmpty()) {
                 throw new IllegalArgumentException("Field and values must be valid");
             }
-            return null;
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            if (negate) {
+                return b.nin(field, values).build();
+            }
+            return b.in(field, values).build();
         }
     }
 
@@ -371,14 +517,14 @@ public class VectorStoreUnderTest {
      * <p>
      * Instructions:
      * - Validate env != null && !env.isBlank(), minSeverity != null && !minSeverity.isBlank(),
-     *   and targetTeams != null && !targetTeams.isEmpty(); throw {@link IllegalArgumentException} otherwise.
+     * and targetTeams != null && !targetTeams.isEmpty(); throw {@link IllegalArgumentException} otherwise.
      * - Construct the nested expression representing:
-     *   (environment == env) AND ((severity == minSeverity) OR (team IN targetTeams))
+     * (environment == env) AND ((severity == minSeverity) OR (team IN targetTeams))
      * - Using FilterExpressionBuilder:
-     *   return b.and(
-     *       b.eq("environment", env),
-     *       b.or(b.eq("severity", minSeverity), b.in("team", targetTeams.toArray()))
-     *   ).build().
+     * return b.and(
+     * b.eq("environment", env),
+     * b.or(b.eq("severity", minSeverity), b.in("team", targetTeams.toArray()))
+     * ).build().
      */
     public static class NestedFilterBuilder {
         public static Filter.Expression buildAuditFilter(String env, String minSeverity, List<String> targetTeams) {
@@ -386,7 +532,14 @@ public class VectorStoreUnderTest {
             if (env == null || env.isBlank() || minSeverity == null || minSeverity.isBlank() || targetTeams == null || targetTeams.isEmpty()) {
                 throw new IllegalArgumentException("Inputs must not be null or blank");
             }
-            return null;
+            FilterExpressionBuilder b = new FilterExpressionBuilder();
+            return b.and(
+                    b.eq("environment", env),
+                    b.or(
+                            b.eq("severity", minSeverity),
+                            b.in("team", targetTeams)
+                    )
+            ).build();
         }
     }
 
@@ -395,12 +548,12 @@ public class VectorStoreUnderTest {
      * <p>
      * Instructions:
      * - Validate vectorStore != null, query != null && !query.isBlank(), filterExpression != null, and topK >= 1;
-     *   throw {@link IllegalArgumentException} otherwise.
+     * throw {@link IllegalArgumentException} otherwise.
      * - Build SearchRequest via SearchRequest.builder()
-     *   - query(query)
-     *   - topK(topK)
-     *   - filterExpression(filterExpression)
-     *   - build()
+     * - query(query)
+     * - topK(topK)
+     * - filterExpression(filterExpression)
+     * - build()
      * - Call vectorStore.similaritySearch(req).
      * - Map returned documents to List of SearchResult.
      * - Return results.
@@ -416,7 +569,21 @@ public class VectorStoreUnderTest {
             if (vectorStore == null || query == null || query.isBlank() || filterExpression == null || topK < 1) {
                 throw new IllegalArgumentException("Invalid search arguments");
             }
-            return List.of();
+            SearchRequest request = SearchRequest.builder()
+                    .query(query)
+                    .topK(topK)
+                    .filterExpression(filterExpression)
+                    .build();
+            List<SearchResult> results = new ArrayList<>();
+            for(Document document: vectorStore.similaritySearch(request)){
+                results.add(new SearchResult(
+                        document.getId(),
+                        document.getText(),
+                        document.getMetadata(),
+                        document.getScore() != null ? document.getScore() : 0.0
+                ));
+            }
+            return results;
         }
     }
 }
