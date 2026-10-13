@@ -181,7 +181,16 @@ phaseXX-exYY-<name>/
 
 ## 📖 Reference Documentation
 
-- [Spring AI 2.0.1 Reference Notes](docs/reference/spring-ai-2.0.1-reference.md)
+- [Spring AI 2.0.1 Master Reference Index](docs/reference/spring-ai-2.0.1-reference.md)
+  - [01. ChatClient & Core Accessors](docs/reference/01-chat-client.md)
+  - [02. Structured Outputs & Schema Repair](docs/reference/02-structured-outputs.md)
+  - [03. Tool Calling & Callbacks](docs/reference/03-tool-calling.md)
+  - [04. CallAdvisors & Guardrail Pipelines](docs/reference/04-guardrail-advisors.md)
+  - [05. Deterministic Testing & Test Harness](docs/reference/05-testing-harness.md)
+  - [06. Evaluators & LLM Judges](docs/reference/06-evaluators-judges.md)
+  - [07. RAG & Vector Stores](docs/reference/07-rag-vector-stores.md)
+  - [08. Model Context Protocol (MCP)](docs/reference/08-model-context-protocol.md)
+  - [09. Enterprise Architecture & Saga Loops](docs/reference/09-enterprise-architecture.md)
 - [Sealed Golden Reference Solutions](docs/golden/)
 
 ---
