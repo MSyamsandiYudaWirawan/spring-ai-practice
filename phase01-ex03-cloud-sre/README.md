@@ -41,6 +41,38 @@ Exit `0` = PASS.
 
 ---
 
+## 🧠 Architectural Theory & Incident Triage Flow
+
+In mission-critical Cloud SRE operations, LLM prompts must enforce strict role boundaries, fail-fast boundary invariants, and token quota telemetry:
+
+```
+                                CLOUD SRE INCIDENT TRIAGE LIFECYCLE
+[Pod Crash Event] ──► [SRE Invariant Checks] ──► [System & User Envelopes] ──► [ChatClient]
+ (Cluster, Pod, Logs)  (Non-blank namespace)     • SRE System Persona           (Options, Quotas)
+                                                 • Paging Dispatch Metadata             │
+                                                 • Crash Dump Log Context               ▼
+                                                                                   [ChatResponse]
+                                                                                        │
+                                        ┌───────────────────────────────────────────────┴────────┐
+                                        ▼                                                        ▼
+                              [Incident Root Cause]                                    [Telemetry Accounting]
+                              `response.getResult()`                                 `response.getMetadata()`
+                               • Diagnostic Summary                                   • Token Usage Check
+                               • Mitigation Actions                                   • Budget Verification
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `ChatClient` | `org.springframework.ai.chat.client` | Executes SRE root-cause triage requests with configured cluster personas and timeout policies. |
+| `PromptSystemSpec` | `org.springframework.ai.chat.client` | Configures system role envelopes with on-call paging metadata and cluster security rules. |
+| `PromptUserSpec` | `org.springframework.ai.chat.client` | Parameterizes crash context: binds pod names, namespaces, exit codes, and raw container stderr. |
+| `ChatOptions` / `Builder` | `org.springframework.ai.chat.prompt` | Locks temperature to near-zero ($0.1 - 0.2$) to ensure deterministic root-cause recommendations. |
+| `Usage` | `org.springframework.ai.chat.metadata` | Verifies and accumulates token expenditure to prevent runaway automated triage loops. |
+
+---
+
 ## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
 ### Topic 1: Role Separation, Cluster Invariants & Paging Envelopes (Drills 1–3)

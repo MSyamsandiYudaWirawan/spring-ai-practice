@@ -5,6 +5,57 @@ In **Phase 04 Exercise 01**, you master cold muscle memory building Spring AI `C
 
 ---
 
+## 🧠 Architectural Theory & Onion Pipeline Flow
+
+Spring AI uses an around-advice "onion model" for intercepting chat model calls via `CallAdvisor`. Lower `getOrder()` values execute first on the way in (`PRE_CALL`) and last on the way out (`POST_CALL`):
+
+```
+                                 CALLADVISOR ONION PIPELINE
+[ChatClientRequest]
+        │
+        ▼  getOrder() = 10 (Highest Precedence - Runs earliest pre-call)
+┌────────────────────────────────────────────────────────────────────────┐
+│ Security & Keyword Guardrail (Pre-Call Check: Blocked Keywords, Regex) │
+│       │                                                                │
+│       ▼  getOrder() = 20                                               │
+│ ┌────────────────────────────────────────────────────────────┐         │
+│ │ Context Enrichment Advisor (Pre-Call: correlationId, Auth) │         │
+│ │     │                                                      │         │
+│ │     ▼  getOrder() = 50 (Innermost)                         │         │
+│ │ ┌──────────────────────────────────────────────┐           │         │
+│ │ │ Token Budget & Latency Advisor               │           │         │
+│ │ │   │                                          │           │         │
+│ │ │   ▼                                          │           │         │
+│ │ │ [chain.nextCall(request)] ──► [ChatModel]    │           │         │
+│ │ │   │                                          │           │         │
+│ │ │   ▼                                          │           │         │
+│ │ │ Token Usage Tracking & Latency Bounds Check  │           │         │
+│ │ └──────────────────────────────────────────────┘           │         │
+│ │     │                                                      │         │
+│ │     ▼                                                      │         │
+│ │ PII Redaction & Secret Masking (Post-Call Mutation)        │         │
+│ └────────────────────────────────────────────────────────────┘         │
+│       │                                                                │
+│       ▼                                                                │
+│ Audit Logging & Metrics Publishing                                     │
+└────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+[ChatClientResponse]
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `CallAdvisor` | `o.s.ai.chat.client.advisor.api` | Core interceptor interface exposing `adviseCall(ChatClientRequest, CallAdvisorChain)`. Implements `Ordered`. |
+| `CallAdvisorChain` | `o.s.ai.chat.client.advisor.api` | Pipeline dispatcher advancing execution via `chain.nextCall(request)`. Note: Single-pass deque internally. |
+| `ChatClientRequest` | `org.springframework.ai.chat.client` | Immutable request containing `Prompt`, `ChatOptions`, and `context()` map. Mutated via `request.mutate()`. |
+| `ChatClientResponse` | `org.springframework.ai.chat.client` | Immutable response containing `ChatResponse` and response `context()`. Mutated via `response.mutate()`. |
+| `Ordered` | `org.springframework.core` | Controls onion nesting order. Lower numbers run outer/earlier; higher numbers run inner/closer to model. |
+
+---
+
 ## 15-Drill Clustered Syllabus
 
 ### Topic 1: Pre-Call Security & Policy Injections (Drills 1 - 3)

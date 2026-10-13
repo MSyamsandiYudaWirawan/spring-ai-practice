@@ -10,6 +10,51 @@ In **Phase 06 Exercise 01**, you master the foundational evaluation interfaces a
 
 ---
 
+## 🧠 Architectural Theory & Evaluation Pipeline Flow
+
+Evaluating LLM applications requires a dual-track strategy combining deterministic mathematical checks (latency, exact match) with semantic LLM evaluation (relevance, hallucination):
+
+```
+                             EVALUATION & BENCHMARK GATE PIPELINE
+[Candidate Model Output] + [Ground Truth / Context Documents]
+                                   │
+                                   ▼
+                         [EvaluationRequest]
+               (userText, dataList, responseContent)
+                                   │
+                                   ▼
+                       [Evaluator Interface Pipeline]
+                                   │
+         ┌─────────────────────────┼─────────────────────────┐
+         ▼                         ▼                         ▼
+ [Deterministic Matcher]   [RelevancyEvaluator]   [Composite Evaluators]
+ • Exact string match      • Built-in Spring AI   • Weighted multi-criteria
+ • Categorical set check   • Binary YES/NO check  • Fail-fast short-circuit
+ • Bounded numeric window  • Context grounding    • All-must-pass consensus
+         │                         │                         │
+         └─────────────────────────┼─────────────────────────┘
+                                   ▼
+                         [EvaluationResponse]
+                 (isPass, score, feedback, metadata)
+                                   │
+                                   ▼
+                       [Benchmark Quality Gate]
+              • Pass Rate >= 90%?
+              • If failed ──► throw EvaluationGateException
+```
+
+### 🧩 Core Spring AI Evaluation Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `Evaluator` | `org.springframework.ai.evaluation` | Root interface exposing `evaluate(EvaluationRequest) -> EvaluationResponse`. |
+| `EvaluationRequest` | `org.springframework.ai.evaluation` | Input contract providing `.getUserText()`, `.getDataList()` (context chunks), and `.getResponseContent()`. |
+| `EvaluationResponse` | `org.springframework.ai.evaluation` | Outcome entity exposing `.isPass()`, `.getScore()`, `.getFeedback()`, and custom `.getMetadata()`. |
+| `RelevancyEvaluator` | `org.springframework.ai.chat.evaluation` | Built-in evaluator prompting a judge LLM to assess if output aligns with provided context. |
+| `CompositeEvaluator` | Practice design pattern | Chains multiple evaluators (weighted combination, fail-fast, or strict unanimous consensus). |
+
+---
+
 ## Repetitive Muscle Memory Structure (15 Scenarios)
 
 ### Topic 1: Spring AI Evaluator Interface & Request/Response Basics (Scenarios 1 – 3)

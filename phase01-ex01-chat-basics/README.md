@@ -41,6 +41,39 @@ Exit `0` = PASS.
 
 ---
 
+## 🧠 Architectural Theory & Request Flow
+
+Spring AI's `ChatClient` provides a fluent, immutable wrapper over underlying `ChatModel` implementations, managing prompt formatting, role separation, and response extraction:
+
+```
+                                 CHATCLIENT FLUENT REQUEST LIFECYCLE
+[ChatModel] ──► [ChatClient.builder()] ──► [ChatClient]
+                      │ (defaults: system, options)  │
+                      ▼                              ▼
+                 .defaultSystem(...)             .prompt() ──► [ChatClientRequestSpec]
+                 .defaultOptions(...)                               │
+                                                                    ├─► .system(...) / .system(s -> s.text(...).param(...))
+                                                                    ├─► .user(...)   / .user(u -> u.text(...).params(...))
+                                                                    ├─► .options(...)
+                                                                    ▼
+                                                                  .call() ──► [CallResponseSpec]
+                                                                                   ├─► .content()      (String)
+                                                                                   └─► .chatResponse() (ChatResponse)
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `ChatClient` | `org.springframework.ai.chat.client` | High-level fluent client wrapping any `ChatModel`. Thread-safe and immutable. |
+| `ChatClient.Builder` | `org.springframework.ai.chat.client` | Configures client instances with defaults (system prompt, options builder, advisors, tools). |
+| `ChatClientRequestSpec` | `org.springframework.ai.chat.client` | Per-call request builder configuring `.system()`, `.user()`, model options, and tool bindings. |
+| `PromptSystemSpec` / `PromptUserSpec` | `org.springframework.ai.chat.client` | Parameterized template builders binding dynamic variables into prompt strings via `.param()` and `.params()`. |
+| `CallResponseSpec` | `org.springframework.ai.chat.client` | Terminal call gateway providing synchronous unpackers: `.content()`, `.chatResponse()`, `.entity()`. |
+| `ChatModel` | `org.springframework.ai.chat.model` | Low-level SPI interface (`call(Prompt) -> ChatResponse`) that communicates with provider APIs. |
+
+---
+
 ## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
 ### Topic 1: Role Separation & System Instructions (Drills 1–3)

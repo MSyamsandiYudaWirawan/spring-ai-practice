@@ -11,6 +11,44 @@ Phase 04 Exercise 01 established the mechanics of Spring AI's `CallAdvisor` inte
 
 ---
 
+## 🧠 Architectural Theory & Resilient Advisor Onion Flow
+
+In production multi-tenant environments, advisors must not only inspect requests, but also handle catastrophic failures (model timeouts, rate limit spikes, ungrounded hallucinations, schema breaches, and token exhaustion):
+
+```
+                             RESILIENT PRODUCTION ADVISOR ONION
+[Request]
+   │
+   ▼ Order 10: RuntimeContextAdvisor (Sets [DRY_RUN], audit flags)
+   │
+   ▼ Order 20: SlidingWindowTruncationAdvisor (Preserves SystemMsg, drops oldest history)
+   │
+   ▼ Order 30: SlidingWindowRateLimiterAdvisor (Short-circuits if requests > limit)
+   │
+   ▼ Order 40: TraceContextPropagationAdvisor (W3C traceparent injection)
+   │
+   ▼ Order 50: DynamicTokenQuotaAdvisor (Pre-allocates estimate; ROLLBACK on exception!)
+   │
+   ▼ Order 60: GroundingValidationAdvisor (Checks entity catalog compliance)
+   │
+   ▼ Order 70: SchemaSelfHealingAdvisor (Closed-loop retry via chain.copy(this))
+   │
+   ▼ Order 80: ModelFailoverAdvisor (Catches downstream 503/timeout -> fallback ChatModel)
+   │
+[ChatModel Execution]
+```
+
+### 🧩 Core Spring AI Invariants & Discoveries
+
+| Mechanism | Rule & Implementation Detail |
+|---|---|
+| **Single-Pass Chain Rule** | `CallAdvisorChain` is an internal deque that is popped on each call. Calling `chain.nextCall(...)` a second time throws `IllegalStateException`. For retries (e.g. schema healing), you **MUST** call `chain.copy(this).nextCall(retryReq)`. |
+| **Transactional Pre-Allocation** | To prevent quota debt on failed calls: (1) Pre-allocate estimated tokens before `chain.nextCall()`, (2) Reconcile actual tokens on success, (3) In a `catch` block, immediately refund estimated tokens before rethrowing! |
+| **Model Failover Positioning** | Place `ModelFailoverAdvisor` **innermost** (Order 80+). When the primary LLM times out or returns 503, Order 80 catches it and calls the fallback model. Outer advisors (Order 50 quota, Order 60 grounding) will still execute on the fallback response! |
+| **Sliding Window Memory** | Prunes conversational turn bloat while strictly pinning `SystemMessage` at index 0. |
+
+---
+
 ## The 15 Drills & Exact Contracts
 
 | # | Topic | Drill / Component | Order | Core Contract & Invariants |

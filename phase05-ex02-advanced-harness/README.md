@@ -7,6 +7,39 @@ In **Exercise 02**, you take this muscle memory to production-grade resilience: 
 
 ---
 
+## 🧠 Architectural Theory & Offline Chaos Testing Flow
+
+Testing mission-critical autonomous agents requires subjecting them to adverse network chaos, token latency, and malformed outputs—without waiting for real-world timeouts or spending real API credits:
+
+```
+                             ADVANCED OFFLINE CHAOS HARNESS PIPELINE
+[Agent Request] ──► [CompositeChaosPipeline]
+                            │
+                            ├─► [1. Probabilistic Drop Stage] (Simulates network 503 / packet loss)
+                            ├─► [2. Virtual Time Delay Stage] (Simulates model TTFT latency via TestClock)
+                            ├─► [3. Payload Mangling Stage]   (Truncates JSON / corrupts schema)
+                            │
+                            ▼
+[Circuit Breaker State Machine: CLOSED ──(fails >= 3)──► OPEN ──(virtual timeout)──► HALF_OPEN]
+                            │
+                            ▼
+[Reactive Flux Stream Double: Flux.fromIterable(tokenChunks)]
+                            │
+                            ▼
+[Multi-Tenant Token Quota Accounting: Tenant Quota Ledger]
+```
+
+### 🧩 Core Harness Contracts & Roles
+
+| Component | Responsibility | Testing Value |
+|---|---|---|
+| `AdvancedTestClock` | Virtual time clock advancing instantly via `.advance(duration)`. | Replaces brittle `Thread.sleep(...)` with $0\text{ms}$ deterministic execution. |
+| `ChaosInjectingChatPort` | Probabilistic fault injector simulating connection resets and 503s. | Verifies agent retry loops and fallback policies under turbulent conditions. |
+| `CorruptingChaosChatPort` | Mutates, truncates, or mangles output JSON strings before returning. | Verifies that downstream `BeanOutputConverter` error handling and repair loops trigger cleanly. |
+| `StreamingChunkLatencySimulator` | Emits token-by-token `Flux<String>` with recorded simulated latency. | Verifies reactive backpressure and streaming UI event processing offline. |
+
+---
+
 ## 15-Drill Clustered Syllabus
 
 ### Topic 1: Chaos Injection & Payload Corruption (Drills 1 - 3)

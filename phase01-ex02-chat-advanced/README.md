@@ -41,6 +41,36 @@ Exit `0` = PASS.
 
 ---
 
+## 🧠 Architectural Theory & Response Metadata Flow
+
+Advanced agentic auditing requires not just obtaining output text, but inspecting execution metadata, token costs, and overriding model options per call:
+
+```
+                                 FINTECH COMPLIANCE AUDITING FLOW
+[Transaction DTO] ──► [System & User Specs] ──► [ChatClient] ──► [ChatModel]
+                            │                                         │
+                            ├─► Regional Compliance System Prompt     ▼
+                            └─► Parameterized Transaction Data    [ChatResponse]
+                                                                      │
+                                                ┌─────────────────────┴─────────────────────┐
+                                                ▼                                           ▼
+                                        [Output Generation]                         [Response Metadata]
+                                   `response.getResult().getOutput()`         `response.getMetadata().getUsage()`
+                                           (Audit Findings)                     (Prompt & Completion Tokens)
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `ChatOptions` / `Builder` | `org.springframework.ai.chat.prompt` | Configures model runtime hyper-parameters (`temperature`, `topP`). Overrides client builder defaults per prompt. |
+| `ChatResponse` | `org.springframework.ai.chat.model` | Canonical execution response object returned by `call().chatResponse()`. |
+| `Generation` | `org.springframework.ai.chat.model` | Individual completion alternative containing the generated `AssistantMessage`. |
+| `ChatResponseMetadata` | `org.springframework.ai.chat.metadata` | Holds response metadata, finish reasons, and token consumption statistics. |
+| `Usage` | `org.springframework.ai.chat.metadata` | Detailed token accounting interface exposing `getPromptTokens()`, `getCompletionTokens()`, and `getTotalTokens()`. |
+
+---
+
 ## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
 ### Topic 1: Role Separation & Parameterized System Specs (Drills 1–3)

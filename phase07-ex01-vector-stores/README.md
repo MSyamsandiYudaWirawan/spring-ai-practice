@@ -20,6 +20,37 @@ In **Phase 07 Exercise 01**, you build cold muscle memory on Spring AI's Vector 
 
 ---
 
+## 🧠 Architectural Theory & Vector Ingestion Flow
+
+Vector stores provide semantic similarity search over text embeddings combined with strict metadata filtering:
+
+```
+                                 INGESTION & INDEXING PIPELINE
+[Raw Text / DTO] ──► [TokenTextSplitter] ──► [Document Chunks] ──► [EmbeddingModel] ──► [VectorStore]
+                       (ChunkSize, Overlap)   (ID, Text, Metadata)   (float[] Vector)   (SimpleVectorStore)
+
+                                  RETRIEVAL & FILTERING FLOW
+[Search Query] ──► [EmbeddingModel] ──► [Query Vector] ─┐
+                                                         ▼
+[FilterExpressionBuilder] ────────────► [Filter.Expr] ──► [VectorStore.similaritySearch(SearchRequest)]
+                                                                   │
+                                                                   ▼
+                                                          [List<Document> (Top-K, Scored)]
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `Document` | `org.springframework.ai.document` | Canonical container of text content, ID, custom metadata map, and embedding vector. Immutable; updated via `doc.mutate()`. |
+| `TokenTextSplitter` | `o.s.ai.transformer.splitter` | Splits raw text into smaller overlapping token windows preserving semantic boundary context. |
+| `EmbeddingModel` | `org.springframework.ai.embedding` | Converts text chunks and query strings into high-dimensional vector embeddings (`float[]`). |
+| `VectorStore` | `org.springframework.ai.vectorstore` | Storage and similarity search interface (`add`, `delete`, `similaritySearch`). In-memory implementation: `SimpleVectorStore`. |
+| `SearchRequest` | `org.springframework.ai.vectorstore` | Fluent specification for querying: defines query text, `topK`, `similarityThreshold`, and metadata filter expressions. |
+| `FilterExpressionBuilder` | `o.s.ai.vectorstore.filter` | Type-safe builder DSL constructing `Filter.Expression` AST trees (`eq`, `ne`, `gte`, `lte`, `in`, `and`, `or`). |
+
+---
+
 ## 18 Scenarios Breakdown (6 Topics × 3 Repetitions)
 
 | # | Topic | Component | Key Responsibility |

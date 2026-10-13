@@ -5,6 +5,47 @@
 
 ---
 
+## 🧠 Architectural Theory & Structured Output Flow
+
+LLMs do not produce Java objects; they emit text streams. To build resilient production systems, raw text must pass through sanitization, schema conversion, invariant gating, and closed-loop repair:
+
+```
+                              STRUCTURED OUTPUT EXTRACTION PIPELINE
+[Prompt / Advisory] ──► [ChatClient.call()] ──► [Raw LLM Output] (Markdown code fences, chatter)
+                                                       │
+                                                       ▼
+                                         [Defensive JSON Sanitizer]
+                                         • Strips ```json ... ``` fences
+                                         • Slices first '{' / '[' to last '}' / ']'
+                                                       │
+                                                       ▼
+                                      [BeanOutputConverter<T> Deserializer]
+                                      • Single Record / POJO
+                                      • Generic List<T> / Map<K,V> (ParameterizedTypeReference)
+                                                       │
+                           ┌───────────────────────────┴───────────────────────────┐
+                           ▼                                                       ▼
+                   [Valid Entity DTO]                                     [Malformed / Bad Schema]
+                           │                                                       │
+                           ▼                                                       ▼
+               [TigerStyle Invariant Gate]                               [One-Shot Repair Protocol]
+               • Regex / Ranges / Required Fields                        • Quotes error back to LLM
+                           │                                             • Exactly 1 retry attempt
+                           ▼                                                       │
+                   [TriageEnvelope.ok(data)]                             [TriageEnvelope.rejected(err)]
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `BeanOutputConverter<T>` | `org.springframework.ai.converter` | Generates JSON Schema format instructions (`.getFormat()`) and deserializes JSON strings into typed Java instances via `.convert()`. |
+| `ParameterizedTypeReference<T>` | `org.springframework.core` | Captures generic type parameters at runtime (e.g. `List<PatchPlan>`) to prevent JVM type erasure during JSON array deserialization. |
+| `CallResponseSpec.entity(...)` | `org.springframework.ai.chat.client` | Fluent shortcut that attaches schema format instructions to the request and automatically converts the completion to type `T`. |
+| `TriageEnvelope<T>` | Practice domain contract | Typed wrapper isolating deserialization failures (`ok` vs `rejected`), preventing unhandled runtime exceptions from crashing agent loops. |
+
+---
+
 ## The 15 Drills & Exact Contracts
 
 | # | Topic | Drill / Component | Description & Invariants |

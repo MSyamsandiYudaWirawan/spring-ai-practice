@@ -10,6 +10,50 @@ This exercise drills the client side of the official Model Context Protocol (MCP
 
 ---
 
+## 🧠 Architectural Theory & MCP Client Federation Flow
+
+In distributed agent architectures, an application connects to multiple MCP servers simultaneously. The MCP client layer federates these servers, namespaces tool names to prevent collisions, and adapts them into Spring AI `ToolCallback`s:
+
+```
+                             FEDERATED MCP CLIENT ORCHESTRATION FLOW
+         [ChatClient.builder().defaultToolCallbacks(federatedCallbacks).build()]
+                                             │
+                                             ▼
+                             [LLM Emits Prefixed Tool Call]
+                                (e.g. "gh_create_issue")
+                                             │
+                                             ▼
+                             [Federated Multi-Server Registry]
+                             • Inspects server prefix ("gh_")
+                             • Routes to target MCP Client Adapter
+                                             │
+                       ┌─────────────────────┴─────────────────────┐
+                       ▼                                           ▼
+             [GitHub MCP Server]                           [Kubernetes MCP Server]
+             (JSON-RPC via stdio)                          (JSON-RPC via SSE)
+                       │                                           │
+                       └─────────────────────┬─────────────────────┘
+                                             ▼
+                             [Resilient Tool Execution Shield]
+                             • Traps remote timeouts / 500 errors
+                             • Converts MCP isError: true into clean feedback
+                                             │
+                                             ▼
+                               [Result Returned to ChatClient]
+```
+
+### 🧩 Core MCP Client Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `McpClientAdapter` | Practice / SDK wrapper | Client interface managing JSON-RPC connections (`listTools`, `callTool`, `readResource`). |
+| `McpToolUtils.toToolCallback` | `org.springframework.ai.mcp` | Adapts remote MCP `Tool` schemas into standard Spring AI `ToolCallback` instances for `ChatClient`. |
+| `McpToolUtils.prefixedToolName` | `org.springframework.ai.mcp` | Formats collision-free namespaced identifiers (`serverId + "_" + toolName`) across federated servers. |
+| `MultiServerClientRegistry` | Practice design pattern | Coordinates multiple MCP clients, maintaining $O(1)$ prefixed tool routing and dynamic schema reloads. |
+| `Reverse Sampling Protocol` | `sampling/createMessage` | Allows downstream MCP servers to request completions from the host application's `ChatClient`. |
+
+---
+
 ## Repetitive Muscle Memory Structure (15 Scenarios)
 
 ### Topic 1: Client Capabilities & Specs (Scenarios 1 – 3)

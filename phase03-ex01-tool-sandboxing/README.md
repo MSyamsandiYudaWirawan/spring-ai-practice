@@ -5,6 +5,49 @@
 
 ---
 
+## 🧠 Architectural Theory & Tool Sandboxing Flow
+
+In autonomous agent architectures, tools give LLMs external sensory perception. However, tools must be strictly sandboxed to prevent path traversal, infinite execution loops, and uncaught exceptions:
+
+```
+                                 TOOL CALLING & SANDBOXING LIFECYCLE
+[LLM Tool Call Request] ──► [ToolCallbacks Dispatcher] ──► [Tool Sandboxing Gateway]
+ (JSON Arguments)           (Method Reflection / Schema)   • Path Traversal Check (sandboxRoot)
+                                                           • Sensitive File Quarantine (.env, .git)
+                                                           • File Size Ceiling (100 KB)
+                                                           • Turn Quota / Rate Limiter
+                                                                   │
+                                   ┌───────────────────────────────┴───────────────────────────────┐
+                                   ▼                                                               ▼
+                         [Sandboxed Execution]                                           [Security / Boundary Fail]
+                         • Read source file                                              • Path escape rejected
+                         • Walk directory tree                                           • Quota exceeded cutoff
+                         • Search codebase                                               • Sensitive file blocked
+                                   │                                                               │
+                                   ▼                                                               ▼
+                         [ToolEnvelope.ok(data)]                                         [ToolEnvelope.fail(reason)]
+                                   │                                                               │
+                                   └───────────────────────────────┬───────────────────────────────┘
+                                                                   ▼
+                                                       [Trajectory Audit Trail]
+                                                       (Sequence, Action, Params, Outcome)
+                                                                   │
+                                                                   ▼
+                                                    [JSON String Output ──► LLM]
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `@Tool` | `org.springframework.ai.tool.annotation` | Method-level annotation declaring a tool and its semantic description for LLM function calling. |
+| `@ToolParam` | `org.springframework.ai.tool.annotation` | Parameter-level annotation providing argument descriptions for JSON Schema generation. |
+| `ToolCallbacks` | `org.springframework.ai.support` | Reflection utility (`ToolCallbacks.from(bean)`) that discovers `@Tool` annotated methods on Spring beans. |
+| `ToolCallback` | `org.springframework.ai.tool` | Core interface executing incoming JSON string arguments (`.call(json)`) against target methods and returning stringified results. |
+| `ToolEnvelope<T>` | Practice domain contract | Typed result container ensuring business errors and boundary breaches are returned as structured data rather than unhandled Java exceptions. |
+
+---
+
 ## The 15 Drills & Exact Contracts
 
 | # | Topic | Drill / Component | Core Contract & Boundary Invariants |

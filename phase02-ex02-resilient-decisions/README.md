@@ -41,6 +41,47 @@ Exit `0` = PASS.
 
 ---
 
+## 🧠 Architectural Theory & Decision Parsing Flow
+
+In autonomous diagnostic agent sagas, the DECIDE phase converts unstructured LLM suggestions into strictly validated, polymorphic operational decisions:
+
+```
+                                AUTONOMOUS SAGA DECISION PARSING FLOW
+[Baseline Telemetry] ──► [Prompt Injection] ──► [ChatClient] ──► [Raw LLM Stream]
+                           • Format Instructions                     │
+                           • Polymorphic Schema                      ▼
+                                                        [Conversational Text Sanitizer]
+                                                        • Regex code-fence stripping
+                                                        • First '{' to last '}' boundary slicing
+                                                                     │
+                                                                     ▼
+                                                        [Polymorphic Deserializer]
+                                                        • Discriminated union:
+                                                          - kind="template" -> Config changes
+                                                          - kind="edits"    -> Source code diffs
+                                                                     │
+                                    ┌────────────────────────────────┴────────────────────────────────┐
+                                    ▼                                                                 ▼
+                            [Valid DecisionDto]                                            [Schema/Parse Violation]
+                                    │                                                                 │
+                                    ▼                                                                 ▼
+                        [TigerStyle Invariants]                                           [Closed-Loop Repair Turn]
+                        • Non-empty rationale                                             • Send parser error to LLM
+                        • Valid file paths                                                • Strict 1-retry cap
+                        • Legal parameters                                                • Circuit-break if 2nd fail
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `BeanOutputConverter<T>` | `org.springframework.ai.converter` | Generates polymorphic JSON Schema directives for prompt injection and deserializes candidate JSON strings. |
+| `OptimizationDecision` | Practice domain contract | Polymorphic discriminated union representing either runtime config tweaks or targeted multi-file source code diffs. |
+| `DecisionValidator` | Practice domain contract | Validates operational invariants: non-blank rationale, valid file target paths, and allowed parameter boundaries. |
+| `Schema Repair Turn` | LLM-in-the-loop pattern | Resilient closed-loop retry quoting the exact Jackson or schema validation error back to the LLM with an immutable 1-retry limit. |
+
+---
+
 ## 3. The 15 Drills (5 Topics x 3 Repetitions)
 
 ### Topic 1: Schema Directives & Direct Deserialization (Drills 1–3)

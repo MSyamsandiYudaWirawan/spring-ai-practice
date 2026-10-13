@@ -10,6 +10,54 @@ This exercise builds cold muscle memory on Spring AI 2.0.1's native modular RAG 
 
 ---
 
+## 🧠 Architectural Theory & Pipeline Lifecycle
+
+In Spring AI 2.0.1, Retrieval-Augmented Generation (RAG) is decoupled into a modular 4-stage pipeline orchestrated by `RetrievalAugmentationAdvisor` (which implements `CallAdvisor`):
+
+```
+                                  RETRIEVAL AUGMENTATION ADVISOR
+                   ┌────────────────────────────────────────────────────────┐
+                   │                                                        │
+[User Query] ──────┼──► [1. Pre-Retrieval]      QueryTransformer            │
+                   │    • MultiQueryExpander    (Rewrites, expands,         │
+                   │    • RewriteQuery           or compresses queries)     │
+                   │    • TranslationQuery                                  │
+                   │            │                                           │
+                   │            ▼                                           │
+                   │    [2. Retrieval]          DocumentRetriever           │
+                   │    • VectorStoreRetriever  (Fetches top-K candidates   │
+                   │    • Metadata FilterExpr    from VectorStore)          │
+                   │            │                                           │
+                   │            ▼                                           │
+                   │    [3. Post-Retrieval]     DocumentPostProcessor       │
+                   │    • Deduplication         (Cleans, scores, sorts,     │
+                   │    • Priority Sorting       or trims candidates)       │
+                   │    • Score Gating                                      │
+                   │            │                                           │
+                   │            ▼                                           │
+                   │    [4. Augmentation]       QueryAugmenter              │
+                   │    • Contextual Augmenter  (Formats chunks into prompt │
+                   │    • Empty Context Guard    block <context>...</context>)
+                   │            │                                           │
+                   └────────────┼───────────────────────────────────────────┘
+                                ▼
+                     [Augmented Prompt] ──► ChatClient ──► LLM
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `Query` | `org.springframework.ai.rag` | Immutable value object wrapping prompt text and optional history. |
+| `QueryTransformer` | `o.s.ai.rag.preretrieval.query.transformation` | **Stage 1 (Pre-Retrieval):** Transforms `Query -> Query` (e.g. resolving pronouns via `RewriteQueryTransformer`, multilingual translation via `TranslationQueryTransformer`, or compressing conversation via `CompressionQueryTransformer`). |
+| `MultiQueryExpander` | `o.s.ai.rag.preretrieval.query.expansion` | **Stage 1 (Pre-Retrieval):** Expands 1 prompt into $N$ query variations to maximize vector recall across lexical mismatches. |
+| `DocumentRetriever` | `o.s.ai.rag.retrieval.search` | **Stage 2 (Retrieval):** Executes `retrieve(Query) -> List<Document>` against a vector store. Implemented by `VectorStoreDocumentRetriever`. |
+| `DocumentPostProcessor` | `o.s.ai.rag.postretrieval.document` | **Stage 3 (Post-Retrieval):** Cleans, re-ranks, or deduplicates candidate `List<Document>` before prompt injection. |
+| `QueryAugmenter` | `o.s.ai.rag.generation.augmentation` | **Stage 4 (Augmentation):** Injects retrieved documents into prompt templates (`{context}` + `{query}`). Implemented by `ContextualQueryAugmenter`. |
+| `RetrievalAugmentationAdvisor` | `o.s.ai.rag.advisor` | **The Orchestrator:** Implements `CallAdvisor` to wire stages 1–4 seamlessly around any `ChatClient.prompt().call()`. |
+
+---
+
 ## 15 Scenarios Breakdown (5 Topics × 3 Repetitions)
 
 | # | Topic | Component | Key Responsibility |

@@ -23,6 +23,51 @@ In **Phase 06 Exercise 02**, you tackle **repetitive production AI evaluation dr
 
 ---
 
+## 🧠 Architectural Theory & Bias Mitigation Flow
+
+Zero-shot LLM-as-a-judge prompts suffer from positional bias (>70% preferring Option 1), grade inflation, and semantic noise. Production evaluation architectures mitigate this through rigorous protocols:
+
+```
+                             LLM-AS-A-JUDGE & BIAS MITIGATION ARCHITECTURE
+[Candidate A] vs [Candidate B]
+              │
+              ▼
+    [Pairwise Position Swap Tournament]
+    • Run 1: (A, B) -> Winner 1
+    • Run 2: (B, A) -> Winner 2
+    • Verdict: If both picked "Option 1" ──► BIAS_DETECTED (Inconclusive)
+              │
+              ▼
+    [RAG Triad Claim-Level Attribution]
+    • Decomposes response into atomic claims
+    • Verifies each claim against context chunks
+    • Faithfulness = Supported Claims / Total Claims
+              │
+              ▼
+    [Anchor-Based Calibrated Rubrics]
+    • Evaluates Correctness, Completeness, Conciseness against Level 1/3/5 anchors
+              │
+              ▼
+    [Inter-Judge Statistical Agreement]
+    • Computes Cohen's Kappa (κ >= 0.70) against ground-truth baseline
+              │
+              ▼
+    [Production Release Benchmark Gate]
+    • Enforces release threshold across safety, accuracy, and latency
+```
+
+### 🧩 Core Evaluation Methodologies & Roles
+
+| Technique | Problem Solved | Protocol Details |
+|---|---|---|
+| **Pairwise Position Swap** | Positional Bias | Evaluates `(A, B)` then swaps to `(B, A)`. If the judge prefers whatever is in position 1, flags as biased / tie. |
+| **Majority Voting Ensemble** | Confidence Sampling | Runs $N$ evaluations at $T > 0$. Consensus requires $> N/2$ votes; confidence is measured by majority fraction. |
+| **Claim-Level Attribution** | Hallucination Detection | Splits text into atomic claims and verifies each against context documents individually. |
+| **Anchor-Based Rubrics** | Grade Inflation | Pins Level 1 (poor), Level 3 (adequate), and Level 5 (exemplary) concrete examples in prompts. |
+| **Cohen's Kappa ($\kappa$)** | Judge Drift | Measures statistical agreement between LLM judges and human annotations beyond chance. $\kappa \ge 0.70$ required. |
+
+---
+
 ## 15 Scenarios Breakdown (5 Topics × 3 Repetitions)
 
 | Topic | # | Component / Method | Repetition Focus |

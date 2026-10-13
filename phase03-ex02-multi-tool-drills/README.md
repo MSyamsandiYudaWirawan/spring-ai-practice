@@ -5,6 +5,51 @@
 
 ---
 
+## 🧠 Architectural Theory & Multi-Tool Orchestration Flow
+
+In multi-tool agent environments, Spring AI abstracts model tool-calling protocols into declarative method annotations while guaranteeing typed deserialization, boundary validation, and audit tracking:
+
+```
+                             MULTI-TOOL AGENTIC ORCHESTRATION FLOW
+[ChatClient.prompt()] ──► [Model Receives Tool Schemas] ──► [LLM Decides Action]
+                                                                    │
+                                                                    ▼
+                                                    [Spring AI Function Call Gateway]
+                                                    • Matches tool name (e.g. "scaleReplicas")
+                                                    • Deserializes JSON arguments into DTO
+                                                                    │
+                                                                    ▼
+                                                    [@Tool Execution & Validation]
+                                                    • Fail-fast invariants (primitives, enums)
+                                                    • Stateful rate limits (max 3 purges)
+                                                    • Business logic execution
+                                                                    │
+                                    ┌───────────────────────────────┴───────────────────────────────┐
+                                    ▼                                                               ▼
+                            [Typed Return DTO]                                            [ToolEnvelope.fail]
+                            • DeploymentStatus                                            • Rate limit exceeded
+                            • NodeDrainResult                                             • Invalid cluster regex
+                                    │                                                               │
+                                    └───────────────────────────────┬───────────────────────────────┘
+                                                                    ▼
+                                                        [ToolExecutionAudit Log]
+                                                                    │
+                                                                    ▼
+                                                    [JSON Result Serialized back to LLM]
+```
+
+### 🧩 Core Spring AI Classes & Roles
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `@Tool(description)` | `org.springframework.ai.tool.annotation` | Method-level annotation providing semantic metadata for LLM tool selection. |
+| `@ToolParam(description)` | `org.springframework.ai.tool.annotation` | Annotates parameters, specifying names and descriptions for generated JSON Schema schemas. |
+| `ToolCallbacks.from(bean)` | `org.springframework.ai.support` | Discovers all `@Tool` annotated methods on a bean and converts them into `ToolCallback[]`. |
+| `ChatClient.Builder.defaultTools(bean)` | `org.springframework.ai.chat.client` | Registers tool beans globally on `ChatClient`, allowing models to trigger function calls automatically. |
+| `ToolCallback.call(json)` | `org.springframework.ai.tool` | Low-level dispatcher executing raw JSON tool invocations directly against registered Java beans. |
+
+---
+
 ## The 15 Drills & Exact Contracts
 
 | # | Topic | Drill / Component | Parameter / Return Signature | Validation & Contract Invariants |

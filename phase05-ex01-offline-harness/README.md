@@ -11,6 +11,41 @@ This drill builds instinctive muscle memory on writing, wiring, and verifying th
 
 ---
 
+## 🧠 Architectural Theory & Hexagonal Boundary Seam
+
+Directly mocking Spring AI's fluent `ChatClient` in unit tests requires mocking 6+ internal builder classes, creating brittle tests that break on minor upgrades. Hexagonal boundary seams solve this:
+
+```
+                             HEXAGONAL SEAM & DETERMINISTIC TEST HARNESS
+                                     [Application Agent Loop]
+                                                │
+                                                ▼ talks to domain seam
+                                           [ChatPort]
+                                                │
+                    ┌───────────────────────────┴───────────────────────────┐
+                    ▼ (Production)                                          ▼ (Deterministic Tests)
+           [SpringAiChatPort]                                      [Deterministic Test Doubles]
+                    │                                              (Runs in 0ms, 0 live tokens)
+                    ▼                                                       │
+            [ChatClient.prompt()]                                           ├─► ScriptedChatPort (FIFO Queue)
+                    │                                                       ├─► PredicateRoutingChatPort (Pattern Match)
+                    ▼                                                       ├─► PromptCapturingChatPort (Outgoing Spy)
+            [Live LLM Provider]                                             ├─► FaultInjectingChatPort (Simulate 503/OOM)
+                                                                            └─► BudgetEnforcingChatPort (Token Ceiling)
+```
+
+### 🧩 Core Seam Contracts & Roles
+
+| Component | Nature | Role & Execution Behavior |
+|---|---|---|
+| `ChatPort` | Domain Port Interface | Minimal interface (`chat(system, user, tools) -> ChatResult`) owned by your application. |
+| `SpringAiChatPort` | Production Adapter | Unpacks `ChatPort` parameters, invokes `ChatClient.prompt().call()`, and converts `ChatResponse` back to `ChatResult`. |
+| `ScriptedChatPort` | FIFO Test Double | In-memory queue returning canned answers sequentially. Throws `IllegalStateException` on empty queue. |
+| `PredicateRoutingChatPort` | Pattern-Matching Double | Dynamically evaluates prompt text against configured `Predicate<String>` rules, returning distinct answers per scenario. |
+| `PromptCapturingChatPort` | Outgoing Test Spy | Captures outgoing prompt templates, system instructions, and tool bindings for strict JUnit assertions. |
+
+---
+
 ## 15-Drill Clustered Syllabus
 
 ### Topic 1: Scripted FIFO & Inspection Doubles

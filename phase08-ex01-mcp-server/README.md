@@ -10,6 +10,49 @@ This exercise drills the official Model Context Protocol (MCP) Java SDK (`io.mod
 
 ---
 
+## 🧠 Architectural Theory & MCP Server Flow
+
+Model Context Protocol (MCP) standardizes how models connect to tools, context resources, and prompt templates over JSON-RPC 2.0:
+
+```
+                             MODEL CONTEXT PROTOCOL (MCP) SERVER FLOW
+           [MCP Host / Client] (e.g. Claude Desktop, Spring AI MCP Client)
+                    │
+                    ▼ JSON-RPC 2.0 (stdio or SSE)
+    ┌────────────────────────────────────────────────────────────────────────┐
+    │                        MCP Server Architecture                         │
+    │                                                                        │
+    │   [1. Handshake] ────────► ServerCapabilities (tools, resources,       │
+    │                            prompts, logging)                           │
+    │                                                                        │
+    │   [2. Tool Calling] ─────► Tool Specification (JSON Schema)            │
+    │                                   │                                    │
+    │                                   ▼                                    │
+    │                            SyncToolSpecification Handler               │
+    │                                   │                                    │
+    │                                   ▼                                    │
+    │                            CallToolResult (TextContent, isError)       │
+    │                                                                        │
+    │   [3. Resources] ────────► ReadResourceResult (Text / Blob URI data)   │
+    │                                                                        │
+    │   [4. Prompts] ──────────► GetPromptResult (Parameterized templates)   │
+    │                                                                        │
+    │   [5. Adaptation] ───────► McpToolUtils (Spring AI @Tool <-> MCP)      │
+    └────────────────────────────────────────────────────────────────────────┘
+```
+
+### 🧩 Core MCP SDK & Spring AI Classes
+
+| Class | Package | Role & Data Flow |
+|---|---|---|
+| `ServerCapabilities` | `io.modelcontextprotocol.spec.McpSchema` | Informs the client what features this server exposes (`tools`, `resources`, `prompts`, `logging`). |
+| `Tool` | `io.modelcontextprotocol.spec.McpSchema` | Declares tool name, description, and JSON Schema input argument specifications. |
+| `SyncToolSpecification` | `org.springframework.ai.mcp` | Binds an MCP `Tool` definition to a synchronous execution handler lambda `(exchange, args) -> CallToolResult`. |
+| `CallToolResult` | `io.modelcontextprotocol.spec.McpSchema` | Outcome envelope returning content blocks (`TextContent`) and strict failure flags (`isError: true`). |
+| `McpToolUtils` | `org.springframework.ai.mcp` | Adapter utility converting Spring AI `@Tool` callbacks into MCP `SyncToolSpecification` instances. |
+
+---
+
 ## Repetitive Muscle Memory Structure (15 Scenarios)
 
 ### Topic 1: MCP Tool Definition & JSON Input Schema (Scenarios 1 – 3)
